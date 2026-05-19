@@ -1532,7 +1532,7 @@ async function fetchDatosLive() {
   console.log('Leyendo Sheets...');
   const [negocioRows, adsRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
     tryLeerSheet('negocio',   'A1:Z60'),
-    tryLeerSheet('ads',       'A1:Z30'),
+    tryLeerSheet('anuncios',  'A1:Z30'),
     tryLeerSheet('closers',   'A1:Z80'),
     tryLeerSheet('cobranzas', 'A1:Z500'),
     tryLeerSheet('egresos',   'A1:Z20'),
