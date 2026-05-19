@@ -1,0 +1,13 @@
+{
+  "name": "Founders Dashboard",
+  "short_name": "Founders",
+  "description": "Dashboard de métricas de Founders by Vicky Becci",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFF7",
+  "theme_color": "#282727",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

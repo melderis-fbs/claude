@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#282727"/>
+  <text x="256" y="360" font-family="Arial Black,sans-serif" font-size="300" font-weight="900" fill="#FFFFF7" text-anchor="middle">U</text>
+  <polygon points="256,40 320,140 192,140" fill="#FFFFF7"/>
+  <rect x="222" y="136" width="68" height="70" fill="#FFFFF7"/>
+</svg>
