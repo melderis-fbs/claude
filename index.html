@@ -1517,29 +1517,35 @@ async function leerSheet(tab, rango) {
   return data.values || [];
 }
 
+async function tryLeerSheet(tab, rango) {
+  try {
+    const rows = await leerSheet(tab, rango);
+    console.log(`✓ Pestaña "${tab}": ${rows.length} filas`);
+    return rows;
+  } catch(e) {
+    console.warn(`✗ Pestaña "${tab}" falló: ${e.message}`);
+    return null;
+  }
+}
+
 async function fetchDatosLive() {
   console.log('Leyendo Sheets...');
-  try {
-    const [negocioRows, adsRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
-      leerSheet('negocio',    'A1:Z60'),
-      leerSheet('ads',        'A1:Z30'),
-      leerSheet('closers',    'A1:Z80'),
-      leerSheet('cobranzas',  'A1:Z500'),
-      leerSheet('egresos',    'A1:Z20'),
-    ]);
+  const [negocioRows, adsRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
+    tryLeerSheet('negocio',   'A1:Z60'),
+    tryLeerSheet('ads',       'A1:Z30'),
+    tryLeerSheet('closers',   'A1:Z80'),
+    tryLeerSheet('cobranzas', 'A1:Z500'),
+    tryLeerSheet('egresos',   'A1:Z20'),
+  ]);
 
-    procesarNegocio(negocioRows);
-    procesarAds(adsRows);
-    procesarClosers(closersRows);
-    procesarCobranzas(cobranzasRows);
-    procesarEgresos(egresosRows);
+  if (negocioRows)   procesarNegocio(negocioRows);
+  if (adsRows)       procesarAds(adsRows);
+  if (closersRows)   procesarClosers(closersRows);
+  if (cobranzasRows) procesarCobranzas(cobranzasRows);
+  if (egresosRows)   procesarEgresos(egresosRows);
 
-    const ts = document.getElementById('ts-live');
-    if (ts) ts.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
-    console.log('✓ Sheets actualizados:', new Date().toLocaleTimeString('es-AR'));
-  } catch(e) {
-    console.log('Error leyendo Sheets —', e.message);
-  }
+  const ts = document.getElementById('ts-live');
+  if (ts) ts.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
 }
 
 // ── Helpers globales de parseo ──
