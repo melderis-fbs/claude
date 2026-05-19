@@ -949,639 +949,92 @@ setTimeout(() => generarAnalisisCobranzas(), 2200);this.classList.add('active');
   <button class="bnav-btn" id="bnav-ventas" onclick="switchTab('ventas')"><span class="bnav-icon">$</span>VENTAS</button>
 </div>
 
+
 <script>
-// ═══════════ DATA ═══════════
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-let currentMonthIdx = 4;
-let currentPeriod   = 'mes';
-let currentCloser   = 'consolidado';
+// ══════════════════════════════════════════════════════════
+//  FOUNDERS DASHBOARD — script principal
+// ══════════════════════════════════════════════════════════
 
-const closerData = {
-  consolidado:{ label:'Equipo consolidado', agendadas:[48,72,126,122,38], asistencia:[42,59,110,99,32], validas:[40,55,106,95,32], noshow:[3,9,5,3,1], ofertas:[22,50,91,67,33], cierres:[10,13,15,13,5], pcierre:['23,81%','23,64%','14,15%','13,68%','15,63%'], pasist:['87,50%','81,94%','87,30%','81,15%','84,21%'] },
-  kevin:{ label:'Kevin Pavón', agendadas:[31,38,71,57,19], asistencia:[27,32,69,51,17], validas:[25,28,66,49,17], noshow:[1,5,1,2,0], ofertas:[22,26,59,45,17], cierres:[6,7,9,7,3], pcierre:['22,22%','21,88%','13,04%','13,73%','17,65%'], pasist:['87,10%','84,21%','97,18%','89,47%','89,47%'] },
-  fabri:{ label:'Fabricio', agendadas:[0,0,26,43,6], asistencia:[0,0,18,26,3], validas:[0,0,18,24,3], noshow:[0,0,2,1,1], ofertas:[0,0,18,5,4], cierres:[0,0,2,2,1], pcierre:['—','—','11,11%','7,69%','33,33%'], pasist:['—','—','69,23%','60,47%','50,00%'] },
-  braian:{ label:'Braian', agendadas:[0,0,6,4,13], asistencia:[0,0,5,4,12], validas:[0,0,5,4,12], noshow:[0,0,0,0,0], ofertas:[0,0,0,0,12], cierres:[0,0,0,1,1], pcierre:['—','—','—','25,00%','8,33%'], pasist:['—','—','83,33%','100,00%','92,31%'] },
-  vicky:{ label:'Vicky', agendadas:[17,34,23,18,0], asistencia:[15,27,18,18,0], validas:[15,27,17,18,0], noshow:[2,4,2,0,0], ofertas:[0,24,14,17,0], cierres:[4,6,4,3,0], pcierre:['26,67%','22,22%','22,22%','16,67%','—'], pasist:['88,24%','79,41%','78,26%','100,00%','—'] }
-};
-
-const reportes = [
-  { tipo:'LLAMADA NUEVA', nombre:'Guillermo Fogelman', closer:'Kevin', texto:'Lic. en seguridad, consultora incipiente. Se inclina por Founders pero tiene última reunión hoy a las 16hs. Confirma mañana.', estado:'hot' },
-  { tipo:'LLAMADA NUEVA', nombre:'Marcelo Casanova',   closer:'Kevin', texto:'Economista, fanático del feng shui. Sin urgencia económica. Buena conexión. Define el 20.', estado:'warm' },
-  { tipo:'LLAMADA NUEVA', nombre:'Javier Martinez Luque', closer:'Braian', texto:'Coaching ejecutivo. Desconfiado, frustrado con mentorías pasadas. Seguimiento difícil.', estado:'cold' },
-  { tipo:'LLAMADA NUEVA', nombre:'Romina Correa',      closer:'Kevin', texto:'Lic. en mkt, dos proyectos. Le encantó la propuesta, va por M1. Activando tarjeta hoy o mañana.', estado:'hot' },
-  { tipo:'SEGUIMIENTO',   nombre:'Ivana y Karina',     closer:'Kevin', texto:'Cancelaron 2da llamada. Desempleadas, sin ingresos, no quieren endeudarse. Trabajando objeción por chat.', estado:'cold' },
-  { tipo:'SEGUIMIENTO',   nombre:'Duplo agencia',      closer:'Kevin', texto:'Confirman pago el 15. No entraron aún los pagos que esperaban para señar hoy.', estado:'hot' },
-];
-
-// ═══════════ RENDER LEADS ═══════════
-function renderReportes() {
-  const tCls = { 'LLAMADA NUEVA':'p-call', 'SEGUIMIENTO':'p-seg' };
-  const eCls = { hot:'p-hot', warm:'p-warm', cold:'p-cold' };
-  const eLabel= { hot:'caliente', warm:'tibio', cold:'difícil' };
-  document.getElementById('reportes-list').innerHTML = reportes.map(r => `
-    <div class="lead">
-      <div class="lead-meta">
-        <span class="pill ${tCls[r.tipo]||'p-seg'}">${r.tipo}</span>
-        <div class="lead-name">${r.nombre}</div>
-        <div class="lead-closer">${r.closer}</div>
-        <span class="pill ${eCls[r.estado]||'p-cold'}" style="margin-top:5px">${eLabel[r.estado]||r.estado}</span>
-      </div>
-      <div class="lead-body">${r.texto}</div>
-    </div>`).join('');
-}
-
-// ═══════════ RENDER CLOSERS ═══════════
-function renderCloser(name) {
-  const d  = closerData[name];
-  const hi = Math.min(currentMonthIdx, 4);
-  const months = MONTHS.slice(0,5);
-  const rows = [
-    ['Agendadas', d.agendadas],['Asistencias', d.asistencia],
-    ['Asist. válidas', d.validas],['No show', d.noshow],
-    ['Ofertas', d.ofertas],['Cierres', d.cierres],
-    ['% cierre', d.pcierre],['% asist.', d.pasist],
-  ];
-  let html = `<div style="font-size:12px;color:var(--ink2);margin-bottom:12px;font-family:var(--font2);font-weight:600">${d.label}</div>
-    <div class="stat-wrap"><table class="stat-table">
-    <thead><tr><th>Métrica</th>${months.map((m,i)=>`<th style="${i===hi?'color:var(--ink)':''}">${m.slice(0,3)}</th>`).join('')}</tr></thead>
-    <tbody>`;
-  rows.forEach(([n,vals]) => {
-    html += `<tr><td>${n}</td>${vals.map((v,i)=>`<td class="${i===hi?'hl':''}">${v===0?'—':v}</td>`).join('')}</tr>`;
-  });
-  html += `</tbody></table></div>`;
-  document.getElementById('closer-data').innerHTML = html;
-
-  // bars
-  const bars = [
-    { label:'Kevin',  val:17.65, color:'var(--info)' },
-    { label:'Fabri',  val:33.33, color:'var(--ok)' },
-    { label:'Braian', val:8.33,  color:'var(--sand)' },
-    { label:'Total',  val:15.63, color:'var(--ink)' },
-  ];
-  document.getElementById('cierre-bars').innerHTML = bars.map(b => `
-    <div class="bar-row">
-      <div class="bar-labels"><span>${b.label}</span><span>${b.val}%</span></div>
-      <div class="bar-track"><div class="bar-fill" style="width:${b.val}%;background:${b.color}"></div></div>
-    </div>`).join('');
-}
-
-// ═══════════ AI ═══════════
-const SLACK_TXT = reportes.map(r=>`[${r.tipo}] ${r.nombre} (${r.closer}): ${r.texto}`).join('\n');
-const BIZ_CTX = `Negocio: Founders, mentoría para emprendedores, Argentina.
-Objetivo mayo: $120.000 · 25 ventas. Recaudado: $15.500 (12,9%). Falta: $96.500. Días restantes: 19.
-Cierres: 5 ventas · tasa 15,6%. ROAS: 3,11. Inversión ads: $4.344,76.
-Closers mayo: Kevin 3 cierres 17,65%; Braian 1 cierre 8,33%; Fabri 1 cierre 33,33%.
-Objeción principal: sin presupuesto 66,7%.`;
-
-async function callClaude(prompt) {
-  // El análisis con IA requiere una API key configurada en un backend propio.
-  // Por ahora retorna vacío para no mostrar errores.
-  return '';
-}
-
-async function generarAnalisisNegocio() {
-  const el = document.getElementById('ai-negocio-txt');
-  if (el) el.style.display = 'none';
-  const btn = document.querySelector('[onclick="generarAnalisisNegocio()"]');
-  if (btn) btn.style.display = 'none';
-}
-
-async function generarAnalisisLlamadas() {
-  const el = document.getElementById('ai-llamadas-txt');
-  if (el) el.style.display = 'none';
-}
-
-async function actualizarSlack() {
-  const el = document.getElementById('ai-llamadas-txt');
-  if (el) el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Actualizando desde Slack...</div>';
-  await fetchSlack();
-  generarAnalisisLlamadas();
-}
-
-// ═══════════ NAV ═══════════
-function switchTab(name) {
-  const names = ['negocio','agendas','cobranzas','llamadas','closers','anuncios','ventas'];
-  document.querySelectorAll('.tabBtn').forEach((t,i) => t.classList.toggle('active', names[i]===name));
-  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id==='tab-'+name));
-  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('active', b.id==='bnav-'+name));
-  window.scrollTo(0,0);
-}
-// ══════════ DATOS REALES DE LOS SHEETS ══════════
-
-// Cuadro de Resultados — datos por mes (0=Ene…11=Dic)
-const ventasData = {
-  0: { mes:'Enero',  ventas:10, back:0, total:10, front:'$48.001', backMonto:'$0', totalMonto:'$48.001', cc:'$61.983', recNueva:'$20.623', recCuotas:'$41.360', recBack:'$0', recBackCuotas:'$6.500', costos:'$41.309', ganancia:'$6.692', rentabilidad:'13,94%', rentCC:'33,35%', pcc:'129,1%',
-      gastos:{ sueldos:'$22.538', publicidad:'$9.064', apps:'$1.119', impuestos:'$4.720', formacion:'$2.329', otros:'$1.540' }, objetivo:'$120.000', objVentas:25 },
-  1: { mes:'Febrero', ventas:13, back:1, total:14, front:'$60.500', backMonto:'$10.000', totalMonto:'$70.500', cc:'$62.751', recNueva:'$36.000', recCuotas:'$24.751', recBack:'$1.000', recBackCuotas:'$2.000', costos:'$39.713', ganancia:'$30.787', rentabilidad:'43,67%', rentCC:'32,68%', pcc:'89,0%',
-      gastos:{ sueldos:'$25.871', publicidad:'$9.752', apps:'$1.274', impuestos:'$1.069', formacion:'$2.329', otros:'$1.134' }, objetivo:'$120.000', objVentas:25 },
-  2: { mes:'Marzo',  ventas:15, back:1, total:16, front:'$80.550', backMonto:'$5.000', totalMonto:'$85.550', cc:'$68.271', recNueva:'$38.850', recCuotas:'$29.421', recBack:'$5.000', recBackCuotas:'$3.000', costos:'$38.639', ganancia:'$46.912', rentabilidad:'54,84%', rentCC:'34,64%', pcc:'79,8%',
-      gastos:{ sueldos:'$25.705', publicidad:'$6.276', apps:'$985', impuestos:'$40', formacion:'$4.246', otros:'$1.387' }, objetivo:'$120.000', objVentas:25 },
-  3: { mes:'Abril',  ventas:13, back:0, total:13, front:'$70.000', backMonto:'$0', totalMonto:'$70.000', cc:'$65.132', recNueva:'$37.700', recCuotas:'$27.432', recBack:'$0', recBackCuotas:'$0', costos:'$42.988', ganancia:'$27.012', rentabilidad:'38,59%', rentCC:'31,63%', pcc:'93,1%',
-      gastos:{ sueldos:'$26.040', publicidad:'$11.697', apps:'$1.254', impuestos:'$40', formacion:'$2.950', otros:'$1.006' }, objetivo:'$120.000', objVentas:25 },
-  4: { mes:'Mayo',   ventas:6, back:0, total:6, front:'$27.000', backMonto:'$0', totalMonto:'$27.000', cc:'$19.500', recNueva:'$13.000', recCuotas:'$6.500', recBack:'$0', recBackCuotas:'$0', costos:'$0', ganancia:'$27.000', rentabilidad:'100%', rentCC:'65,96%', pcc:'65,96%',
-      gastos:{ sueldos:'$0', publicidad:'$0', apps:'$0', impuestos:'$0', formacion:'$0', otros:'$0' }, objetivo:'$120.000', objVentas:25 },
-};
-
-// Ads Tracker — datos por mes
-const adsDataByMonth = {
-  0: { inv:'$0',       agendas:'0',  cpa:'$0',      cal:'0',  asist:'0',  cierres:'0', pasist:'0%',     pcierres:'0%',    lc:'0%',   roas:'—',  leads:'0',  cpLead:'$0',     pCalif:'0%' },
-  1: { inv:'$1.773,60',agendas:'28', cpa:'$63,34',  cal:'28', asist:'27', cierres:'1', pasist:'96,4%',  pcierres:'3,7%',  lc:'1,3%', roas:'2,54', leads:'76', cpLead:'$23,34', pCalif:'36,8%', casist:'$65,69' },
-  2: { inv:'$6.518,43',agendas:'193',cpa:'$33,77',  cal:'108',asist:'104',cierres:'10',pasist:'96,3%',  pcierres:'9,6%',  lc:'5,2%', roas:'8,28', leads:'193',cpLead:'$33,77', pCalif:'55,4%', casist:'$62,68' },
-  3: { inv:'$10.375,92',agendas:'131',cpa:'$79,21', cal:'135',asist:'110',cierres:'8', pasist:'81,5%',  pcierres:'7,3%',  lc:'4,8%', roas:'4,14', leads:'168',cpLead:'$61,76', pCalif:'46,7%', casist:'$94,33' },
-  4: { inv:'$4.359,96',agendas:'28', cpa:'$155,71', cal:'28', asist:'22', cierres:'3', pasist:'91,67%', pcierres:'13,64%',lc:'5,36%',roas:'3,11', leads:'60', cpLead:'$72,67', pCalif:'46,7%', casist:'$198,18' },
-};
-
-function fmtMes(mi) { return ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][mi] || ''; }
-
-function updateAdsDisplay(p, monthIdx) {
-  const mi = (monthIdx !== undefined) ? monthIdx : currentMonthIdx;
-  const d = adsDataByMonth[mi] || adsDataByMonth[4];
-  const mes = fmtMes(mi).toLowerCase();
-  const set = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-  set('ads-period-label', fmtMes(mi) + ' · inversión y retorno');
-  set('ads-inversion', d.inv);
-  set('ads-periodo-ms', 'acumulado ' + mes);
-  set('ads-roas', d.roas);
-  set('ads-agendas', d.agendas);
-  set('ads-cpa', d.cpa);
-  set('ads-leads', d.leads);
-  set('ads-leads-ms', 'total ' + mes);
-  set('ads-cpl', d.cpLead);
-  set('ads-pcalif', d.pCalif);
-  set('ads-pcalif-ms', d.agendas + ' de ' + d.leads + ' leads');
-  set('ads-cal', d.cal);
-  set('ads-cal-pct', pct(d.cal, d.agendas) + '% de agendas');
-  set('ads-asist', d.asist);
-  set('ads-asist-pct', d.pasist + ' asistencia');
-  set('ads-cierres', d.cierres);
-  set('ads-cierres-pct', d.pcierres + ' de asistencias');
-  set('ads-bar-cpa', d.cpa);
-  set('ads-bar-casist', d.casist || '—');
-  set('ads-bar-lc', d.lc);
-  set('ads-bar-pcierres', d.pcierres);
-  // Sincronizar ROAS en NEGOCIO
-  set('neg-roas', d.roas || '—');
-  set('neg-roas-ms', 'inv. ' + (d.inv || '—'));
-}
-function pct(a, b) { const n = parseInt(b); return n ? Math.round(parseInt(a)/n*100) : 0; }
-
-function updateVentasDisplay(monthIdx) {
-  const mi = (monthIdx !== undefined) ? monthIdx : currentMonthIdx;
-  const d = ventasData[mi];
-  if (!d) return;
-  const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-
-  // Helpers para parsear montos almacenados como string "$X.XXX"
-  const toNum = (s) => { if (!s) return 0; return parseFloat(String(s).replace(/[$\s]/g,'').replace(/\./g,'').replace(',','.')) || 0; };
-
-  el('v-mes-label', d.mes + ' · objetivo');
-  el('v-objetivo', d.objetivo);
-  el('v-obj-ventas', d.objVentas);
-
-  const objNum   = toNum(d.objetivo);
-  const ccNum    = toNum(d.cc);
-  el('v-falta', _fmtDin(Math.max(0, objNum - ccNum)));
-  const faltaVentas = Math.max(0, (d.objVentas || 0) - (d.total || d.ventas || 0));
-  el('v-falta-ventas', faltaVentas);
-
-  el('v-ventas-total', d.total || d.ventas || 0);
-  el('v-front-monto', d.front || d.totalMonto || '—');
-  el('v-cc', d.cc);
-  el('v-costos', d.costos || '—');
-  el('v-venta-nueva', d.ventas || 0);
-  el('v-front-total', d.front || d.totalMonto || '—');
-  el('v-rec-nueva', d.recNueva || '—');
-  el('v-rec-cuotas', d.recCuotas || '—');
-  el('v-back-cant', d.back || 0);
-  el('v-back-monto', d.backMonto || '$0');
-  el('v-rec-back', d.recBack || '$0');
-  el('v-rec-back-cuotas', d.recBackCuotas || '$0');
-  el('v-ganancia', d.ganancia || '—');
-  el('v-rentabilidad', d.rentabilidad || '—');
-
-  // gastos (de ventasData o de la última lectura de EGRESOS)
-  const g = d.gastos || {};
-  el('v-sueldo', g.sueldos    || '$0');
-  el('v-pub',    g.publicidad || '$0');
-  el('v-apps',   g.apps       || '$0');
-  el('v-admin',  g.admin      || '$0');
-  el('v-form',   g.formacion  || '$0');
-  el('v-imp',    g.impuestos  || '$0');
-  el('v-otros',  g.otros      || '$0');
-  el('v-total-gastos', g.total || '$0');
-
-  // progress bar
-  const totalNum = toNum(d.totalMonto || d.front || '0');
-  const pctVal   = objNum > 0 ? Math.min(100, Math.round(totalNum / objNum * 100)) : 0;
-  el('v-pct', pctVal + '%');
-  const bar = document.getElementById('v-progress-fill');
-  if(bar) bar.style.width = pctVal + '%';
-  const meta = document.getElementById('v-progress-meta');
-  if(meta) meta.textContent = (d.totalMonto || d.front || '$0') + ' vendido de ' + d.objetivo + ' objetivo';
-
-  // Sincronizar métricas clave en el tab NEGOCIO
-  el('neg-mes-label', 'Estado de ' + d.mes);
-  el('neg-ventas-monto', d.totalMonto || d.front || '—');
-  el('neg-ventas-ms', 'de ' + d.objetivo + ' objetivo');
-  el('neg-falta', _fmtDin(Math.max(0, objNum - ccNum)));
-  el('neg-falta-ms', faltaVentas + ' ventas · faltan');
-  el('neg-cierres-label', 'Cierres ' + d.mes.toLowerCase());
-  el('neg-cierres', d.ventas || 0);
-}
-
-function setPeriod(p, btn) {
-  currentPeriod = p;
-  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  guardarEnMemoria('founders_periodo', p);
-  updateAdsDisplay(p, currentMonthIdx);
-  updateVentasDisplay(currentMonthIdx);
-  updateLlamadasPeriod(p);
-}
-// setMonth definido abajo con memoria
-function setCloser(name, btn) {
-  currentCloser = name;
-  document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderCloser(name);
-}
-
-// ═══════════ INIT ═══════════
-function tick() {
-  document.getElementById('ts-live').textContent =
-    new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-}
-
-// ══════════ AGENDAS ══════════
-
-// Semana actual: Lun 12 May a Vie 16 May 2026
-// Todas las agendas reales del canal #comercial-agenda esta semana
-
-// Las que ENTRARON esta semana (por fecha de posteo lun-vie)
-const agendasEntradas = [
-  // Martes 12 (hoy) — entraron hoy
-  { fuente:'Automática', nombre:'Yanina',        fecha_llamada:'Vie 15 May 13:30', dia_entrada:'Mar 12', ocupacion:'Nutricionista funcional', nicho:'Salud / nutrición', confirmar:false },
-  { fuente:'Bio IG',     nombre:'Daniela Librandi', fecha_llamada:'Jue 14 May 12:00', dia_entrada:'Mar 12', ocupacion:'Consultora financiera independiente, ex auditora bancaria', nicho:'Finanzas / consultoría', confirmar:false },
-  { fuente:'Automática', nombre:'Antonella Rossi', fecha_llamada:'Mar 19 May 11:30', dia_entrada:'Mar 12', ocupacion:'Arquitecta e interiorista, vende ebooks de decoración online', nicho:'Arquitectura / diseño', confirmar:false },
-  { fuente:'Automática', nombre:'Silvana',       fecha_llamada:'Mié 13 May 10:00', dia_entrada:'Mar 12', ocupacion:'Acompañamiento a mujeres +40 — energía, depuración y peso', nicho:'Salud / bienestar', confirmar:false },
-  { fuente:'Bio IG',     nombre:'Valeria',       fecha_llamada:'Mié 13 May 12:00', dia_entrada:'Mar 12', ocupacion:'Nutricionista, cambio de hábitos en personas de todas las edades', nicho:'Salud / nutrición', confirmar:false },
-  { fuente:'Automática', nombre:'Rocío',         fecha_llamada:'Mié 13 May 15:00', dia_entrada:'Mar 12', ocupacion:'Servicio gastronómico para empresas', nicho:'Gastronomía', confirmar:true },
-  { fuente:'Automática', nombre:'Jimena',        fecha_llamada:'Mié 13 May 13:00', dia_entrada:'Mar 12', ocupacion:'Psiquiatra — recuperar control de emociones y vida', nicho:'Salud / salud mental', confirmar:false },
-  { fuente:'Automática', nombre:'Javier Eduardo',fecha_llamada:'Jue 14 May 12:30', dia_entrada:'Mar 12', ocupacion:'Mentorías', nicho:'Coaching / mentoría', confirmar:false },
-  // Lunes 11 — entraron ayer (inicio de semana)
-  { fuente:'Automática', nombre:'Rodrigo',       fecha_llamada:'Mié 13 May 10:00', dia_entrada:'Lun 11', ocupacion:'Asesores de viajes nacionales e internacionales', nicho:'Turismo / viajes', confirmar:false },
-  { fuente:'Automática', nombre:'Virginia Sebouhdanian', fecha_llamada:'Vie 15 May 10:00', dia_entrada:'Lun 11', ocupacion:'Agente inmobiliario', nicho:'Inmobiliario', confirmar:false },
-  { fuente:'Bio IG',     nombre:'Michael Pleasonton', fecha_llamada:'Mié 13 May 12:00', dia_entrada:'Lun 11', ocupacion:'Embodiment coaching — identidad corporal y movimiento', nicho:'Coaching / bienestar', confirmar:false },
-  { fuente:'Automática', nombre:'Martin Fernandez', fecha_llamada:'Mar 12 May 14:00', dia_entrada:'Lun 11', ocupacion:'Director comercial y broker de seguros', nicho:'Finanzas / seguros', confirmar:false },
-  { fuente:'Bio IG',     nombre:'Eugenia Castro Jalil', fecha_llamada:'Mar 12 May 16:00', dia_entrada:'Lun 11', ocupacion:'Arquitecta — proyectos de cortinas y espacios para edificios', nicho:'Arquitectura / diseño', confirmar:false },
-  { fuente:'Automática', nombre:'Abel Villarroel', fecha_llamada:'Mar 12 May 14:30', dia_entrada:'Lun 11', ocupacion:'Clases', nicho:'Educación', confirmar:true },
-];
-
-// Las que TIENEN LLAMADA esta semana (lun-vie), extraído de fecha_llamada
-const agendasLlamadaSemana = [
-  { fuente:'Automática', nombre:'Martin Fernandez',    dia:'Mar 12', hora:'14:00', ocupacion:'Director comercial, broker de seguros', nicho:'Finanzas / seguros' },
-  { fuente:'Bio IG',     nombre:'Eugenia Castro Jalil',dia:'Mar 12', hora:'16:00', ocupacion:'Arquitecta — cortinas y espacios', nicho:'Arquitectura' },
-  { fuente:'Automática', nombre:'Abel Villarroel',     dia:'Mar 12', hora:'14:30', ocupacion:'Clases', nicho:'Educación' },
-  { fuente:'Automática', nombre:'Silvana',             dia:'Mié 13', hora:'10:00', ocupacion:'Acompañamiento mujeres +40, depuración', nicho:'Salud / bienestar' },
-  { fuente:'Bio IG',     nombre:'Valeria',             dia:'Mié 13', hora:'12:00', ocupacion:'Nutricionista', nicho:'Salud / nutrición' },
-  { fuente:'Automática', nombre:'Jimena',              dia:'Mié 13', hora:'13:00', ocupacion:'Psiquiatra', nicho:'Salud / mental' },
-  { fuente:'Bio IG',     nombre:'Michael Pleasonton',  dia:'Mié 13', hora:'12:00', ocupacion:'Embodiment coaching', nicho:'Coaching' },
-  { fuente:'Automática', nombre:'Rocío',               dia:'Mié 13', hora:'15:00', ocupacion:'Servicio gastronómico empresas', nicho:'Gastronomía' },
-  { fuente:'Automática', nombre:'Javier Eduardo',      dia:'Jue 14', hora:'12:30', ocupacion:'Mentorías', nicho:'Coaching' },
-  { fuente:'Bio IG',     nombre:'Daniela Librandi',    dia:'Jue 14', hora:'12:00', ocupacion:'Consultora financiera', nicho:'Finanzas' },
-  { fuente:'Automática', nombre:'L. Antonella',        dia:'Jue 14', hora:'11:00', ocupacion:'Arquitecta, interiorismo y muebles', nicho:'Arquitectura' },
-  { fuente:'Automática', nombre:'Vanesa',              dia:'Jue 14', hora:'10:00', ocupacion:'Asesora en planificación financiera', nicho:'Finanzas' },
-  { fuente:'Automática', nombre:'Pia De Aurteneche',   dia:'Jue 14', hora:'16:00', ocupacion:'Yoga, pranayama y meditación', nicho:'Salud / bienestar' },
-  { fuente:'Automática', nombre:'Virginia',            dia:'Vie 15', hora:'10:00', ocupacion:'Agente inmobiliario', nicho:'Inmobiliario' },
-  { fuente:'Automática', nombre:'Yanina',              dia:'Vie 15', hora:'13:30', ocupacion:'Nutricionista funcional', nicho:'Salud' },
-  { fuente:'Automática', nombre:'Mauricio',            dia:'Vie 15', hora:'14:00', ocupacion:'Servicios a franquicias e inversores inmobiliarios', nicho:'Inmobiliario' },
-];
-
-let agendaVista = 'entradas'; // 'entradas' | 'llamadas'
-
-function getLunesViernes() {
-  const hoy = new Date();
-  const dia = hoy.getDay(); // 0=dom, 1=lun...
-  const diffLunes = dia === 0 ? -6 : 1 - dia;
-  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() + diffLunes);
-  const viernes = new Date(lunes); viernes.setDate(lunes.getDate() + 4);
-  const fmt = d => d.toLocaleDateString('es-AR', {day:'numeric', month:'short'});
-  return `Lun ${fmt(lunes)} — Vie ${fmt(viernes)}`;
-}
-
-function renderAgendas(vista) {
-  agendaVista = vista || agendaVista;
-  const list = document.getElementById('ag-nichos-list');
-  const boxTitle = document.getElementById('ag-box-title');
-  if (!list) return;
-
-  const semanaLabel = getLunesViernes();
-
-  if (agendaVista === 'entradas') {
-    const data = agendasEntradas;
-    if (boxTitle) boxTitle.textContent = `Entraron esta semana (${semanaLabel})`;
-    // Agrupar por día de entrada
-    const dias = [...new Set(data.map(a=>a.dia_entrada))];
-    list.innerHTML = dias.map(dia => {
-      const agsDia = data.filter(a=>a.dia_entrada===dia);
-      return `<div style="font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;font-family:var(--font2);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:4px">${dia}</div>` +
-      agsDia.map(a => `
-        <div class="lead">
-          <div class="lead-meta">
-            <span class="pill ${a.fuente==='Bio IG'?'p-seg':'p-call'}">${a.fuente==='Bio IG'?'Bio IG':'Auto'}</span>
-            <div class="lead-name">${a.nombre}</div>
-            <div class="lead-closer" style="margin-top:2px">📅 ${a.fecha_llamada}</div>
-            ${a.confirmar?'<span class="pill p-hot" style="margin-top:4px">⚠ nicho</span>':''}
-          </div>
-          <div class="lead-body">
-            <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">${a.nicho}</div>
-            <div>${a.ocupacion}</div>
-          </div>
-        </div>`).join('');
-    }).join('');
-
-    document.getElementById('ag-total').textContent = data.length;
-    document.getElementById('ag-auto').textContent = data.filter(a=>a.fuente==='Automática').length;
-    document.getElementById('ag-ig').textContent = data.filter(a=>a.fuente==='Bio IG').length;
-
-  } else {
-    // Vista llamadas de la semana, agrupada por día
-    const dias = ['Mar 12','Mié 13','Jue 14','Vie 15'];
-    if (boxTitle) boxTitle.textContent = `Llamadas esta semana (${semanaLabel})`;
-    const data = agendasLlamadaSemana;
-    list.innerHTML = dias.map(dia => {
-      const agsDia = data.filter(a=>a.dia===dia);
-      if (!agsDia.length) return '';
-      return `<div style="font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;font-family:var(--font2);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:4px">${dia}</div>` +
-      agsDia.map(a => `
-        <div class="lead">
-          <div class="lead-meta">
-            <span class="pill ${a.fuente==='Bio IG'?'p-seg':'p-call'}">${a.fuente==='Bio IG'?'Bio IG':'Auto'}</span>
-            <div class="lead-name">${a.nombre}</div>
-            <div class="lead-closer">${a.hora}</div>
-          </div>
-          <div class="lead-body">
-            <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">${a.nicho}</div>
-            <div>${a.ocupacion}</div>
-          </div>
-        </div>`).join('');
-    }).join('');
-
-    document.getElementById('ag-total').textContent = data.length;
-    document.getElementById('ag-auto').textContent = data.filter(a=>a.fuente==='Automática').length;
-    document.getElementById('ag-ig').textContent = data.filter(a=>a.fuente==='Bio IG').length;
-  }
-}
-
-async function generarAnalisisAgendas() {
-  const el = document.getElementById('ai-agendas-txt');
-  if (el) el.style.display = 'none';
-}
-
-async function actualizarAgendas() {
-  await fetchSlack();
-  renderAgendas('entradas');
-  generarAnalisisAgendas();
-}
-
-
-// Datos de llamadas por período
-const llamadasData = {
-  dia: {
-    label: 'Hoy · llamadas y seguimientos',
-    kpiLabel: 'Llamadas nuevas hoy', segLabel: 'Seguimientos hoy',
-    nuevas: 4, nuevasMs: 'Kevin 2 · Braian 2',
-    segs: 2, hot: 2,
-    reportes: [
-      { tipo:'LLAMADA NUEVA', nombre:'Guillermo Fogelman', closer:'Kevin', texto:'Lic. en seguridad, consultora incipiente. Se inclina por Founders pero tiene última reunión hoy 16hs. Confirma mañana.', estado:'hot' },
-      { tipo:'LLAMADA NUEVA', nombre:'Marcelo Casanova', closer:'Kevin', texto:'Economista, feng shui. Sin urgencia. Buena conexión. Define el 20.', estado:'warm' },
-      { tipo:'LLAMADA NUEVA', nombre:'Javier Martinez Luque', closer:'Braian', texto:'Coaching ejecutivo. Desconfiado, frustrado con mentorías pasadas. Difícil.', estado:'cold' },
-      { tipo:'LLAMADA NUEVA', nombre:'Romina Correa', closer:'Kevin', texto:'Lic. en mkt. Le encantó la propuesta, va por M1. Activando tarjeta hoy o mañana.', estado:'hot' },
-      { tipo:'SEGUIMIENTO', nombre:'Ivana y Karina', closer:'Kevin', texto:'Cancelaron 2da llamada. Sin ingresos, no quieren endeudarse.', estado:'cold' },
-      { tipo:'SEGUIMIENTO', nombre:'Duplo agencia', closer:'Kevin', texto:'Confirman pago el 15. Esperando cobros para señar.', estado:'hot' },
-    ]
-  },
-  semana: {
-    label: 'Esta semana · llamadas y seguimientos',
-    kpiLabel: 'Llamadas nuevas semana', segLabel: 'Seguimientos semana',
-    nuevas: 18, nuevasMs: 'Kevin 9 · Braian 7 · Fabri 2',
-    segs: 11, hot: 7,
-    reportes: [
-      { tipo:'LLAMADA NUEVA', nombre:'Guillermo Fogelman', closer:'Kevin', texto:'Confirma mañana — reunión con otra empresa hoy.', estado:'hot' },
-      { tipo:'LLAMADA NUEVA', nombre:'Romina Correa', closer:'Kevin', texto:'Activando tarjeta hoy o mañana. Lista para M1.', estado:'hot' },
-      { tipo:'LLAMADA NUEVA', nombre:'Marcelo Casanova', closer:'Kevin', texto:'Define el 20. Economista, buena conexión.', estado:'warm' },
-      { tipo:'LLAMADA NUEVA', nombre:'Mariana Dolhare', closer:'Kevin', texto:'Influencer consultando con otra agencia. Define el viernes.', estado:'warm' },
-      { tipo:'LLAMADA NUEVA', nombre:'Javier Martinez Luque', closer:'Braian', texto:'Coaching ejecutivo. Muy defensivo. Seguimiento difícil.', estado:'cold' },
-      { tipo:'LLAMADA NUEVA', nombre:'Julio Burna', closer:'Braian', texto:'Terapeuta transpersonal. 2da llamada agendada el jueves.', estado:'warm' },
-      { tipo:'SEGUIMIENTO', nombre:'Duplo agencia', closer:'Kevin', texto:'Paga el 15. Esperando cobros.', estado:'hot' },
-      { tipo:'SEGUIMIENTO', nombre:'Ines Juri', closer:'Kevin', texto:'Pendiente de definición.', estado:'warm' },
-      { tipo:'SEGUIMIENTO', nombre:'Jose Becerra', closer:'Kevin', texto:'Decide con su esposa esta semana.', estado:'warm' },
-    ]
-  },
-  mes: {
-    label: 'Mayo · llamadas y seguimientos',
-    kpiLabel: 'Llamadas nuevas mayo', segLabel: 'Seguimientos mayo',
-    nuevas: 38, nuevasMs: 'consolidado del mes',
-    segs: 32, hot: 12,
-    reportes: [] // en mes se muestra resumen, no lista completa
-  }
-};
-
-function updateLlamadasPeriod(p) {
-  const d = llamadasData[p] || llamadasData.dia;
-  const set = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-  set('kpi-llamadas-label', d.kpiLabel);
-  set('kpi-nuevas', d.nuevas);
-  set('kpi-nuevas-ms', d.nuevasMs);
-  set('kpi-seg-label', d.segLabel);
-  set('kpi-segs', d.segs);
-  set('kpi-hot-leads', d.hot);
-  // Actualizar reportes
-  if (d.reportes.length > 0) {
-    renderReportesData(d.reportes);
-    renderResumenLlamadas(d.reportes);
-  } else {
-    document.getElementById('reportes-list').innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px 0;text-align:center">Ver datos en pestaña Closers para el mes completo</div>';
-  }
-  // Regenerar análisis IA
-  generarAnalisisLlamadasConDatos(d.reportes);
-}
-
-function renderResumenLlamadas(data) {
-  const list = document.getElementById('resumen-llamadas-list');
-  if (!list || !data || data.length === 0) {
-    if(list) list.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:4px 0">No hay reportes para mostrar</div>';
-    return;
-  }
-  const nuevas  = data.filter(r => r.tipo === 'LLAMADA NUEVA');
-  const segs    = data.filter(r => r.tipo === 'SEGUIMIENTO');
-  const calientes = data.filter(r => r.estado === 'hot');
-  const tibios    = data.filter(r => r.estado === 'warm');
-  const frios     = data.filter(r => r.estado === 'cold');
-
-  list.innerHTML = `
-    <div class="grid g3" style="margin-bottom:12px">
-      <div class="mc info"><div class="ml">Llamadas nuevas</div><div class="mv">${nuevas.length}</div></div>
-      <div class="mc sand"><div class="ml">Seguimientos</div><div class="mv">${segs.length}</div></div>
-      <div class="mc warn"><div class="ml">Calientes</div><div class="mv">${calientes.length}</div></div>
-    </div>
-    <div class="prow"><div class="prow-l">🔥 Calientes</div><div class="prow-r" style="color:var(--warn);font-weight:700">${calientes.map(r=>r.nombre).join(' · ') || '—'}</div></div>
-    <div class="prow"><div class="prow-l">🌡 Tibios</div><div class="prow-r" style="color:var(--info)">${tibios.map(r=>r.nombre).join(' · ') || '—'}</div></div>
-    <div class="prow"><div class="prow-l">❄ Difíciles</div><div class="prow-r" style="color:var(--ink3)">${frios.map(r=>r.nombre).join(' · ') || '—'}</div></div>`;
-}
-
-function renderReportesData(data) {
-  const tCls = { 'LLAMADA NUEVA':'p-call', 'SEGUIMIENTO':'p-seg' };
-  const eCls = { hot:'p-hot', warm:'p-warm', cold:'p-cold' };
-  const eLabel= { hot:'caliente', warm:'tibio', cold:'difícil' };
-  const list = document.getElementById('reportes-list');
-  if (!list) return;
-  list.innerHTML = data.map(r => `
-    <div class="lead">
-      <div class="lead-meta">
-        <span class="pill ${tCls[r.tipo]||'p-seg'}">${r.tipo}</span>
-        <div class="lead-name">${r.nombre}</div>
-        <div class="lead-closer">${r.closer}</div>
-        <span class="pill ${eCls[r.estado]||'p-cold'}" style="margin-top:5px">${eLabel[r.estado]||r.estado}</span>
-      </div>
-      <div class="lead-body">${r.texto}</div>
-    </div>`).join('');
-}
-
-async function generarAnalisisLlamadasConDatos(reportesData) {
-  const el = document.getElementById('ai-llamadas-txt');
-  if (el) el.style.display = 'none';
-}
-
-// ══════════ MEMORIA / STORAGE ══════════
-function guardarEnMemoria(clave, valor) {
-  try { localStorage.setItem(clave, JSON.stringify(valor)); } catch(e) {}
-}
-
-function leerDeMemoria(clave) {
-  try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : null; } catch(e) { return null; }
-}
-
-function initMemoria() {
-  const p = leerDeMemoria('founders_periodo');
-  if (p) {
-    currentPeriod = p;
-    const btn = [...document.querySelectorAll('.pbtn')].find(b => b.textContent.toLowerCase().includes(p === 'dia' ? 'hoy' : p));
-    if (btn) { document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-  }
-  const mi = leerDeMemoria('founders_mes');
-  if (mi !== null) {
-    currentMonthIdx = mi;
-    const sel = document.getElementById('month-sel');
-    if (sel) sel.value = mi;
-  }
-  updateAdsDisplay(currentPeriod, currentMonthIdx);
-  updateVentasDisplay(currentMonthIdx);
-  updateLlamadasPeriod(currentPeriod);
-}
-
-// Sobrescribir setPeriod y setMonth para guardar en memoria
-
-function setMonth(val) {
-  currentMonthIdx = parseInt(val);
-  renderCloser(currentCloser);
-  updateVentasDisplay(currentMonthIdx);
-  updateAdsDisplay(currentPeriod, currentMonthIdx);
-  guardarEnMemoria('founders_mes', parseInt(val));
-}
-
-
-// ══════════ CONEXIÓN CON APPS SCRIPT (Slack) ══════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEj8RqWOWw8Ck-t-0F19cY8yfojZwYe3IjT0r0dQMmnK5sZmNrz0kv_q5tfs4F73B2/exec';
-
-// ══════════ GOOGLE SHEETS API — PLANILLA ÚNICA ══════════
+// ── Config ──
+const SHEET_ID       = '13cqe5BHs4RNbhFSOCle9lAPL9Cbnxh4UacM5ncrfnF8';
 const SHEETS_API_KEY = 'AIzaSyA1MBSrFkzHs_92REv9nzPkG4vVIfr3x1o';
-const SHEET_ID = '13cqe5BHs4RNbhFSOCle9lAPL9Cbnxh4UacM5ncrfnF8';
-// Pestañas: NEGOCIO | ADS | CLOSERS | COBRANZAS | EGRESOS
+const SLACK_URL      = 'https://script.google.com/macros/s/AKfycbwEj8RqWOWw8Ck-t-0F19cY8yfojZwYe3IjT0r0dQMmnK5sZmNrz0kv_q5tfs4F73B2/exec';
 
+// ── Estado ──
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let currentMonthIdx = new Date().getMonth();
+let currentPeriod   = 'mes';
+let currentCloser   = 'Todos';
+
+// ── Stores de datos ──
+const negocioData  = {};   // { mi: { ventas, back, total, front, ... } }
+const anunciosData = {};   // { mi: { inv, agendas, cpa, ... } }
+const egresosData  = {};   // { mi: { sueldos, pub, apps, admin, form, imp, extras, total } }
+const closersStore = {};   // { 'Todos': { agendadas:[], ... }, 'Kevin': {...}, ... }
+const cobranzasSemana = [];
+const deudoresActivos = [];
+let _lastCobranzasRows = null;
+
+// ── Helpers ──
 async function leerSheet(tab, rango) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab)}!${rango}?key=${SHEETS_API_KEY}&valueRenderOption=UNFORMATTED_VALUE`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Sheet ${tab}: ${res.status}`);
-  const data = await res.json();
-  return data.values || [];
+  if (!res.ok) throw new Error(`Sheet "${tab}": HTTP ${res.status}`);
+  return (await res.json()).values || [];
 }
 
-async function tryLeerSheet(tab, rango) {
-  try {
-    const rows = await leerSheet(tab, rango);
-    console.log(`✓ Pestaña "${tab}": ${rows.length} filas`);
-    return rows;
-  } catch(e) {
-    console.warn(`✗ Pestaña "${tab}" falló: ${e.message}`);
-    return null;
-  }
+function serialToDate(s) {
+  // Google Sheets serial date → JS Date
+  return new Date(Math.round((Number(s) - 25569) * 86400000));
 }
 
-async function fetchDatosLive() {
-  console.log('Leyendo Sheets...');
-  const [negocioRows, adsRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
-    tryLeerSheet('negocio',   'A1:Z60'),
-    tryLeerSheet('anuncios',  'A1:Z30'),
-    tryLeerSheet('closers',   'A1:Z80'),
-    tryLeerSheet('cobranzas', 'A1:Z500'),
-    tryLeerSheet('egresos',   'A1:Z20'),
-  ]);
-
-  if (negocioRows)   procesarNegocio(negocioRows);
-  if (adsRows)       procesarAds(adsRows);
-  if (closersRows)   procesarClosers(closersRows);
-  if (cobranzasRows) procesarCobranzas(cobranzasRows);
-  if (egresosRows)   procesarEgresos(egresosRows);
-
-  const ts = document.getElementById('ts-live');
-  if (ts) ts.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
-}
-
-// ── Helpers globales de parseo ──
-function _parseFecha(str) {
+function parseFechaStr(str) {
   if (!str) return null;
-  const s = String(str).trim();
-  // DD/MM/YYYY o D/M/YYYY
-  const p = s.split('/');
-  if (p.length === 3) {
-    const [d, m, y] = p.map(Number);
-    if (d && m && y) return new Date(y, m - 1, d);
-  }
-  // ISO YYYY-MM-DD
-  const iso = new Date(s);
-  return isNaN(iso) ? null : iso;
+  const p = String(str).split('/');
+  if (p.length === 3) { const [d,m,y] = p.map(Number); if(d&&m&&y) return new Date(y,m-1,d); }
+  const d = new Date(str); return isNaN(d) ? null : d;
 }
-function _parseMonto(v) {
-  if (v === null || v === undefined || v === '') return 0;
+
+function parseMonto(v) {
   if (typeof v === 'number') return v;
-  // Sheets puede devolver strings con formato: "$1.500,50", "1,000", "1.000"
-  const s = String(v).replace(/[$\s]/g, '');
-  // Si tiene coma Y punto: el último es decimal
+  if (!v) return 0;
+  // Handles '$2.500,00' (AR: dot=miles, comma=decimal) and '$1,773.60' (US)
+  const s = String(v).replace(/[$\s]/g,'');
   if (s.includes(',') && s.includes('.')) {
-    const lastComma = s.lastIndexOf(',');
-    const lastDot   = s.lastIndexOf('.');
-    if (lastDot > lastComma) return parseFloat(s.replace(/,/g,'')) || 0;  // 1,000.50
-    return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;         // 1.000,50
+    const li = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+    return ld > li
+      ? parseFloat(s.replace(/,/g,'')) || 0          // 1,773.60
+      : parseFloat(s.replace(/\./g,'').replace(',','.')) || 0; // 2.500,00
   }
-  // Solo coma: puede ser miles (1,000) o decimal (1,5)
   if (s.includes(',')) {
-    const partes = s.split(',');
-    if (partes[partes.length-1].length === 3) return parseFloat(s.replace(',','')) || 0; // miles
-    return parseFloat(s.replace(',','.')) || 0; // decimal
+    const parts = s.split(',');
+    return parts[parts.length-1].length === 3
+      ? parseFloat(s.replace(',','')) || 0   // 2,500 = miles
+      : parseFloat(s.replace(',','.')) || 0; // 2,5 = decimal
   }
-  // Solo punto o nada
-  return parseFloat(s.replace(/\./g, (m,o,str) => {
-    // Si hay varios puntos, todos son miles excepto el último
-    const count = (str.match(/\./g)||[]).length;
-    return count > 1 ? '' : '.';
-  })) || 0;
+  return parseFloat(s.replace(/\./g, (m,o,str) => (str.match(/\./g)||[]).length>1?'':'.')) || 0;
 }
-function _fmtDin(n) {
+
+function fmtDin(n) {
   if (!n && n !== 0) return '$0';
-  return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2});
+  return '$' + Math.round(Number(n)).toLocaleString('es-AR');
 }
-function _semanaActual() {
+
+function fmtPct(n) {
+  if (typeof n === 'number') return (n * 100).toFixed(1).replace('.',',') + '%';
+  return String(n);
+}
+
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString('es-AR');
+}
+
+function set(id, val) {
+  const e = document.getElementById(id);
+  if (e) e.textContent = val;
+}
+
+function semanaActual() {
   const hoy = new Date();
   const diffLun = hoy.getDay() === 0 ? -6 : 1 - hoy.getDay();
   const lunes = new Date(hoy); lunes.setDate(hoy.getDate() + diffLun); lunes.setHours(0,0,0,0);
@@ -1589,621 +1042,710 @@ function _semanaActual() {
   return { lunes, viernes };
 }
 
-// ── Procesador COBRANZAS ──
-// Columnas: Mes(0) | Nombre(1) | Programa(2) | N de cuota(3) | Cant cuotas(4) | MontoCuota(5) | FechaCuota(6) | Medio(7) | Estado(8)
+function getLunesViernes() {
+  const { lunes, viernes } = semanaActual();
+  const fmt = d => d.toLocaleDateString('es-AR', {day:'numeric', month:'short'});
+  return `Lun ${fmt(lunes)} — Vie ${fmt(viernes)}`;
+}
+
+// ── Procesadores ──
+
+// NEGOCIO: col 0=Mes, 1=ventasNuevas, 2=ventasBack, 3=ventasTotales, 4=ventasFront$,
+//  5=ventasBack$, 6=ventasTOTAL$, 7=cashCollected, 8=recNueva, 9=recRecFront,
+//  10=recBack, 11=recRecBack, 12=%CC, 13=costos, 14=ganancia, 15=rentabilidad,
+//  16=objetivo$, 17=objVentas, 18=faltaVentas, 19=faltaObj
+function procesarNegocio(rows) {
+  if (!rows || rows.length < 2) return;
+  rows.slice(1).forEach(row => {
+    const mes = String(row[0]||'').trim();
+    const mi = MONTHS.findIndex(m => m.toLowerCase() === mes.toLowerCase());
+    if (mi < 0) return;
+    negocioData[mi] = {
+      mes,
+      ventas:      Number(row[1]) || 0,
+      back:        Number(row[2]) || 0,
+      total:       Number(row[3]) || 0,
+      front:       Number(row[4]) || 0,
+      backMonto:   Number(row[5]) || 0,
+      totalMonto:  Number(row[6]) || 0,
+      cc:          Number(row[7]) || 0,
+      recNueva:    Number(row[8]) || 0,
+      recRecFront: Number(row[9]) || 0,
+      recBack:     Number(row[10]) || 0,
+      recRecBack:  Number(row[11]) || 0,
+      pcc:         Number(row[12]) || 0,
+      costos:      Number(row[13]) || 0,
+      ganancia:    Number(row[14]) || 0,
+      rentabilidad:Number(row[15]) || 0,
+      objetivo:    Number(row[16]) || 0,
+      objVentas:   Number(row[17]) || 0,
+      faltaVentas: Number(row[18]) || 0,
+      faltaObj:    Number(row[19]) || 0,
+    };
+  });
+  updateNegocioDisplay();
+  updateVentasDisplay();
+}
+
+// ANUNCIOS: col 0=Mes, 1=Inversión, 2=Agendas, 3=CPA, 4=LlamadasCal,
+//  5=Asistencias, 6=%Asistencia(0-1), 7=$Asistencia, 8=Cierres,
+//  9=%Cierres(0-1), 10=%LC(0-1), 11=ROAS, 12=ROAS CASH
+function procesarAnuncios(rows) {
+  if (!rows || rows.length < 2) return;
+  rows.slice(1).forEach(row => {
+    const mes = String(row[0]||'').trim();
+    const mi = MONTHS.findIndex(m => m.toLowerCase() === mes.toLowerCase());
+    if (mi < 0) return;
+    anunciosData[mi] = {
+      inv:      Number(row[1])  || 0,
+      agendas:  Number(row[2])  || 0,
+      cpa:      Number(row[3])  || 0,
+      cal:      Number(row[4])  || 0,
+      asist:    Number(row[5])  || 0,
+      pasist:   Number(row[6])  || 0,  // float 0-1
+      casist:   Number(row[7])  || 0,
+      cierres:  Number(row[8])  || 0,
+      pcierres: Number(row[9])  || 0,  // float 0-1
+      lc:       Number(row[10]) || 0,  // float 0-1
+      roas:     Number(row[11]) || 0,
+      roasCash: Number(row[12]) || 0,
+    };
+  });
+  updateAnunciosDisplay();
+}
+
+// EGRESOS: col 0=Mes, 1=Sueldos, 2=Publicidad, 3=APPS,
+//  4=GastosAdmin, 5=Formacion, 6=Impuestos, 7=Extras
+function procesarEgresos(rows) {
+  if (!rows || rows.length < 2) return;
+  rows.slice(1).forEach(row => {
+    const mes = String(row[0]||'').trim();
+    const mi = MONTHS.findIndex(m => m.toLowerCase() === mes.toLowerCase());
+    if (mi < 0) return;
+    const g = {
+      sueldos: parseMonto(row[1]),
+      pub:     parseMonto(row[2]),
+      apps:    parseMonto(row[3]),
+      admin:   parseMonto(row[4]),
+      form:    parseMonto(row[5]),
+      imp:     parseMonto(row[6]),
+      extras:  parseMonto(row[7]),
+    };
+    g.total = g.sueldos + g.pub + g.apps + g.admin + g.form + g.imp + g.extras;
+    egresosData[mi] = g;
+    if (negocioData[mi]) { negocioData[mi].costos = g.total; negocioData[mi].gastos = g; }
+  });
+  updateEgresosDisplay();
+}
+
+// CLOSERS: col 0=Mes, 1=Closer, 2=Agendadas, 3=Asistencias,
+//  4=Reagenda, 5=SegundaLlamada, 6=AsistSegunda, 7=Ofertas,
+//  8=Seña, 9=Cierres, 10=%cierre, 11=%asistencia
+function procesarClosers(rows) {
+  if (!rows || rows.length < 2) return;
+  rows.slice(1).forEach(row => {
+    const mes    = String(row[0]||'').trim();
+    const closer = String(row[1]||'').trim();
+    const mi = MONTHS.findIndex(m => m.toLowerCase() === mes.toLowerCase());
+    if (mi < 0 || !closer) return;
+    if (!closersStore[closer]) {
+      closersStore[closer] = {
+        agendadas:   new Array(12).fill(0),
+        asistencias: new Array(12).fill(0),
+        cierres:     new Array(12).fill(0),
+        pcierre:     new Array(12).fill('—'),
+        pasist:      new Array(12).fill('—'),
+      };
+    }
+    closersStore[closer].agendadas[mi]   = parseInt(row[2])  || 0;
+    closersStore[closer].asistencias[mi] = parseInt(row[3])  || 0;
+    closersStore[closer].cierres[mi]     = parseInt(row[9])  || 0;
+    closersStore[closer].pcierre[mi]     = row[10] || '—';
+    closersStore[closer].pasist[mi]      = row[11] || '—';
+  });
+  // Actualizar tabs de closers en el HTML
+  actualizarBotonesClosers();
+  renderCloser(currentCloser);
+}
+
+// COBRANZAS: col 0=Mes, 1=Nombre, 2=Programa, 3=N cuota, 4=Cant cuotas,
+//  5=MontoCuota(texto AR), 6=FechaCuota(serial), 7=Medio, 8=Estado(bool)
 function procesarCobranzas(rows) {
   if (!rows || rows.length < 2) return;
-
-  const { lunes, viernes } = _semanaActual();
+  _lastCobranzasRows = rows;
+  const { lunes, viernes } = semanaActual();
   const mesActual = MONTHS[currentMonthIdx].toLowerCase();
 
   const nuevasSemana = [];
-  const nuevosDeudores = [];
-  let cobradoMes = 0;
-  let pendienteMes = 0;
-
-  // Agrupar cuotas por persona para detectar deudores
-  const porPersona = {};
+  const porPersona   = {};
+  let cobradoMes = 0, pendienteMes = 0;
 
   rows.slice(1).forEach(row => {
-    const mes      = String(row[0] || '').trim().toLowerCase();
-    const nombre   = String(row[1] || '').trim();
-    const programa = String(row[2] || '').trim();
-    const nCuota   = String(row[3] || '').trim();
-    const monto    = _parseMonto(row[5]);
-    const fecha    = _parseFecha(row[6]);
-    const medio    = String(row[7] || '—').trim();
-    const estado   = String(row[8] || '').toUpperCase().trim();
-    const pagado   = estado === 'TRUE';
+    const mes     = String(row[0]||'').trim().toLowerCase();
+    const nombre  = String(row[1]||'').trim();
+    const prog    = String(row[2]||'').trim();
+    const nCuota  = String(row[3]||'');
+    const monto   = parseMonto(row[5]);
+    const medio   = String(row[7]||'—').trim();
+    const pagado  = row[8] === true || String(row[8]).toUpperCase() === 'TRUE';
 
     if (!nombre || !monto) return;
 
+    const fecha = typeof row[6] === 'number'
+      ? serialToDate(row[6])
+      : parseFechaStr(row[6]);
+
     // Totales del mes seleccionado
-    if (mes === mesActual || mes.startsWith(mesActual.slice(0, 3))) {
-      if (pagado) cobradoMes += monto;
+    if (mes === mesActual || mes.startsWith(mesActual.slice(0,3))) {
+      if (pagado) cobradoMes  += monto;
       else        pendienteMes += monto;
     }
 
-    // Cuotas que vencen esta semana (sin importar el mes)
+    // Esta semana
     if (!pagado && fecha && fecha >= lunes && fecha <= viernes) {
       nuevasSemana.push({
-        nombre, programa, monto, medio,
+        nombre, programa: prog, monto, medio,
         fecha: fecha.toLocaleDateString('es-AR', {weekday:'short', day:'numeric', month:'short'}),
-        nota: `Cuota ${nCuota}`,
-        riesgo: false,
-        pagado: false
+        nota: `Cuota ${nCuota}`
       });
     }
 
-    // Detectar deudores: cuotas impagas con fecha ya vencida
+    // Deudores (cuotas con fecha pasada sin pagar)
     if (!pagado && fecha && fecha < lunes) {
-      if (!porPersona[nombre]) porPersona[nombre] = { nombre, programa, monto: 0, desde: mes || '' };
+      if (!porPersona[nombre]) porPersona[nombre] = { nombre, programa: prog, monto: 0, desde: mes };
       porPersona[nombre].monto += monto;
     }
   });
 
-  const set = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-
-  // Actualizar KPIs
-  if (cobradoMes > 0 || pendienteMes > 0) {
-    set('cob-cobrado-mes', _fmtDin(cobradoMes));
-    set('cob-falta', _fmtDin(pendienteMes));
-  }
-
-  // Cuotas de la semana
-  if (nuevasSemana.length > 0) {
-    cobranzasSemana.length = 0;
-    nuevasSemana.forEach(c => cobranzasSemana.push(c));
-  }
-  set('cob-esperado', _fmtDin(cobranzasSemana.reduce((s,c) => s + c.monto, 0)));
-
-  // Deudores
-  // Siempre limpiar y repoblar desde el sheet
-  deudoresActivos.length = 0;
-  Object.values(porPersona).sort((a,b) => b.monto - a.monto).forEach(d => {
-    deudoresActivos.push({
-      nombre: d.nombre, programa: d.programa, monto: d.monto,
-      detalle: `Cuotas vencidas sin pagar (desde ${d.desde})`,
-      urgencia: 'alta', desde: d.desde
-    });
-  });
-  set('cob-deudores', deudoresActivos.length);
-
   cobranzasSemana.length = 0;
   nuevasSemana.forEach(c => cobranzasSemana.push(c));
 
+  deudoresActivos.length = 0;
+  Object.values(porPersona).sort((a,b) => b.monto - a.monto).forEach(d => deudoresActivos.push(d));
+
+  set('cob-cobrado-mes', fmtDin(cobradoMes));
+  set('cob-falta',       fmtDin(pendienteMes));
+  set('cob-esperado',    fmtDin(cobranzasSemana.reduce((s,c)=>s+c.monto,0)));
+  set('cob-deudores',    deudoresActivos.length);
+
+  const total = cobradoMes + pendienteMes;
+  const pct   = total > 0 ? Math.round(cobradoMes / total * 100) : 0;
+  const bf = document.getElementById('cob-bar-fill');
+  if (bf) bf.style.width = pct + '%';
+  set('cob-bar-pct',   pct + '% cobrado');
+  set('cob-bar-total', fmtDin(total) + ' total esperado ' + MONTHS[currentMonthIdx].toLowerCase());
+
   renderCobranzasSemana();
   renderDeudores();
-
-  // Progreso cobrado/total del mes
-  const total = cobradoMes + pendienteMes;
-  const pctCob = total > 0 ? Math.round(cobradoMes / total * 100) : 0;
-  const barFill = document.getElementById('cob-bar-fill');
-  if (barFill) barFill.style.width = pctCob + '%';
-  const barPct = document.getElementById('cob-bar-pct');
-  if (barPct) barPct.textContent = pctCob + '% cobrado';
-  const barTotal = document.getElementById('cob-bar-total');
-  if (barTotal) barTotal.textContent = _fmtDin(total) + ' total esperado ' + MONTHS[currentMonthIdx].toLowerCase();
 }
 
-// ── Procesador EGRESOS ──
-// Columnas: Mes(0) | Sueldos(1) | Publicidad(2) | APPS(3) | Gastos administrativos(4) | Formacion(5) | Impuestos(6) | Extras(7)
-function procesarEgresos(rows) {
-  if (!rows || rows.length < 2) return;
-
-  // Detectar índices por header (fila 0)
-  const header = rows[0].map(c => String(c).trim().toLowerCase());
-  const ci = (kw) => header.findIndex(h => h.includes(kw.toLowerCase()));
-  const iMes   = 0;
-  const iSuel  = ci('sueldo') > -1 ? ci('sueldo') : 1;
-  const iPub   = ci('publicidad') > -1 ? ci('publicidad') : 2;
-  const iApps  = ci('app') > -1 ? ci('app') : 3;
-  const iAdmin = ci('admin') > -1 ? ci('admin') : (ci('gasto') > -1 ? ci('gasto') : 4);
-  const iForm  = ci('formac') > -1 ? ci('formac') : 5;
-  const iImp   = ci('impuesto') > -1 ? ci('impuesto') : 6;
-  const iExtra = ci('extra') > -1 ? ci('extra') : 7;
-
-  const mesActual = MONTHS[currentMonthIdx].toLowerCase();
-
-  rows.slice(1).forEach(row => {
-    const mes = String(row[iMes] || '').trim().toLowerCase();
-    if (!mes.startsWith(mesActual.slice(0,3))) return;
-
-    const get = (i) => _parseMonto(row[i]);
-    const sueldos  = get(iSuel);
-    const pub      = get(iPub);
-    const apps     = get(iApps);
-    const admin    = get(iAdmin);
-    const form     = get(iForm);
-    const imp      = get(iImp);
-    const extras   = get(iExtra);
-    const total    = sueldos + pub + apps + admin + form + imp + extras;
-
-    // Actualizar ventasData para el mes actual
-    if (ventasData[currentMonthIdx]) {
-      ventasData[currentMonthIdx].gastos = {
-        sueldos:  _fmtDin(sueldos),
-        publicidad: _fmtDin(pub),
-        apps:     _fmtDin(apps),
-        admin:    _fmtDin(admin),
-        formacion: _fmtDin(form),
-        impuestos: _fmtDin(imp),
-        otros:    _fmtDin(extras),
-        total:    _fmtDin(total),
-      };
-      ventasData[currentMonthIdx].costos = _fmtDin(total);
-    }
-
-    const set = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-    set('v-sueldo',  _fmtDin(sueldos));
-    set('v-pub',     _fmtDin(pub));
-    set('v-apps',    _fmtDin(apps));
-    set('v-admin',   _fmtDin(admin));
-    set('v-form',    _fmtDin(form));
-    set('v-imp',     _fmtDin(imp));
-    set('v-otros',   _fmtDin(extras));
-    set('v-total-gastos', _fmtDin(total));
-    set('v-costos',  _fmtDin(total));
-
-    // También actualizar resumen en NEGOCIO
-    set('neg-costos', _fmtDin(total));
-  });
-}
-
-// ── Procesador NEGOCIO (reemplaza procesarVentas) ──
-// Acepta tanto orientación "métricas-como-filas / meses-como-columnas"
-// como "meses-como-filas / métricas-como-columnas"
-function procesarNegocio(rows) {
-  if (!rows || rows.length < 2) return;
-
-  const fmtNum = (v) => {
-    if (!v || v === '—') return null;
-    const n = parseFloat(String(v).replace(/[$\s]/g,'').replace(/\./g,'').replace(',','.'));
-    return isNaN(n) ? String(v) : _fmtDin(n);
-  };
-
-  // Detectar orientación: ¿hay nombres de mes en la primera fila? → meses-como-columnas (orientación original)
-  const row0 = rows[0].map(c => String(c).trim());
-  const hasMesesEnCol = MONTHS.some(m => row0.includes(m));
-
-  if (hasMesesEnCol) {
-    // Orientación: fila-cabecera tiene meses, col[0] es nombre de métrica
-    let colMes = {};
-    row0.forEach((cell, j) => {
-      const mi = MONTHS.indexOf(cell);
-      if (mi >= 0) colMes[mi] = j;
-    });
-    const gM = (kw) => rows.find(r => String(r[0]||'').toLowerCase().includes(kw.toLowerCase()));
-    const fVentas  = gM('cantidad') || gM('cant. ventas') || gM('ventas new');
-    const fBack    = gM('back');
-    const fMonto   = gM('total ventas') || gM('ventas total') || gM('front total') || gM('monto total');
-    const fCC      = gM('cash collected') || gM('recoleccion') || gM('recolección');
-    const fGan     = gM('ganancia');
-    const fRent    = gM('rentabilidad');
-    const fRecNuev = gM('recoleccion nueva') || gM('rec. nueva');
-    const fRecCuot = gM('cuotas') || gM('rec. cuotas');
-
-    Object.entries(colMes).forEach(([mi, col]) => {
-      const idx = parseInt(mi);
-      if (!ventasData[idx]) return;
-      const get = (f) => f ? (f[col] || null) : null;
-      if (fVentas && get(fVentas)) ventasData[idx].ventas    = parseInt(get(fVentas)) || ventasData[idx].ventas;
-      if (fBack   && get(fBack))   ventasData[idx].back      = parseInt(get(fBack))   || ventasData[idx].back;
-      if (fMonto  && get(fMonto))  ventasData[idx].totalMonto= fmtNum(get(fMonto))    || ventasData[idx].totalMonto;
-      if (fCC     && get(fCC))     ventasData[idx].cc        = fmtNum(get(fCC))       || ventasData[idx].cc;
-      if (fGan    && get(fGan))    ventasData[idx].ganancia  = fmtNum(get(fGan))      || ventasData[idx].ganancia;
-      if (fRent   && get(fRent))   ventasData[idx].rentabilidad = get(fRent)          || ventasData[idx].rentabilidad;
-      if (fRecNuev&& get(fRecNuev))ventasData[idx].recNueva  = fmtNum(get(fRecNuev)) || ventasData[idx].recNueva;
-      if (fRecCuot&& get(fRecCuot))ventasData[idx].recCuotas = fmtNum(get(fRecCuot)) || ventasData[idx].recCuotas;
-      ventasData[idx].total = (ventasData[idx].ventas || 0) + (ventasData[idx].back || 0);
-    });
-
-  } else {
-    // Orientación alternativa: col[0] es mes, resto son métricas
-    const header = rows[0].map(c => String(c).trim().toLowerCase());
-    const ci = (kw) => header.findIndex(h => h.includes(kw.toLowerCase()));
-    const iMes    = 0;
-    const iVentas = ci('ventas') > -1 ? ci('ventas') : (ci('cant') > -1 ? ci('cant') : 1);
-    const iBack   = ci('back') > -1 ? ci('back') : -1;
-    const iMonto  = ci('total') > -1 ? ci('total') : (ci('monto') > -1 ? ci('monto') : 2);
-    const iCC     = ci('cash') > -1 ? ci('cash') : (ci('recolec') > -1 ? ci('recolec') : 3);
-    const iGan    = ci('ganancia') > -1 ? ci('ganancia') : 4;
-    const iRent   = ci('rentab') > -1 ? ci('rentab') : 5;
-
-    rows.slice(1).forEach(row => {
-      const mesCell = String(row[iMes] || '').trim();
-      const mi = MONTHS.findIndex(m => mesCell.toLowerCase().startsWith(m.slice(0,3).toLowerCase()) || m.toLowerCase() === mesCell.toLowerCase());
-      if (mi < 0 || !ventasData[mi]) return;
-      const get = (i) => i >= 0 && row[i] ? String(row[i]).trim() : null;
-      if (get(iVentas)) ventasData[mi].ventas     = parseInt(get(iVentas)) || ventasData[mi].ventas;
-      if (get(iBack) && iBack>=0) ventasData[mi].back = parseInt(get(iBack)) || ventasData[mi].back;
-      if (get(iMonto)) ventasData[mi].totalMonto  = fmtNum(get(iMonto)) || ventasData[mi].totalMonto;
-      if (get(iCC))    ventasData[mi].cc           = fmtNum(get(iCC))    || ventasData[mi].cc;
-      if (get(iGan))   ventasData[mi].ganancia     = fmtNum(get(iGan))   || ventasData[mi].ganancia;
-      if (get(iRent))  ventasData[mi].rentabilidad = get(iRent)          || ventasData[mi].rentabilidad;
-      ventasData[mi].total = (ventasData[mi].ventas||0) + (ventasData[mi].back||0);
-    });
+// ── Fetch principal ──
+async function trySheet(tab, rango) {
+  try {
+    const rows = await leerSheet(tab, rango);
+    console.log(`✓ "${tab}": ${rows.length} filas`);
+    return rows;
+  } catch(e) {
+    console.warn(`✗ "${tab}": ${e.message}`);
+    return null;
   }
-
-  updateVentasDisplay(currentMonthIdx);
 }
 
-// ── Procesador ADS ──
-// Métricas esperadas: Inversión | Agendas cualificadas | $Costo por agenda |
-//   Llamadas en calendario | Asistencias | %Asistencia | $Asistencia |
-//   Cierres | %Cierres | %LC | ROAS | ROAS CASH
-// Soporta orientación fila=mes (col[0]=mes, resto=métricas) y fila=métrica (col[0]=métrica, resto=meses)
-function procesarAds(rows) {
-  if (!rows || rows.length < 2) return;
+async function fetchDatosLive() {
+  console.log('Leyendo Sheets...');
+  const [negocioRows, anunciosRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
+    trySheet('negocio',   'A1:U30'),
+    trySheet('anuncios',  'A1:M20'),
+    trySheet('closers',   'A1:L100'),
+    trySheet('cobranzas', 'A1:I500'),
+    trySheet('egresos',   'A1:H20'),
+  ]);
 
-  const row0 = rows[0].map(c => String(c).trim());
-  const hasMesesEnCol = MONTHS.some(m => row0.includes(m));
+  if (negocioRows)   procesarNegocio(negocioRows);
+  if (anunciosRows)  procesarAnuncios(anunciosRows);
+  if (closersRows)   procesarClosers(closersRows);
+  if (cobranzasRows) procesarCobranzas(cobranzasRows);
+  if (egresosRows)   procesarEgresos(egresosRows);
 
-  const applyToMonth = (mi, d) => {
-    if (!adsDataByMonth[mi]) adsDataByMonth[mi] = {};
-    const a = adsDataByMonth[mi];
-    const fmtM = (v) => {
-      if (!v) return null;
-      const n = parseFloat(String(v).replace(/[$\s]/g,'').replace(/\./g,'').replace(',','.'));
-      return isNaN(n) ? String(v) : _fmtDin(n);
-    };
-    const pctFmt = (v) => {
-      if (!v) return null;
-      const s = String(v).trim();
-      return s.includes('%') ? s : (parseFloat(s.replace(',','.')) * (parseFloat(s) < 2 ? 100 : 1)).toFixed(1) + '%';
-    };
-    if (d.inv      != null) a.inv      = fmtM(d.inv) || a.inv;
-    if (d.agendas  != null) a.agendas  = String(d.agendas);
-    if (d.cpa      != null) a.cpa      = fmtM(d.cpa) || a.cpa;
-    if (d.cal      != null) a.cal      = String(d.cal);
-    if (d.asist    != null) a.asist    = String(d.asist);
-    if (d.pasist   != null) a.pasist   = pctFmt(d.pasist) || a.pasist;
-    if (d.casist   != null) a.casist   = fmtM(d.casist) || a.casist;
-    if (d.cierres  != null) a.cierres  = String(d.cierres);
-    if (d.pcierres != null) a.pcierres = pctFmt(d.pcierres) || a.pcierres;
-    if (d.lc       != null) a.lc       = pctFmt(d.lc) || a.lc;
-    if (d.roas     != null) a.roas     = String(d.roas);
-    if (d.roasCash != null) a.roasCash = String(d.roasCash);
-    if (d.leads    != null) a.leads    = String(d.leads);
-  };
-
-  if (hasMesesEnCol) {
-    // Orientación: col[0]=métrica, cols 1..N=meses
-    let colMes = {};
-    row0.forEach((cell, j) => {
-      const mi = MONTHS.indexOf(cell);
-      if (mi >= 0) colMes[mi] = j;
-    });
-    const gM  = (kw) => rows.find(r => String(r[0]||'').toLowerCase().includes(kw.toLowerCase()));
-    const fInv    = gM('invers');
-    const fAg     = gM('agenda');
-    const fCpa    = gM('costo por agenda') || gM('cpa');
-    const fCal    = gM('calendario') || gM('llamadas en cal');
-    const fAsist  = gM('asistencias');
-    const fPAsist = gM('%asist');
-    const fDAsist = gM('$asist') || gM('costo asist');
-    const fCierr  = gM('cierres');
-    const fPCierr = gM('%cierre');
-    const fLC     = gM('%lc') || gM('lc');
-    const fRoas   = rows.find(r => String(r[0]||'').toLowerCase() === 'roas');
-    const fRoasC  = gM('roas cash');
-    const fLeads  = gM('leads');
-
-    Object.entries(colMes).forEach(([mi, col]) => {
-      const g = (f) => f && f[col] != null ? f[col] : null;
-      applyToMonth(parseInt(mi), {
-        inv: g(fInv), agendas: g(fAg), cpa: g(fCpa), cal: g(fCal),
-        asist: g(fAsist), pasist: g(fPAsist), casist: g(fDAsist),
-        cierres: g(fCierr), pcierres: g(fPCierr), lc: g(fLC),
-        roas: g(fRoas), roasCash: g(fRoasC), leads: g(fLeads)
-      });
-    });
-
-  } else {
-    // Orientación: col[0]=mes, cols 1..N=métricas
-    const header = row0.map(c => c.toLowerCase());
-    const ci  = (kw, skip=0) => { let found=0; for(let i=0;i<header.length;i++){if(header[i].includes(kw.toLowerCase())){if(found===skip)return i;found++;}} return -1; };
-    const iMes    = 0;
-    const iInv    = ci('invers') > -1 ? ci('invers') : 1;
-    const iAg     = ci('agenda') > -1 ? ci('agenda') : 2;
-    const iCpa    = ci('costo') > -1 ? ci('costo') : 3;
-    const iCal    = ci('calendario') > -1 ? ci('calendario') : (ci('llamada') > -1 ? ci('llamada') : 4);
-    const iAsist  = ci('asistencia') > -1 ? ci('asistencia') : 5;
-    const iPAsist = ci('%asist') > -1 ? ci('%asist') : (ci('asist',1) > -1 ? ci('asist',1) : 6);
-    const iDAsist = ci('$asist') > -1 ? ci('$asist') : 7;
-    const iCierr  = ci('cierre') > -1 ? ci('cierre') : 8;
-    const iPCierr = ci('%cierre') > -1 ? ci('%cierre') : (ci('cierre',1) > -1 ? ci('cierre',1) : 9);
-    const iLC     = ci('%lc') > -1 ? ci('%lc') : (ci('lc') > -1 ? ci('lc') : 10);
-    const iRoas   = header.findIndex(h => h === 'roas') > -1 ? header.findIndex(h => h === 'roas') : (ci('roas') > -1 ? ci('roas') : 11);
-    const iRoasC  = ci('roas cash') > -1 ? ci('roas cash') : (ci('roas',1) > -1 ? ci('roas',1) : 12);
-    const iLeads  = ci('lead') > -1 ? ci('lead') : -1;
-
-    rows.slice(1).forEach(row => {
-      const mesCell = String(row[iMes] || '').trim();
-      const mi = MONTHS.findIndex(m => mesCell.toLowerCase().startsWith(m.slice(0,3).toLowerCase()) || m.toLowerCase() === mesCell.toLowerCase());
-      if (mi < 0) return;
-      const g = (i) => i >= 0 && row[i] != null ? row[i] : null;
-      applyToMonth(mi, {
-        inv: g(iInv), agendas: g(iAg), cpa: g(iCpa), cal: g(iCal),
-        asist: g(iAsist), pasist: g(iPAsist), casist: g(iDAsist),
-        cierres: g(iCierr), pcierres: g(iPCierr), lc: g(iLC),
-        roas: g(iRoas), roasCash: g(iRoasC), leads: iLeads >= 0 ? g(iLeads) : null
-      });
-    });
-  }
-
-  updateAdsDisplay(currentPeriod, currentMonthIdx);
+  set('ts-live', 'Actualizado ' + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'}));
 }
 
-// ── Procesador CLOSERS ──
-// Intenta leer métricas de closers desde el sheet; usa datos hardcodeados como fallback
-function procesarClosers(rows) {
-  if (!rows || rows.length < 2) return;
-  // Estructura esperada: col[0]=nombre closer, col[1]=mes, resto=métricas
-  // O col[0]=métrica, cols=closers por mes. Si no puede parsear, retorna sin cambios.
-  // Por ahora usa los datos hardcodeados (closerData) como fuente única
-  // y sólo actualiza si encuentra la estructura reconocible.
-  const header = rows[0].map(c => String(c).trim().toLowerCase());
-  const iNombre  = header.findIndex(h => h.includes('closer') || h.includes('nombre'));
-  const iMes     = header.findIndex(h => h === 'mes' || h.includes('mes'));
-  const iAgend   = header.findIndex(h => h.includes('agendad') || h.includes('agendas'));
-  const iAsist   = header.findIndex(h => h.includes('asist'));
-  const iCierres = header.findIndex(h => h.includes('cierre'));
-  if (iNombre < 0 || iMes < 0 || iCierres < 0) return; // estructura desconocida
-
-  const closerNames = { kevin:'kevin', fabri:'fabri', braian:'braian', vicky:'vicky' };
-  rows.slice(1).forEach(row => {
-    const rawNombre = String(row[iNombre] || '').trim().toLowerCase();
-    const closerKey = Object.keys(closerNames).find(k => rawNombre.includes(k));
-    if (!closerKey) return;
-    const mesCell = String(row[iMes] || '').trim();
-    const mi = MONTHS.findIndex(m => mesCell.toLowerCase().startsWith(m.slice(0,3).toLowerCase()));
-    if (mi < 0 || mi > 4) return;
-    const cd = closerData[closerKey];
-    if (!cd) return;
-    if (iAgend >= 0   && row[iAgend])   cd.agendadas[mi] = parseInt(row[iAgend])  || cd.agendadas[mi];
-    if (iAsist >= 0   && row[iAsist])   cd.asistencia[mi]= parseInt(row[iAsist])  || cd.asistencia[mi];
-    if (iCierres >= 0 && row[iCierres]) cd.cierres[mi]   = parseInt(row[iCierres])|| cd.cierres[mi];
-  });
-  renderCloser(currentCloser);
-}
-
-// ── Fetch Slack (agendas + reportes de llamadas) ──
-// Apps Script devuelve: { reportes: { messages:[{texto,fecha}] }, agendas: { messages:[{texto,fecha}] } }
+// ── Fetch Slack ──
 async function fetchSlack() {
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
-    if (!res.ok) throw new Error('Slack HTTP ' + res.status);
+    const res   = await fetch(SLACK_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const datos = await res.json();
-    console.log('Slack response:', JSON.stringify(datos).slice(0, 500));
+    console.log('Slack response keys:', Object.keys(datos));
 
-    // ── Agendas ──
-    const msgsAgenda = datos.agendas?.messages || [];
-    if (msgsAgenda.length > 0) {
-      const { lunes, viernes } = _semanaActual();
-      const nuevasEntradas = [];
-      msgsAgenda.forEach(m => {
-        const texto = m.texto || '';
-        // Extraer nombre (primera línea o formato "Nombre: X")
+    // Agendas
+    const msgsAg = datos.agendas?.messages || datos.agendas || [];
+    if (Array.isArray(msgsAg) && msgsAg.length > 0) {
+      agendasEntradas.length = 0;
+      msgsAg.forEach(m => {
+        const texto = m.texto || m.text || m.message || String(m);
         const nombreM = texto.match(/Nombre[:\s]+([^\n]+)/i) || texto.match(/^([^\n:]+)/);
-        const nombre = nombreM ? nombreM[1].trim() : 'Lead';
+        const nombre  = nombreM ? nombreM[1].trim() : 'Lead';
         const fuenteM = texto.match(/fuente[:\s]*(bio ig|automática|auto)/i);
-        const fuente = fuenteM ? (fuenteM[1].toLowerCase().includes('bio') ? 'Bio IG' : 'Automática') : 'Automática';
-        const llamadaM = texto.match(/llamada[:\s]+([^\n]+)/i) || texto.match(/horario[:\s]+([^\n]+)/i);
-        const fecha_llamada = llamadaM ? llamadaM[1].trim() : 'Por confirmar';
-        const ocupM = texto.match(/(?:ocupación|rubro|nicho)[:\s]+([^\n]+)/i);
-        const ocupacion = ocupM ? ocupM[1].trim() : texto.split('\n').slice(1,2).join('').trim() || 'A confirmar';
-        // Fecha de entrada desde m.fecha
-        const fechaEntrada = m.fecha ? new Date(m.fecha) : new Date();
-        const diaEntrada = fechaEntrada.toLocaleDateString('es-AR', {weekday:'short', day:'numeric', month:'short'});
-        nuevasEntradas.push({ fuente, nombre, fecha_llamada, dia_entrada: diaEntrada, ocupacion, nicho: detectarNicho(ocupacion), confirmar: false });
+        const fuente  = fuenteM ? (fuenteM[1].toLowerCase().includes('bio') ? 'Bio IG' : 'Automática') : 'Automática';
+        const llamM   = texto.match(/(?:llamada|horario|fecha)[:\s]+([^\n]+)/i);
+        const fechaLl = llamM ? llamM[1].trim() : 'Por confirmar';
+        const ocupM   = texto.match(/(?:ocupación|rubro|nicho|actividad)[:\s]+([^\n]+)/i);
+        const ocup    = ocupM ? ocupM[1].trim() : texto.split('\n').slice(1,2).join('').trim() || 'A confirmar';
+        const fechaE  = m.fecha ? new Date(m.fecha) : new Date();
+        agendasEntradas.push({
+          fuente, nombre,
+          fecha_llamada: fechaLl,
+          dia_entrada:   fechaE.toLocaleDateString('es-AR', {weekday:'short', day:'numeric', month:'short'}),
+          ocupacion: ocup,
+          nicho:     detectarNicho(ocup),
+          confirmar: false
+        });
       });
-      if (nuevasEntradas.length > 0) {
-        agendasEntradas.length = 0;
-        nuevasEntradas.forEach(a => agendasEntradas.push(a));
-        renderAgendas(agendaVista);
-        const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
-        set('ag-total', nuevasEntradas.length);
-        set('ag-auto',  nuevasEntradas.filter(a=>a.fuente==='Automática').length);
-        set('ag-ig',    nuevasEntradas.filter(a=>a.fuente==='Bio IG').length);
-      }
+      renderAgendas(agendaVista);
+      set('ag-total', agendasEntradas.length);
+      set('ag-auto',  agendasEntradas.filter(a=>a.fuente==='Automática').length);
+      set('ag-ig',    agendasEntradas.filter(a=>a.fuente==='Bio IG').length);
     }
 
-    // ── Reportes de llamadas ──
-    const msgsReportes = datos.reportes?.messages || [];
-    if (msgsReportes.length > 0) {
-      const parsed = msgsReportes.map(m => parsearReporte(m.texto, m.fecha)).filter(Boolean);
+    // Reportes / llamadas
+    const msgsRep = datos.reportes?.messages || datos.reportes || [];
+    if (Array.isArray(msgsRep) && msgsRep.length > 0) {
+      const parsed = msgsRep.map(m => parsearReporte(m.texto || m.text || String(m), m.fecha)).filter(Boolean);
       if (parsed.length > 0) {
         llamadasData.dia.reportes = parsed;
-        llamadasData.dia.nuevas   = parsed.filter(r => r.tipo === 'LLAMADA NUEVA').length;
-        llamadasData.dia.segs     = parsed.filter(r => r.tipo === 'SEGUIMIENTO').length;
-        llamadasData.dia.hot      = parsed.filter(r => r.estado === 'hot').length;
+        llamadasData.dia.nuevas   = parsed.filter(r=>r.tipo==='LLAMADA NUEVA').length;
+        llamadasData.dia.segs     = parsed.filter(r=>r.tipo==='SEGUIMIENTO').length;
+        llamadasData.dia.hot      = parsed.filter(r=>r.estado==='hot').length;
         if (currentPeriod === 'dia') updateLlamadasPeriod('dia');
       }
     }
-
     console.log('✓ Slack actualizado:', new Date().toLocaleTimeString('es-AR'));
   } catch(e) {
-    console.log('Slack no disponible —', e.message);
+    console.log('Slack no disponible:', e.message);
   }
 }
 
-// Detectar nicho automáticamente del texto de ocupación
-function detectarNicho(ocu) {
-  if (!ocu) return 'A confirmar';
-  const o = ocu.toLowerCase();
-  if (o.includes('nutrici') || o.includes('salud') || o.includes('psiqui') || 
-      o.includes('yoga') || o.includes('medit') || o.includes('terapia') ||
-      o.includes('bienestar') || o.includes('depurat')) return 'Salud / bienestar';
-  if (o.includes('arquitect') || o.includes('diseño') || o.includes('interior')) return 'Arquitectura / diseño';
-  if (o.includes('coach') || o.includes('mentor') || o.includes('formac')) return 'Coaching / mentoría';
-  if (o.includes('finanz') || o.includes('seguro') || o.includes('invers') || 
-      o.includes('contab') || o.includes('auditor')) return 'Finanzas';
-  if (o.includes('inmobil') || o.includes('propiedad') || o.includes('construc')) return 'Inmobiliario';
-  if (o.includes('gastr') || o.includes('restau') || o.includes('comida')) return 'Gastronomía';
-  if (o.includes('educac') || o.includes('docente') || o.includes('colegio')) return 'Educación';
-  if (o.includes('viaje') || o.includes('turismo')) return 'Turismo';
-  if (o.includes('marketing') || o.includes('redes') || o.includes('contenido')) return 'Marketing digital';
-  return 'Otro';
+// ── Display: NEGOCIO ──
+function updateNegocioDisplay() {
+  const d = negocioData[currentMonthIdx];
+  if (!d) return;
+  set('neg-mes-label',    'Estado de ' + d.mes);
+  set('neg-ventas-monto', fmtDin(d.totalMonto || d.front));
+  set('neg-ventas-ms',    'de ' + fmtDin(d.objetivo) + ' objetivo');
+  set('neg-falta',        fmtDin(Math.max(0, d.objetivo - d.cc)));
+  set('neg-falta-ms',     (d.faltaVentas||0) + ' ventas · faltan');
+  set('neg-cierres-label','Cierres ' + d.mes.toLowerCase());
+  set('neg-cierres',      d.ventas);
+  set('neg-tasa-ms',      'tasa ' + fmtPct(d.ventas && d.objVentas ? d.ventas/d.objVentas : 0));
 }
 
-// Parsear un mensaje de Slack de reportes
-function parsearReporte(texto, hora) {
-  if (!texto) return null;
-  const t = texto.toUpperCase();
-  const tipo = t.includes('LLAMADA NUEVA') || t.includes('NUEVA LLAMADA') ? 'LLAMADA NUEVA' : 'SEGUIMIENTO';
-  const nombreM = texto.match(/(?:LLAMADA NUEVA|SEGUIMIENTO)[\s:\-–]*([^\n\(]+)/i);
-  const nombre = nombreM ? nombreM[1].trim() : 'Lead';
-  const closerM = texto.match(/closer[:\s]+([^\n,]+)/i) || texto.match(/\(([A-ZÁÉÍÓÚa-záéíóú ]+)\)/);
-  const closer = closerM ? closerM[1].trim() : '—';
-  const estadoM = texto.toLowerCase();
-  const estado = estadoM.includes('caliente') || estadoM.includes('hot') || estadoM.includes('paga') ? 'hot'
-               : estadoM.includes('tibio') || estadoM.includes('decide') || estadoM.includes('interesa') ? 'warm'
-               : 'cold';
-  return { tipo, nombre, closer, texto: texto.substring(0, 200), estado, hora };
+// ── Display: VENTAS ──
+function updateVentasDisplay() {
+  const d = negocioData[currentMonthIdx];
+  const g = egresosData[currentMonthIdx];
+  if (!d) return;
+
+  set('v-mes-label',       d.mes + ' · objetivo');
+  set('v-objetivo',        fmtDin(d.objetivo));
+  set('v-obj-ventas',      d.objVentas || '—');
+  set('v-falta',           fmtDin(Math.max(0, d.objetivo - d.cc)));
+  set('v-falta-ventas',    Math.max(0, (d.objVentas||0) - d.total));
+  set('v-ventas-total',    d.total);
+  set('v-front-monto',     fmtDin(d.front));
+  set('v-cc',              fmtDin(d.cc));
+  set('v-costos',          fmtDin(d.costos || (g ? g.total : 0)));
+  set('v-venta-nueva',     d.ventas);
+  set('v-front-total',     fmtDin(d.front));
+  set('v-rec-nueva',       fmtDin(d.recNueva));
+  set('v-rec-cuotas',      fmtDin(d.recRecFront));
+  set('v-back-cant',       d.back);
+  set('v-back-monto',      fmtDin(d.backMonto));
+  set('v-rec-back',        fmtDin(d.recBack));
+  set('v-rec-back-cuotas', fmtDin(d.recRecBack));
+  set('v-ganancia',        fmtDin(d.ganancia));
+  set('v-rentabilidad',    fmtPct(d.rentabilidad));
+
+  const pct = d.objetivo > 0 ? Math.min(100, Math.round(d.totalMonto / d.objetivo * 100)) : 0;
+  set('v-pct', pct + '%');
+  const bar = document.getElementById('v-progress-fill');
+  if (bar) bar.style.width = pct + '%';
+  const meta = document.getElementById('v-progress-meta');
+  if (meta) meta.textContent = fmtDin(d.totalMonto) + ' vendido de ' + fmtDin(d.objetivo) + ' objetivo';
+
+  if (g) updateEgresosDisplay();
 }
 
-// ── Auto-refresh cada 1 hora con countdown visible ──
-const REFRESH_INTERVAL = 60 * 60; // segundos
-let _refreshSecs = REFRESH_INTERVAL;
-
-function startCountdown() {
-  _refreshSecs = REFRESH_INTERVAL;
-  const el = document.getElementById('refresh-countdown');
-  const tick = () => {
-    if (!el) return;
-    const m = Math.floor(_refreshSecs / 60);
-    const s = _refreshSecs % 60;
-    el.textContent = `↺ ${m}:${String(s).padStart(2,'0')}`;
-    if (_refreshSecs <= 0) {
-      el.textContent = '↺ actualizando...';
-      fetchDatosLive();
-      fetchSlack();
-      _refreshSecs = REFRESH_INTERVAL;
-    } else {
-      _refreshSecs--;
-    }
-  };
-  tick();
-  setInterval(tick, 1000);
+// ── Display: EGRESOS (en tab Ventas) ──
+function updateEgresosDisplay() {
+  const g = egresosData[currentMonthIdx];
+  if (!g) return;
+  set('v-sueldo',       fmtDin(g.sueldos));
+  set('v-pub',          fmtDin(g.pub));
+  set('v-apps',         fmtDin(g.apps));
+  set('v-admin',        fmtDin(g.admin));
+  set('v-form',         fmtDin(g.form));
+  set('v-imp',          fmtDin(g.imp));
+  set('v-otros',        fmtDin(g.extras));
+  set('v-total-gastos', fmtDin(g.total));
+  set('v-costos',       fmtDin(g.total));
+  set('neg-costos',     fmtDin(g.total));
 }
 
+// ── Display: ANUNCIOS ──
+function updateAnunciosDisplay() {
+  const d = anunciosData[currentMonthIdx];
+  if (!d) return;
+  set('ads-period-label',  MONTHS[currentMonthIdx] + ' · inversión y retorno');
+  set('ads-inversion',     fmtDin(d.inv));
+  set('ads-periodo-ms',    'acumulado ' + MONTHS[currentMonthIdx].toLowerCase());
+  set('ads-roas',          Number(d.roas).toFixed(2));
+  set('ads-agendas',       d.agendas);
+  set('ads-cpa',           fmtDin(d.cpa));
+  set('ads-leads',         d.agendas);  // no hay col leads separada
+  set('ads-leads-ms',      'agendas ' + MONTHS[currentMonthIdx].toLowerCase());
+  set('ads-cpl',           fmtDin(d.cpa));
+  set('ads-pcalif',        '—');
+  set('ads-pcalif-ms',     '');
+  set('ads-cal',           d.cal);
+  set('ads-cal-pct',       d.agendas > 0 ? Math.round(d.cal/d.agendas*100)+'% de agendas' : '—');
+  set('ads-asist',         d.asist);
+  set('ads-asist-pct',     fmtPct(d.pasist) + ' asistencia');
+  set('ads-cierres',       d.cierres);
+  set('ads-cierres-pct',   fmtPct(d.pcierres) + ' de asistencias');
+  set('ads-bar-cpa',       fmtDin(d.cpa));
+  set('ads-bar-casist',    fmtDin(d.casist));
+  set('ads-bar-lc',        fmtPct(d.lc));
+  set('ads-bar-pcierres',  fmtPct(d.pcierres));
+  // NEGOCIO: ROAS
+  set('neg-roas',    Number(d.roas).toFixed(2));
+  set('neg-roas-ms', 'inv. ' + fmtDin(d.inv));
 
-// ══════════ COBRANZAS ══════════
-// Datos reales del Sheet "pagos clientes" — semana 13-16 Mayo 2026
+  // Barras de %, actualizar widths
+  const barLc = document.getElementById('ads-bar-lc')?.parentElement?.querySelector('.bar-fill');
+  if (barLc) barLc.style.width = Math.min(100, d.lc * 100) + '%';
+  const barPc = document.getElementById('ads-bar-pcierres')?.parentElement?.querySelector('.bar-fill');
+  if (barPc) barPc.style.width = Math.min(100, d.pcierres * 100) + '%';
+}
 
-// Datos reales del Sheet pagos clientes — procesados del archivo
-const cobranzasSemana  = [];
-const deudoresActivos  = [];
+// ── Display: CLOSERS ──
+function actualizarBotonesClosers() {
+  const nombres = Object.keys(closersStore).filter(n => n !== 'Todos');
+  const wrap = document.querySelector('.closer-tabs');
+  if (!wrap) return;
+  wrap.innerHTML = `<button class="cbtn ${currentCloser==='Todos'?'active':''}" onclick="setCloser('Todos',this)">Total</button>` +
+    nombres.map(n => `<button class="cbtn ${currentCloser===n?'active':''}" onclick="setCloser('${n}',this)">${n}</button>`).join('');
+}
 
-// Cobros reales por semana de mayo (del Sheet)
-const cobrosSemanaMayo = [
-  { label:'Sem 1–9 May',          monto:3000,  pagado:false, items:['Andrea S. Videla $2.000','Cintia Galicia $1.000'] },
-  { label:'Sem 12–16 May (esta)', monto:5450,  pagado:false, items:['Sandra Allegreti $1.500','Eliana Cantelmi $1.000','Pamela Viale $1.500','Gaspar $1.450'] },
-  { label:'Sem 18–23 May',        monto:3450,  pagado:false, items:['Camila Zopatti $1.250','GT y Francisco $2.200'] },
-  { label:'Sem 25–31 May',        monto:9850,  pagado:false, items:['Victoria Alonso $1.000','Noelia Orazzi $2.500','F. Misquinich $1.200','Silvina Fernandez $1.250','Santiago Gomez $1.000','Mariano Chiesa $1.650','Bernardo $1.250'] },
-];
+function renderCloser(name) {
+  currentCloser = name;
+  const d = closersStore[name];
+  if (!d) { document.getElementById('closer-data').innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px">Sin datos para este closer</div>'; return; }
 
+  const hi = currentMonthIdx;
+  const rows = [
+    ['Agendadas', d.agendadas], ['Asistencias', d.asistencias],
+    ['Cierres', d.cierres], ['% cierre', d.pcierre], ['% asist.', d.pasist]
+  ];
+  let html = `<div style="font-size:12px;color:var(--ink2);margin-bottom:12px;font-family:var(--font2);font-weight:600">${name}</div>
+    <div class="stat-wrap"><table class="stat-table">
+    <thead><tr><th>Métrica</th>${MONTHS.slice(0,6).map((m,i)=>`<th style="${i===hi?'color:var(--ink)':''}">${m.slice(0,3)}</th>`).join('')}</tr></thead>
+    <tbody>`;
+  rows.forEach(([label, vals]) => {
+    html += `<tr><td>${label}</td>${vals.slice(0,6).map((v,i)=>`<td class="${i===hi?'hl':''}">${v===0||v==='0'?'—':v}</td>`).join('')}</tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('closer-data').innerHTML = html;
+
+  // Barras tasa de cierre del mes actual
+  const barsDiv = document.getElementById('cierre-bars');
+  if (barsDiv) {
+    const closerNombres = Object.keys(closersStore).filter(n => n !== 'Todos');
+    barsDiv.innerHTML = closerNombres.map(n => {
+      const pRaw = closersStore[n]?.pcierre[hi] || '0%';
+      const pNum = parseFloat(String(pRaw).replace('%','').replace(',','.')) || 0;
+      return `<div class="bar-row">
+        <div class="bar-labels"><span>${n}</span><span>${pRaw}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,pNum)}%;background:var(--sand)"></div></div>
+      </div>`;
+    }).join('') + (() => {
+      const pRaw = closersStore['Todos']?.pcierre[hi] || '0%';
+      const pNum = parseFloat(String(pRaw).replace('%','').replace(',','.')) || 0;
+      return `<div class="bar-row">
+        <div class="bar-labels"><span>Total</span><span>${pRaw}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,pNum)}%;background:var(--ink)"></div></div>
+      </div>`;
+    })();
+  }
+}
+
+// ── Display: COBRANZAS ──
 function renderCobranzasSemana() {
   const list  = document.getElementById('cob-semana-list');
   const title = document.getElementById('cob-semana-title');
-  if (!list) return;
-
-  // Título dinámico con la semana actual
   if (title) title.textContent = getLunesViernes();
-
-  if (cobranzasSemana.length === 0) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px 0;text-align:center">Sin cobros para esta semana</div>';
+  if (!list) return;
+  if (!cobranzasSemana.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px 0;text-align:center">Sin cobros programados para esta semana</div>';
     return;
   }
-  const total = cobranzasSemana.reduce((s,c) => s + c.monto, 0);
   list.innerHTML = cobranzasSemana.map(c => `
     <div class="lead">
       <div class="lead-meta">
         <div class="lead-name">${c.nombre}</div>
         <div class="lead-closer">${c.programa} · ${c.fecha}</div>
-        <div class="lead-closer" style="margin-top:2px">${c.medio}</div>
+        <div class="lead-closer">${c.medio}</div>
         <span class="pill p-warn" style="margin-top:5px">pendiente</span>
       </div>
       <div class="lead-body">
-        <div style="font-size:18px;font-weight:700;color:var(--ink);font-family:var(--font2)">${_fmtDin(c.monto)}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--ink);font-family:var(--font2)">${fmtDin(c.monto)}</div>
         <div style="font-size:11px;color:var(--ink3);margin-top:3px">${c.nota}</div>
       </div>
     </div>`).join('');
-  const el = document.getElementById('cob-esperado');
-  if (el) el.textContent = _fmtDin(total);
 }
 
 function renderDeudores() {
   const box = document.getElementById('deudores-box');
   if (!box) return;
-  if (deudoresActivos.length === 0) {
-    box.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px 0;text-align:center">Sin deudores activos</div>';
+  if (!deudoresActivos.length) {
+    box.innerHTML = '<div style="font-size:13px;color:var(--ok);padding:8px 0;text-align:center">✓ Sin deudores activos</div>';
     return;
   }
-  box.innerHTML = deudoresActivos.map((d,i) => `
+  box.innerHTML = deudoresActivos.map((d, i) => `
     <div class="prow">
       <div>
         <div class="prow-l">${d.nombre}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${d.programa} · ${d.detalle}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${d.programa} · cuotas vencidas sin pagar</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:14px;font-weight:700;color:var(--danger)">${_fmtDin(d.monto)}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger)">${fmtDin(d.monto)}</div>
         <span class="pill p-hot" style="margin-top:4px">${i===0?'más urgente':'vencido'}</span>
       </div>
     </div>`).join('');
 }
 
-async function generarAnalisisCobranzas() {
-  const el = document.getElementById('ai-cobranzas-txt');
+// ── AGENDAS ──
+const agendasEntradas = [];
+let agendaVista = 'entradas';
+
+function detectarNicho(ocu) {
+  if (!ocu) return 'A confirmar';
+  const o = ocu.toLowerCase();
+  if (o.includes('nutrici')||o.includes('salud')||o.includes('psiqui')||o.includes('yoga')||o.includes('medit')||o.includes('terapia')||o.includes('bienestar')) return 'Salud / bienestar';
+  if (o.includes('arquitect')||o.includes('diseño')||o.includes('interior')) return 'Arquitectura / diseño';
+  if (o.includes('coach')||o.includes('mentor')||o.includes('formac')) return 'Coaching / mentoría';
+  if (o.includes('finanz')||o.includes('seguro')||o.includes('invers')||o.includes('contab')||o.includes('auditor')) return 'Finanzas';
+  if (o.includes('inmobil')||o.includes('propiedad')) return 'Inmobiliario';
+  if (o.includes('gastr')||o.includes('restau')||o.includes('comida')) return 'Gastronomía';
+  if (o.includes('educac')||o.includes('docente')) return 'Educación';
+  if (o.includes('viaje')||o.includes('turismo')) return 'Turismo';
+  if (o.includes('marketing')||o.includes('redes')||o.includes('contenido')) return 'Marketing digital';
+  return 'Otro';
+}
+
+function renderAgendas(vista) {
+  agendaVista = vista || agendaVista;
+  const list     = document.getElementById('ag-nichos-list');
+  const boxTitle = document.getElementById('ag-box-title');
+  if (!list) return;
+  const semLabel = getLunesViernes();
+  const data = agendasEntradas;
+
+  if (!data.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px;text-align:center">Actualizando desde Slack...</div>';
+    return;
+  }
+  if (boxTitle) boxTitle.textContent = `Esta semana (${semLabel})`;
+  const dias = [...new Set(data.map(a => a.dia_entrada))];
+  list.innerHTML = dias.map(dia => {
+    const agsDia = data.filter(a => a.dia_entrada === dia);
+    return `<div style="font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;font-family:var(--font2);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:4px">${dia}</div>` +
+      agsDia.map(a => `
+        <div class="lead">
+          <div class="lead-meta">
+            <span class="pill ${a.fuente==='Bio IG'?'p-seg':'p-call'}">${a.fuente==='Bio IG'?'Bio IG':'Auto'}</span>
+            <div class="lead-name">${a.nombre}</div>
+            <div class="lead-closer" style="margin-top:2px">📅 ${a.fecha_llamada}</div>
+          </div>
+          <div class="lead-body">
+            <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">${a.nicho}</div>
+            <div>${a.ocupacion}</div>
+          </div>
+        </div>`).join('');
+  }).join('');
+}
+
+async function actualizarAgendas() { await fetchSlack(); renderAgendas('entradas'); }
+
+// ── LLAMADAS ──
+const llamadasData = {
+  dia:    { label:'Hoy', kpiLabel:'Llamadas nuevas hoy', segLabel:'Seguimientos hoy', nuevas:0, nuevasMs:'', segs:0, hot:0, reportes:[] },
+  semana: { label:'Semana', kpiLabel:'Llamadas nuevas semana', segLabel:'Seguimientos semana', nuevas:0, nuevasMs:'', segs:0, hot:0, reportes:[] },
+  mes:    { label:'Mes', kpiLabel:'Llamadas nuevas mes', segLabel:'Seguimientos mes', nuevas:0, nuevasMs:'', segs:0, hot:0, reportes:[] },
+};
+
+function parsearReporte(texto, hora) {
+  if (!texto) return null;
+  const t = texto.toUpperCase();
+  const tipo = t.includes('LLAMADA NUEVA')||t.includes('NUEVA LLAMADA') ? 'LLAMADA NUEVA' : 'SEGUIMIENTO';
+  const nombreM = texto.match(/(?:LLAMADA NUEVA|SEGUIMIENTO)[\s:\-–]*([^\n\(]+)/i);
+  const nombre  = nombreM ? nombreM[1].trim() : 'Lead';
+  const closerM = texto.match(/closer[:\s]+([^\n,]+)/i)||texto.match(/\(([A-ZÁÉÍÓÚa-záéíóú ]+)\)/);
+  const closer  = closerM ? closerM[1].trim() : '—';
+  const tl = texto.toLowerCase();
+  const estado = tl.includes('caliente')||tl.includes('hot')||tl.includes('paga') ? 'hot'
+               : tl.includes('tibio')||tl.includes('decide')||tl.includes('interesa') ? 'warm' : 'cold';
+  return { tipo, nombre, closer, texto: texto.substring(0,200), estado, hora };
+}
+
+function renderReportesData(data) {
+  const tCls  = { 'LLAMADA NUEVA':'p-call', 'SEGUIMIENTO':'p-seg' };
+  const eCls  = { hot:'p-hot', warm:'p-warm', cold:'p-cold' };
+  const eLbl  = { hot:'caliente', warm:'tibio', cold:'difícil' };
+  const list  = document.getElementById('reportes-list');
+  if (!list) return;
+  if (!data || !data.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:8px;text-align:center">Sin reportes — actualizá desde Slack</div>';
+    return;
+  }
+  list.innerHTML = data.map(r => `
+    <div class="lead">
+      <div class="lead-meta">
+        <span class="pill ${tCls[r.tipo]||'p-seg'}">${r.tipo}</span>
+        <div class="lead-name">${r.nombre}</div>
+        <div class="lead-closer">${r.closer}</div>
+        <span class="pill ${eCls[r.estado]||'p-cold'}" style="margin-top:5px">${eLbl[r.estado]||r.estado}</span>
+      </div>
+      <div class="lead-body">${r.texto}</div>
+    </div>`).join('');
+}
+
+function renderResumenLlamadas(data) {
+  const list = document.getElementById('resumen-llamadas-list');
+  if (!list) return;
+  if (!data || !data.length) { list.innerHTML = ''; return; }
+  const nuevas    = data.filter(r=>r.tipo==='LLAMADA NUEVA');
+  const segs      = data.filter(r=>r.tipo==='SEGUIMIENTO');
+  const calientes = data.filter(r=>r.estado==='hot');
+  const tibios    = data.filter(r=>r.estado==='warm');
+  const frios     = data.filter(r=>r.estado==='cold');
+  list.innerHTML = `
+    <div class="grid g3" style="margin-bottom:12px">
+      <div class="mc info"><div class="ml">Llamadas nuevas</div><div class="mv">${nuevas.length}</div></div>
+      <div class="mc sand"><div class="ml">Seguimientos</div><div class="mv">${segs.length}</div></div>
+      <div class="mc warn"><div class="ml">Calientes</div><div class="mv">${calientes.length}</div></div>
+    </div>
+    <div class="prow"><div class="prow-l">🔥 Calientes</div><div class="prow-r" style="color:var(--warn);font-weight:700">${calientes.map(r=>r.nombre).join(' · ')||'—'}</div></div>
+    <div class="prow"><div class="prow-l">🌡 Tibios</div><div class="prow-r" style="color:var(--info)">${tibios.map(r=>r.nombre).join(' · ')||'—'}</div></div>
+    <div class="prow"><div class="prow-l">❄ Difíciles</div><div class="prow-r" style="color:var(--ink3)">${frios.map(r=>r.nombre).join(' · ')||'—'}</div></div>`;
+}
+
+function updateLlamadasPeriod(p) {
+  const d = llamadasData[p] || llamadasData.dia;
+  set('kpi-llamadas-label', d.kpiLabel);
+  set('kpi-nuevas',    d.nuevas);
+  set('kpi-nuevas-ms', d.nuevasMs);
+  set('kpi-seg-label', d.segLabel);
+  set('kpi-segs',      d.segs);
+  set('kpi-hot-leads', d.hot);
+  renderReportesData(d.reportes);
+  renderResumenLlamadas(d.reportes);
+}
+
+async function actualizarSlack() {
+  const el = document.getElementById('ai-llamadas-txt');
   if (el) el.style.display = 'none';
-  return;
-  if (!el) return;
-  el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Analizando cobranzas...</div>';
-  const semanaStr = cobranzasSemana.map(c => `- ${c.nombre} (${c.programa}): $${c.monto} el ${c.fecha} via ${c.medio} — ${c.nota}${c.riesgo?' [CONFIRMAR]':''}`).join('\n');
-  const deudStr = deudoresActivos.map(d => `- ${d.nombre}: debe $${d.monto} — ${d.detalle} (desde ${d.desde})`).join('\n');
-  const txt = await callClaude(`Sos analista financiero de Founders (mentoría para emprendedores, Argentina).
-
-Cobranzas que vencen esta semana (12-16 Mayo 2026):
-${semanaStr}
-
-Deudores activos:
-${deudStr}
-
-Cobrado en mayo: $5.500 de $30.000 proyectado.
-
-Escribí en español rioplatense (voseo) un análisis ejecutivo:
-1. Cuánto entra esta semana y cuáles son los cobros en riesgo
-2. El deudor más urgente y la acción concreta a tomar
-3. Una alerta o recomendación de gestión
-
-Máximo 110 palabras. Sin títulos. Texto corrido.`);
-  el.textContent = txt;
+  await fetchSlack();
 }
 
-function actualizarCobranzas() {
-  renderCobranzasSemana();
-  generarAnalisisCobranzas();
+// ── NAV ──
+function switchTab(name) {
+  const names = ['negocio','agendas','cobranzas','llamadas','closers','anuncios','ventas'];
+  document.querySelectorAll('.tabBtn').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id==='tab-'+name));
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('active', b.id==='bnav-'+name));
+  window.scrollTo(0,0);
 }
 
-renderReportes();
-renderCloser('consolidado');
+function setPeriod(p, btn) {
+  currentPeriod = p;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  localStorage.setItem('founders_periodo', p);
+  updateAnunciosDisplay();
+  updateLlamadasPeriod(p);
+}
+
+function setMonth(val) {
+  currentMonthIdx = parseInt(val);
+  localStorage.setItem('founders_mes', val);
+  updateNegocioDisplay();
+  updateVentasDisplay();
+  updateAnunciosDisplay();
+  updateEgresosDisplay();
+  if (_lastCobranzasRows) procesarCobranzas(_lastCobranzasRows);
+  renderCloser(currentCloser);
+}
+
+function setCloser(name, btn) {
+  currentCloser = name;
+  document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCloser(name);
+}
+
+// ── AI boxes — ocultar (sin API key) ──
+async function generarAnalisisNegocio()  { const e=document.getElementById('ai-negocio-txt');   if(e) e.parentElement.style.display='none'; const b=document.querySelector('[onclick="generarAnalisisNegocio()"]'); if(b) b.style.display='none'; }
+async function generarAnalisisLlamadas() { const e=document.getElementById('ai-llamadas-txt');  if(e) e.parentElement.style.display='none'; }
+async function generarAnalisisAgendas()  { const e=document.getElementById('ai-agendas-txt');   if(e) e.parentElement.style.display='none'; }
+async function generarAnalisisLlamadasConDatos() {}
+async function generarAnalisisCobranzas() { const e=document.getElementById('ai-cobranzas-txt'); if(e) e.parentElement.style.display='none'; }
+
+// ── Countdown 1 hora ──
+let _refreshSecs = 3600;
+function startCountdown() {
+  _refreshSecs = 3600;
+  const el = document.getElementById('refresh-countdown');
+  const tick = () => {
+    if (!el) return;
+    const m = Math.floor(_refreshSecs/60), s = _refreshSecs%60;
+    el.textContent = `↺ ${m}:${String(s).padStart(2,'0')}`;
+    if (_refreshSecs <= 0) {
+      el.textContent = '↺ actualizando...';
+      fetchDatosLive(); fetchSlack();
+      _refreshSecs = 3600;
+    } else { _refreshSecs--; }
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ── Reloj ──
+function tick() {
+  set('ts-live', new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}));
+}
+
+// ── Init ──
+const savedMes = localStorage.getItem('founders_mes');
+if (savedMes !== null) {
+  currentMonthIdx = parseInt(savedMes);
+  const sel = document.getElementById('month-sel');
+  if (sel) sel.value = currentMonthIdx;
+}
+const savedPer = localStorage.getItem('founders_periodo');
+if (savedPer) {
+  currentPeriod = savedPer;
+  const btn = [...document.querySelectorAll('.pbtn')].find(b => b.textContent.toLowerCase().includes(savedPer==='dia'?'hoy':savedPer));
+  if (btn) { document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+}
+
 renderAgendas();
-updateVentasDisplay(currentMonthIdx);
-updateAdsDisplay('mes', currentMonthIdx);
-initMemoria();
-tick();
-setInterval(tick, 60000);
+updateLlamadasPeriod(currentPeriod);
+tick(); setInterval(tick, 60000);
 startCountdown();
-// Cargar datos reales al iniciar
-setTimeout(() => fetchDatosLive(), 300);
-setTimeout(() => fetchSlack(), 600);
-// Análisis IA (requiere API key configurada)
-setTimeout(() => generarAnalisisNegocio(), 1200);
-setTimeout(() => generarAnalisisLlamadas(), 1800);
-setTimeout(() => generarAnalisisAgendas(), 2400);
+setTimeout(() => fetchDatosLive(), 400);
+setTimeout(() => fetchSlack(), 800);
 </script>
-
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
