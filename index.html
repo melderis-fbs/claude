@@ -1034,51 +1034,21 @@ Closers mayo: Kevin 3 cierres 17,65%; Braian 1 cierre 8,33%; Fabri 1 cierre 33,3
 Objeción principal: sin presupuesto 66,7%.`;
 
 async function callClaude(prompt) {
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, messages:[{role:'user',content:prompt}] })
-    });
-    const d = await r.json();
-    return d.content?.find(b=>b.type==='text')?.text || 'No se pudo generar el análisis.';
-  } catch(e) { return 'Error de conexión. Intentá de nuevo.'; }
+  // El análisis con IA requiere una API key configurada en un backend propio.
+  // Por ahora retorna vacío para no mostrar errores.
+  return '';
 }
 
 async function generarAnalisisNegocio() {
   const el = document.getElementById('ai-negocio-txt');
-  el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Generando análisis del negocio...</div>';
-  const txt = await callClaude(`Sos analista de negocios de Founders (mentoría para emprendedores, Argentina).
-
-${BIZ_CTX}
-
-Leads hoy:
-${SLACK_TXT}
-
-Escribí un resumen ejecutivo en español rioplatense (voseo, directo) para Vicky, la dueña:
-- Estado del negocio en 2 oraciones
-- El riesgo más importante
-- La oportunidad más concreta esta semana
-
-Máximo 120 palabras. Sin títulos ni bullets. Texto corrido.`);
-  el.textContent = txt;
+  if (el) el.style.display = 'none';
+  const btn = document.querySelector('[onclick="generarAnalisisNegocio()"]');
+  if (btn) btn.style.display = 'none';
 }
 
 async function generarAnalisisLlamadas() {
   const el = document.getElementById('ai-llamadas-txt');
-  el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Analizando leads de hoy...</div>';
-  const txt = await callClaude(`Sos analista comercial de Founders (mentoría para emprendedores, Argentina).
-
-Reportes de hoy del equipo:
-${SLACK_TXT}
-
-Hacé un resumen ejecutivo en español rioplatense (voseo) con:
-1. Calidad general de los leads de hoy (alta/media/baja y por qué, en una oración)
-2. El lead con más chances de cerrar esta semana y qué acción concreta hay que tomar
-3. Una alerta o patrón que notás
-
-Máximo 110 palabras. Sin títulos. Texto corrido natural.`);
-  el.textContent = txt;
+  if (el) el.style.display = 'none';
 }
 
 async function actualizarSlack() {
@@ -1365,21 +1335,7 @@ function renderAgendas(vista) {
 
 async function generarAnalisisAgendas() {
   const el = document.getElementById('ai-agendas-txt');
-  if (!el) return;
-  el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Analizando agendas...</div>';
-  const lista = agendasEntradas.map(a=>`- ${a.nombre} (${a.fuente}, llama ${a.fecha_llamada}): ${a.nicho} — ${a.ocupacion}`).join('\n');
-  const txt = await callClaude(`Sos analista de Founders (mentoría para emprendedores, Argentina).
-
-Agendas de la semana del canal #comercial-agenda:
-${lista}
-
-Escribí en español rioplatense (voseo):
-1. Qué nichos predominan esta semana y qué tan buenas son las agendas
-2. Las 2-3 agendas con más potencial y por qué
-3. Un patrón o alerta relevante
-
-Máximo 120 palabras. Sin títulos. Texto corrido natural.`);
-  el.textContent = txt;
+  if (el) el.style.display = 'none';
 }
 
 async function actualizarAgendas() {
@@ -1494,25 +1450,7 @@ function renderReportesData(data) {
 
 async function generarAnalisisLlamadasConDatos(reportesData) {
   const el = document.getElementById('ai-llamadas-txt');
-  if (!el) return;
-  el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Analizando...</div>';
-  if (!reportesData || reportesData.length === 0) {
-    el.textContent = 'Seleccioná Hoy o Semana para ver el análisis de leads.';
-    return;
-  }
-  const lista = reportesData.map(r=>`[${r.tipo}] ${r.nombre} (${r.closer}): ${r.texto}`).join('\n');
-  const txt = await callClaude(`Sos analista comercial de Founders (mentoría para emprendedores, Argentina).
-
-Reportes del equipo:
-${lista}
-
-Resumen ejecutivo en español rioplatense (voseo):
-1. Calidad general de los leads (una oración)
-2. El lead con más chances de cerrar y qué hacer concretamente
-3. Un patrón o alerta del equipo
-
-Máximo 110 palabras. Sin títulos. Texto corrido.`);
-  el.textContent = txt;
+  if (el) el.style.display = 'none';
 }
 
 // ══════════ MEMORIA / STORAGE ══════════
@@ -1583,11 +1521,11 @@ async function fetchDatosLive() {
   console.log('Leyendo Sheets...');
   try {
     const [negocioRows, adsRows, closersRows, cobranzasRows, egresosRows] = await Promise.all([
-      leerSheet('NEGOCIO',    'A1:Z60'),
-      leerSheet('ADS',        'A1:Z30'),
-      leerSheet('CLOSERS',    'A1:Z80'),
-      leerSheet('COBRANZAS',  'A1:Z500'),
-      leerSheet('EGRESOS',    'A1:Z20'),
+      leerSheet('negocio',    'A1:Z60'),
+      leerSheet('ads',        'A1:Z30'),
+      leerSheet('closers',    'A1:Z80'),
+      leerSheet('cobranzas',  'A1:Z500'),
+      leerSheet('egresos',    'A1:Z20'),
     ]);
 
     procesarNegocio(negocioRows);
@@ -2181,6 +2119,8 @@ function renderCobranzasSemana() {
 
 async function generarAnalisisCobranzas() {
   const el = document.getElementById('ai-cobranzas-txt');
+  if (el) el.style.display = 'none';
+  return;
   if (!el) return;
   el.innerHTML = '<div class="ai-loading"><div class="ai-spin"></div>Analizando cobranzas...</div>';
   const semanaStr = cobranzasSemana.map(c => `- ${c.nombre} (${c.programa}): $${c.monto} el ${c.fecha} via ${c.medio} — ${c.nota}${c.riesgo?' [CONFIRMAR]':''}`).join('\n');
