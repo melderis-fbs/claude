@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-  getOverviewData,
+  getNegocioData,
   getAgendasData,
   getLlamadasData,
   getClosersData,
@@ -15,8 +15,8 @@ export async function GET(request) {
   try {
     let data;
     switch (tab) {
-      case 'overview':
-        data = await getOverviewData();
+      case 'negocio':
+        data = await getNegocioData();
         break;
       case 'agendas':
         data = await getAgendasData();

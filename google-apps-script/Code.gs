@@ -11,6 +11,9 @@
 //     Filter: solo si el mensaje contiene "Nueva agenda"
 //     Action: "Webhooks by Zapier" → POST → URL del web app
 //       Body type: JSON | Data: { "type": "agenda", "text": [Message Text], "username": [Username] }
+//     NOTA: el username determina la fuente:
+//       - si el username es "Mel" (o el nombre de tu bot principal) → fuente "Anuncios"
+//       - si el mensaje contiene "BIO" o el username es el bot de bio → fuente "Bio IG"
 //
 //   Zapier Zap 2 – Canal llamadas:
 //     Trigger: "New Message Posted to Channel" → canal de llamadas
@@ -336,7 +339,13 @@ function parseAgenda(text, username) {
   var titulo    = extractField(lines, 'Título:');
   var fechaRaw  = extractField(lines, 'Fecha y hora:');
   var ocupacion = extractField(lines, 'Ocupación:');
-  var tipo      = lines[0].toLowerCase().indexOf('bio') >= 0 ? 'Bio IG' : 'Founders';
+
+  // Detectar fuente: "Bio IG" si el mensaje dice "BIO" o el username es el bot de bio,
+  // "Anuncios" si viene de Mel (bot principal / canal de anuncios)
+  var primeraLinea = (lines[0] || '').toLowerCase();
+  var userLower    = (username || '').toLowerCase();
+  var esBio = primeraLinea.indexOf('bio') >= 0 || userLower.indexOf('bio') >= 0;
+  var tipo  = esBio ? 'Bio IG' : 'Anuncios';
 
   // Extraer nombre del cliente del título
   // "Sesión Asesoría Founders - Luis Prueba" → "Luis Prueba"

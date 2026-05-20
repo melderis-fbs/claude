@@ -12,6 +12,7 @@ const NICHO_COLORS = {
   'E-commerce':     'border-orange-400 bg-orange-50',
   'Founders':       'border-teal-400 bg-teal-50',
   'Bio IG':         'border-pink-400 bg-pink-50',
+  'Anuncios':       'border-teal-400 bg-teal-50',
 };
 const NICHO_BADGE = {
   'Fitness':        'bg-green-100 text-green-700',
@@ -20,6 +21,7 @@ const NICHO_BADGE = {
   'E-commerce':     'bg-orange-100 text-orange-700',
   'Founders':       'bg-teal-100 text-teal-700',
   'Bio IG':         'bg-pink-100 text-pink-700',
+  'Anuncios':       'bg-teal-100 text-teal-700',
 };
 
 const FILTERS = [
