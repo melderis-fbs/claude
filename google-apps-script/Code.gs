@@ -1,9 +1,22 @@
 // Dashboard Comercial - Google Apps Script
-// Pegá este código en Extensions > Apps Script dentro de tu Google Sheet.
-// Luego: Deploy > New deployment > Web app
-//   - Execute as: Me
-//   - Who has access: Anyone
-// Copiá la URL generada y ponela como APPS_SCRIPT_URL en Vercel.
+//
+// LECTURA (dashboard):
+//   Deploy > New deployment > Web app > Execute as: Me > Anyone > Deploy
+//   Copiá esa URL como APPS_SCRIPT_URL en Vercel.
+//
+// ESCRITURA desde Zapier (Slack → Sheets):
+//   Usá la MISMA URL del web app en Zapier como destino del webhook POST.
+//   Zapier Zap 1 – Canal agendas:
+//     Trigger: "New Message Posted to Channel" → canal de agendas
+//     Filter: solo si el mensaje contiene "Nueva agenda"
+//     Action: "Webhooks by Zapier" → POST → URL del web app
+//       Body type: JSON | Data: { "type": "agenda", "text": [Message Text], "username": [Username] }
+//
+//   Zapier Zap 2 – Canal llamadas:
+//     Trigger: "New Message Posted to Channel" → canal de llamadas
+//     Filter: solo si el mensaje contiene "Tipo de llamada:" O "Seguimientos de hoy:"
+//     Action: "Webhooks by Zapier" → POST → URL del web app
+//       Body type: JSON | Data: { "type": "llamada", "text": [Message Text], "username": [Username] }
 
 // Nombres de las hojas en tu planilla — ajustá si son distintos
 var SHEET_NEGOCIO   = 'negocio';
@@ -276,4 +289,202 @@ function getIngresos() {
   });
 
   return { egresos: egresos, cobranzas: cobranzas };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ESCRITURA DESDE ZAPIER (Slack → Sheets)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var type     = body.type     || '';
+    var text     = body.text     || '';
+    var username = body.username || '';
+
+    if (type === 'agenda') {
+      var rows = parseAgenda(text, username);
+      rows.forEach(function(row) { appendToSheet(SHEET_AGENDAS, row); });
+      return json({ ok: true, written: rows.length, type: 'agenda' });
+    }
+
+    if (type === 'llamada') {
+      var rows = parseLlamada(text, username);
+      rows.forEach(function(row) { appendToSheet(SHEET_LLAMADAS, row); });
+      return json({ ok: true, written: rows.length, type: 'llamada' });
+    }
+
+    return json({ ok: false, error: 'type desconocido: ' + type });
+  } catch (err) {
+    return json({ ok: false, error: err.message });
+  }
+}
+
+function appendToSheet(sheetName, rowArray) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('Hoja "' + sheetName + '" no encontrada.');
+  sheet.appendRow(rowArray);
+}
+
+// ── Parser de agendas ─────────────────────────────────────────────────────────
+// Formato esperado:
+//   Nueva agenda automática   ← o "Nueva agenda de BIO"
+//   Título: Sesión Asesoría Founders - Luis Prueba
+//   Fecha y hora: Tuesday, May 19, 2026 3:00 PM  ← o formato ISO 2026-05-19T12:00:00
+//   Enlace: https://...
+//   Ocupación: Servicios profesionales...
+function parseAgenda(text, username) {
+  var lines = text.split('\n');
+
+  var titulo    = extractField(lines, 'Título:');
+  var fechaRaw  = extractField(lines, 'Fecha y hora:');
+  var ocupacion = extractField(lines, 'Ocupación:');
+  var tipo      = lines[0].toLowerCase().indexOf('bio') >= 0 ? 'Bio IG' : 'Founders';
+
+  // Extraer nombre del cliente del título
+  // "Sesión Asesoría Founders - Luis Prueba" → "Luis Prueba"
+  // "Sesión Asesoría Founders IG - Kevin Piñón" → "Kevin Piñón"
+  var nombre = titulo;
+  var dashIdx = titulo.lastIndexOf(' - ');
+  if (dashIdx >= 0) nombre = titulo.slice(dashIdx + 3).trim();
+
+  // Parsear fecha/hora
+  var fechaISO = '';
+  var hora     = '';
+  try {
+    var d = new Date(fechaRaw);
+    if (!isNaN(d.getTime())) {
+      fechaISO = fmt(d, 'yyyy-MM-dd');
+      hora     = fmt(d, 'HH:mm');
+    }
+  } catch(e) {}
+
+  var mes = fechaISO ? fechaISO.slice(0, 7) : fmt(new Date(), 'yyyy-MM');
+
+  // Columnas: Mes | Fecha | Hora | Nombre | Nicho | Closer | Estado
+  return [[ mes, fechaISO, hora, nombre, ocupacion || tipo, '', 'Pendiente' ]];
+}
+
+// ── Parser de llamadas ────────────────────────────────────────────────────────
+// Soporta dos formatos:
+//
+// Formato A — reporte de llamada individual:
+//   Tipo de llamada: Llamada
+//   Nombre del lead: Noe Triviño
+//   Resumen de la llamada: ...
+//   Próximos pasos (si hay): ...
+//
+// Formato B — resumen de seguimientos:
+//   Seguimientos de hoy:
+//   Javier Perez: no tuve respuesta...
+//   Flor DAgostino: me introdujo a...
+//   ...
+function parseLlamada(text, username) {
+  var today = fmt(new Date(), 'yyyy-MM-dd');
+  var mes   = today.slice(0, 7);
+  var rows  = [];
+
+  if (text.indexOf('Tipo de llamada:') >= 0) {
+    // ── Formato A
+    var lines       = text.split('\n');
+    var nombre      = extractField(lines, 'Nombre del lead:');
+    var resumen     = extractField(lines, 'Resumen de la llamada:');
+    var proxPaso    = extractField(lines, 'Próximos pasos (si hay):');
+    var resultado   = inferResultado(resumen + ' ' + proxPaso);
+    var fechaProx   = inferFechaProxima(resumen + ' ' + proxPaso, today);
+
+    // Columnas: Mes | Fecha | Closer | Nombre | Resultado | Próximo paso | Fecha próximo contacto | Observaciones
+    rows.push([ mes, today, username, nombre, resultado, proxPaso, fechaProx, resumen ]);
+
+  } else if (text.toLowerCase().indexOf('seguimientos de hoy') >= 0) {
+    // ── Formato B: cada línea después del encabezado es un lead
+    var lines = text.split('\n');
+    var started = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!started) {
+        if (line.toLowerCase().indexOf('seguimientos de hoy') >= 0) { started = true; }
+        continue;
+      }
+      if (!line) continue;
+
+      // "Javier Perez: no tuve respuesta..."
+      var colonIdx = line.indexOf(':');
+      if (colonIdx <= 0) continue;
+      var nombreSeg = line.slice(0, colonIdx).trim();
+      var detalle   = line.slice(colonIdx + 1).trim();
+      var resultado = inferResultado(detalle);
+      var proxPaso  = inferProximoPaso(detalle);
+      var fechaProx = inferFechaProxima(detalle, today);
+
+      rows.push([ mes, today, username, nombreSeg, resultado, proxPaso, fechaProx, detalle ]);
+    }
+  }
+
+  return rows;
+}
+
+// ── Helpers de parseo ─────────────────────────────────────────────────────────
+
+function extractField(lines, fieldName) {
+  var prefix = fieldName.toLowerCase();
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].toLowerCase().indexOf(prefix) === 0) {
+      var val = lines[i].slice(fieldName.length).trim();
+      // Si el siguiente campo aún no empezó, concatenar líneas de continuación
+      for (var j = i + 1; j < lines.length; j++) {
+        var next = lines[j].trim();
+        if (!next || /^[A-ZÁÉÍÓÚ][^:]+:/.test(next)) break;
+        val += ' ' + next;
+      }
+      return val;
+    }
+  }
+  return '';
+}
+
+function inferResultado(texto) {
+  var t = texto.toLowerCase();
+  if (t.indexOf('pagó') >= 0 || t.indexOf('pago') >= 0 || t.indexOf('confirmó') >= 0) return 'Cerrado';
+  if (t.indexOf('no llega') >= 0 || t.indexOf('no puede') >= 0 || t.indexOf('no interesado') >= 0) return 'No interesado';
+  if (t.indexOf('segunda') >= 0 || t.indexOf('2da') >= 0 || t.indexOf('reunión') >= 0 || t.indexOf('reunion') >= 0) return 'Segunda llamada';
+  if (t.indexOf('sin respuesta') >= 0) return 'Sin respuesta';
+  if (t.indexOf('seguimiento') >= 0 || t.indexOf('ver si') >= 0 || t.indexOf('pensando') >= 0) return 'Seguimiento';
+  return 'Seguimiento';
+}
+
+function inferProximoPaso(texto) {
+  var t = texto.toLowerCase();
+  if (t.indexOf('segunda') >= 0 || t.indexOf('2da') >= 0) return 'Segunda llamada';
+  if (t.indexOf('confirma') >= 0) return 'Esperar confirmación';
+  if (t.indexOf('banco') >= 0 || t.indexOf('préstamo') >= 0 || t.indexOf('prestamo') >= 0) return 'Esperar financiamiento';
+  if (t.indexOf('sin respuesta') >= 0) return 'Recontactar';
+  if (t.indexOf('pagó') >= 0 || t.indexOf('pago') >= 0) return '-';
+  return 'Seguimiento';
+}
+
+function inferFechaProxima(texto, baseDate) {
+  // Busca "viernes", "lunes", "el martes", etc. o "X días"
+  var t = texto.toLowerCase();
+  var d = new Date(baseDate);
+  var DIAS = { lunes:1, martes:2, miércoles:3, miercoles:3, jueves:4, viernes:5, sábado:6, sabado:6, domingo:0 };
+  for (var diaName in DIAS) {
+    if (t.indexOf(diaName) >= 0) {
+      var target = DIAS[diaName];
+      var current = d.getDay();
+      var diff = (target - current + 7) % 7 || 7;
+      d.setDate(d.getDate() + diff);
+      return fmt(d, 'dd/MM/yyyy');
+    }
+  }
+  var match = t.match(/en (\d+) días/);
+  if (match) {
+    d.setDate(d.getDate() + parseInt(match[1]));
+    return fmt(d, 'dd/MM/yyyy');
+  }
+  if (t.indexOf('mañana') >= 0) {
+    d.setDate(d.getDate() + 1);
+    return fmt(d, 'dd/MM/yyyy');
+  }
+  return '';
 }
