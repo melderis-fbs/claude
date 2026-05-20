@@ -63,7 +63,12 @@ export default function LlamadasSeguimientos({ data }) {
 
   const columns = [
     { key: 'closer', label: 'Closer', sortable: true },
-    { key: 'cliente', label: 'Cliente', sortable: true },
+    { key: 'tipo', label: 'Tipo', sortable: true,
+      render: (v) => (
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-cream text-ink-2">{v}</span>
+      )
+    },
+    { key: 'nombre', label: 'Nombre', sortable: true },
     {
       key: 'resultado', label: 'Resultado', sortable: true,
       render: (v) => (
@@ -74,7 +79,7 @@ export default function LlamadasSeguimientos({ data }) {
     },
     { key: 'proximoPaso', label: 'Próximo paso' },
     { key: 'fechaProximoContacto', label: 'Próx. contacto', sortable: true },
-    { key: 'duracion', label: 'Duración' },
+    { key: 'observaciones', label: 'Observaciones' },
   ];
 
   return (

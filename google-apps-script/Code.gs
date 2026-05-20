@@ -185,21 +185,22 @@ function getAgendas() {
 }
 
 // ── LLAMADAS ──────────────────────────────────────────────────────────────────
-// Columnas sugeridas: Mes | Fecha | Closer | Nombre | Resultado |
-//                    Próximo paso | Fecha próximo contacto | Observaciones
+// Columnas: Mes | Tipo | Fecha | Closer | Nombre | Resultado |
+//           Próximo paso | Fecha prox paso | Observaciones
 function getLlamadas() {
-  var rows = getRows(SHEET_LLAMADAS, 2, 8);
+  var rows = getRows(SHEET_LLAMADAS, 2, 9);
   return rows.map(function(r) {
     return {
       mes:                   mesKey(r[0]),
-      fecha:                 fmtDateISO(r[1]),
-      fechaDisplay:          fmtDate(r[1]),
-      closer:                str(r[2]),
-      nombre:                str(r[3]),
-      resultado:             str(r[4]),
-      proximoPaso:           str(r[5]),
-      fechaProximoContacto:  fmtDate(r[6]),
-      observaciones:         str(r[7]),
+      tipo:                  str(r[1]),
+      fecha:                 fmtDateISO(r[2]),
+      fechaDisplay:          fmtDate(r[2]),
+      closer:                str(r[3]),
+      nombre:                str(r[4]),
+      resultado:             str(r[5]),
+      proximoPaso:           str(r[6]),
+      fechaProximoContacto:  fmtDate(r[7]),
+      observaciones:         str(r[8]),
     };
   }).sort(function(a, b) { return b.fecha < a.fecha ? -1 : 1; });
 }
@@ -418,20 +419,25 @@ function parseLlamada(text, username) {
   var mes   = today.slice(0, 7);
   var rows  = [];
 
-  if (text.indexOf('Tipo de llamada:') >= 0) {
-    // ── Formato A
-    var lines       = text.split('\n');
-    var nombre      = extractField(lines, 'Nombre del lead:');
-    var resumen     = extractField(lines, 'Resumen de la llamada:');
-    var proxPaso    = extractField(lines, 'Próximos pasos (si hay):');
-    var resultado   = inferResultado(resumen + ' ' + proxPaso);
-    var fechaProx   = inferFechaProxima(resumen + ' ' + proxPaso, today);
+  if (text.indexOf('Tipo de llamada:') >= 0 || text.replace(/\*/g,'').indexOf('Tipo de llamada:') >= 0) {
+    // ── Formato A: reporte individual por llamada
+    var lines    = text.split('\n');
+    var tipo     = extractField(lines, 'Tipo de llamada:');
+    var nombre   = extractField(lines, 'Nombre del lead:');
+    var resumen  = extractField(lines, 'Resumen de la llamada:');
+    var oferta   = extractField(lines, 'Oferta:');
+    var estado   = extractField(lines, 'Estado:');
+    var proxPaso = extractField(lines, 'Próximos pasos (si hay):');
 
-    // Columnas: Mes | Fecha | Closer | Nombre | Resultado | Próximo paso | Fecha próximo contacto | Observaciones
-    rows.push([ mes, today, username, nombre, resultado, proxPaso, fechaProx, resumen ]);
+    var resultado  = estado || inferResultado(resumen + ' ' + proxPaso);
+    var fechaProx  = inferFechaProxima(proxPaso + ' ' + resumen, today);
+    var obs        = resumen + (oferta ? ' | Oferta: ' + oferta : '');
+
+    // Columnas: Mes | Tipo | Fecha | Closer | Nombre | Resultado | Próximo paso | Fecha prox paso | Observaciones
+    rows.push([ mes, tipo, today, username, nombre, resultado, proxPaso, fechaProx, obs ]);
 
   } else if (text.toLowerCase().indexOf('seguimientos de hoy') >= 0) {
-    // ── Formato B: cada línea después del encabezado es un lead
+    // ── Formato B: resumen de seguimientos (una línea por lead)
     var lines = text.split('\n');
     var started = false;
     for (var i = 0; i < lines.length; i++) {
@@ -451,7 +457,8 @@ function parseLlamada(text, username) {
       var proxPaso  = inferProximoPaso(detalle);
       var fechaProx = inferFechaProxima(detalle, today);
 
-      rows.push([ mes, today, username, nombreSeg, resultado, proxPaso, fechaProx, detalle ]);
+      // Columnas: Mes | Tipo | Fecha | Closer | Nombre | Resultado | Próximo paso | Fecha prox paso | Observaciones
+      rows.push([ mes, 'Seguimiento', today, username, nombreSeg, resultado, proxPaso, fechaProx, detalle ]);
     }
   }
 
