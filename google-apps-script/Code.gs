@@ -168,15 +168,16 @@ function getNegocio() {
 // ── AGENDAS ───────────────────────────────────────────────────────────────────
 // Columnas: Mes | Fecha | Nombre | Nicho | Fecha reunión
 function getAgendas() {
-  var rows = getRows(SHEET_AGENDAS, 2, 5);
+  var rows = getRows(SHEET_AGENDAS, 2, 6);
   return rows.map(function(r) {
     return {
-      mes:           mesKey(r[0]),
-      fecha:         fmtDateISO(r[1]),
-      nombre:        str(r[2]),
-      nicho:         str(r[3]),
-      fechaReunion:  fmtDateISO(r[4]),
+      mes:                 mesKey(r[0]),
+      fecha:               fmtDateISO(r[1]),
+      nombre:              str(r[2]),
+      nicho:               str(r[3]),
+      fechaReunion:        fmtDateISO(r[4]),
       fechaReunionDisplay: fmtDisplay(r[4]),
+      fuente:              str(r[5]),
     };
   }).sort(function(a, b) {
     return a.fechaReunion < b.fechaReunion ? -1 : 1;
@@ -361,18 +362,32 @@ function parseAgenda(text, username) {
   var dashIdx = titulo.lastIndexOf(' - ');
   if (dashIdx >= 0) nombre = titulo.slice(dashIdx + 3).trim();
 
-  // Parsear fecha de reunión
+  // Parsear fecha de reunión (formato Calendly ES: "martes, 20 de mayo de 2026 15:00 - 15:30")
   var fechaReunion = '';
   try {
-    var d = new Date(fechaRaw);
-    if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
+    var MESES = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
+                  julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
+    var m = fechaRaw.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+    if (m) {
+      var dia = parseInt(m[1], 10);
+      var mes2 = MESES[m[2].toLowerCase()];
+      var anio = parseInt(m[3], 10);
+      if (mes2) {
+        var d = new Date(anio, mes2 - 1, dia);
+        if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
+      }
+    }
+    if (!fechaReunion) {
+      var d2 = new Date(fechaRaw);
+      if (!isNaN(d2.getTime())) fechaReunion = fmt(d2, 'yyyy-MM-dd');
+    }
   } catch(e) {}
 
   var hoy = fmt(new Date(), 'yyyy-MM-dd');
   var mes = hoy.slice(0, 7);
 
-  // Columnas: Mes | Fecha (registro) | Nombre | Nicho | Fecha reunión
-  return [[ mes, hoy, nombre, ocupacion || tipo, fechaReunion ]];
+  // Columnas: Mes | Fecha (registro) | Nombre | Nicho | Fecha reunión | Fuente
+  return [[ mes, hoy, nombre, ocupacion, fechaReunion, tipo ]];
 }
 
 // ── Parser de llamadas ────────────────────────────────────────────────────────

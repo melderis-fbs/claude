@@ -5,11 +5,11 @@ import { parseISO, isToday, isTomorrow, startOfWeek, endOfWeek, isWithinInterval
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 
-const NICHO_COLORS = {
+const FUENTE_COLORS = {
   'Anuncios': 'border-gold bg-gold-light',
   'Bio IG':   'border-cream-dark bg-cream',
 };
-const NICHO_BADGE = {
+const FUENTE_BADGE = {
   'Anuncios': 'bg-gold-light text-gold-dark',
   'Bio IG':   'bg-cream text-ink-2',
 };
@@ -51,20 +51,20 @@ export default function Agendas({ data = [] }) {
   const grouped = useMemo(() => {
     const byDate = {};
     filtered.forEach(a => {
-      const key = a.fechaReunion;
+      const key    = a.fechaReunion;
+      const fuente = a.fuente || 'Sin fuente';
       if (!byDate[key]) byDate[key] = {};
-      const nicho = a.nicho || 'Sin nicho';
-      if (!byDate[key][nicho]) byDate[key][nicho] = [];
-      byDate[key][nicho].push(a);
+      if (!byDate[key][fuente]) byDate[key][fuente] = [];
+      byDate[key][fuente].push(a);
     });
     return byDate;
   }, [filtered]);
 
   const sortedDates = Object.keys(grouped).sort();
 
-  const nichoCounts = useMemo(() => {
+  const fuenteCounts = useMemo(() => {
     const counts = {};
-    filtered.forEach(a => { const n = a.nicho || 'Sin nicho'; counts[n] = (counts[n] || 0) + 1; });
+    filtered.forEach(a => { const f = a.fuente || 'Sin fuente'; counts[f] = (counts[f] || 0) + 1; });
     return counts;
   }, [filtered]);
 
@@ -97,14 +97,14 @@ export default function Agendas({ data = [] }) {
         </button>
       </div>
 
-      {Object.keys(nichoCounts).length > 0 && (
+      {Object.keys(fuenteCounts).length > 0 && (
         <div className="flex gap-2 flex-wrap">
-          {Object.entries(nichoCounts).map(([nicho, count]) => (
-            <span key={nicho} className={clsx(
+          {Object.entries(fuenteCounts).map(([fuente, count]) => (
+            <span key={fuente} className={clsx(
               'text-xs px-2.5 py-1 rounded-full font-medium',
-              NICHO_BADGE[nicho] || 'bg-cream text-ink-2'
+              FUENTE_BADGE[fuente] || 'bg-cream text-ink-2'
             )}>
-              {nicho}: {count}
+              {fuente}: {count}
             </span>
           ))}
         </div>
@@ -116,10 +116,10 @@ export default function Agendas({ data = [] }) {
         </div>
       ) : (
         sortedDates.map(dateKey => {
-          const dateObj  = parseISO(dateKey);
+          const dateObj   = parseISO(dateKey);
           const dateLabel = cap(format(dateObj, "EEEE dd 'de' MMMM", { locale: es }));
-          const nichos   = grouped[dateKey];
-          const totalDia = Object.values(nichos).reduce((s, arr) => s + arr.length, 0);
+          const fuentes   = grouped[dateKey];
+          const totalDia  = Object.values(fuentes).reduce((s, arr) => s + arr.length, 0);
 
           return (
             <div key={dateKey}>
@@ -135,25 +135,30 @@ export default function Agendas({ data = [] }) {
                 )}
               </div>
 
-              {Object.entries(nichos).map(([nicho, agendas]) => (
-                <div key={nicho} className={clsx(
+              {Object.entries(fuentes).map(([fuente, agendas]) => (
+                <div key={fuente} className={clsx(
                   'mb-3 rounded-xl border-l-4 overflow-hidden',
-                  NICHO_COLORS[nicho] || 'border-cream-dark bg-cream'
+                  FUENTE_COLORS[fuente] || 'border-cream-dark bg-cream'
                 )}>
                   <div className="px-4 py-2 flex items-center gap-2 border-b border-white/50">
                     <span className={clsx(
                       'text-xs font-semibold px-2 py-0.5 rounded-full',
-                      NICHO_BADGE[nicho] || 'bg-cream text-ink-2'
+                      FUENTE_BADGE[fuente] || 'bg-cream text-ink-2'
                     )}>
-                      {nicho}
+                      {fuente}
                     </span>
                     <span className="text-xs text-ink-3">{agendas.length} agenda{agendas.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="divide-y divide-white/60">
                     {agendas.map((a, i) => (
                       <div key={i} className="px-4 py-3 flex items-center justify-between gap-2">
-                        <span className="font-medium text-ink-1 text-sm">{a.nombre}</span>
-                        <span className="text-xs text-ink-3">
+                        <div>
+                          <span className="font-medium text-ink-1 text-sm">{a.nombre}</span>
+                          {a.nicho && (
+                            <span className="ml-2 text-xs text-ink-3">{a.nicho}</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-ink-3 flex-shrink-0">
                           Agendado: {a.fecha ? format(parseISO(a.fecha), 'dd/MM', { locale: es }) : '-'}
                         </span>
                       </div>
