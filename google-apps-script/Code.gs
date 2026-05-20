@@ -152,23 +152,20 @@ function getNegocio() {
 }
 
 // ── AGENDAS ───────────────────────────────────────────────────────────────────
-// Columnas sugeridas: Mes | Fecha | Hora | Nombre | Nicho | Closer | Estado
+// Columnas: Mes | Fecha | Nombre | Nicho | Fecha reunión
 function getAgendas() {
-  var rows = getRows(SHEET_AGENDAS, 2, 7);
+  var rows = getRows(SHEET_AGENDAS, 2, 5);
   return rows.map(function(r) {
     return {
-      mes:          mesKey(r[0]),
-      fecha:        fmtDateISO(r[1]),
-      fechaDisplay: fmtDisplay(r[1]),
-      hora:         str(r[2]),
-      nombre:       str(r[3]),
-      nicho:        str(r[4]),
-      closer:       str(r[5]),
-      estado:       str(r[6]),
+      mes:           mesKey(r[0]),
+      fecha:         fmtDateISO(r[1]),
+      nombre:        str(r[2]),
+      nicho:         str(r[3]),
+      fechaReunion:  fmtDateISO(r[4]),
+      fechaReunionDisplay: fmtDisplay(r[4]),
     };
   }).sort(function(a, b) {
-    if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
-    return a.hora < b.hora ? -1 : 1;
+    return a.fechaReunion < b.fechaReunion ? -1 : 1;
   });
 }
 
@@ -348,21 +345,18 @@ function parseAgenda(text, username) {
   var dashIdx = titulo.lastIndexOf(' - ');
   if (dashIdx >= 0) nombre = titulo.slice(dashIdx + 3).trim();
 
-  // Parsear fecha/hora
-  var fechaISO = '';
-  var hora     = '';
+  // Parsear fecha de reunión
+  var fechaReunion = '';
   try {
     var d = new Date(fechaRaw);
-    if (!isNaN(d.getTime())) {
-      fechaISO = fmt(d, 'yyyy-MM-dd');
-      hora     = fmt(d, 'HH:mm');
-    }
+    if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
   } catch(e) {}
 
-  var mes = fechaISO ? fechaISO.slice(0, 7) : fmt(new Date(), 'yyyy-MM');
+  var hoy = fmt(new Date(), 'yyyy-MM-dd');
+  var mes = hoy.slice(0, 7);
 
-  // Columnas: Mes | Fecha | Hora | Nombre | Nicho | Closer | Estado
-  return [[ mes, fechaISO, hora, nombre, ocupacion || tipo, '', 'Pendiente' ]];
+  // Columnas: Mes | Fecha (registro) | Nombre | Nicho | Fecha reunión
+  return [[ mes, hoy, nombre, ocupacion || tipo, fechaReunion ]];
 }
 
 // ── Parser de llamadas ────────────────────────────────────────────────────────
