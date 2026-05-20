@@ -6,22 +6,12 @@ import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 
 const NICHO_COLORS = {
-  'Fitness':        'border-green-400 bg-green-50',
-  'Coaching':       'border-blue-400 bg-blue-50',
-  'Inmobiliario':   'border-purple-400 bg-purple-50',
-  'E-commerce':     'border-orange-400 bg-orange-50',
-  'Founders':       'border-teal-400 bg-teal-50',
-  'Bio IG':         'border-pink-400 bg-pink-50',
-  'Anuncios':       'border-teal-400 bg-teal-50',
+  'Anuncios': 'border-gold bg-gold-light',
+  'Bio IG':   'border-cream-dark bg-cream',
 };
 const NICHO_BADGE = {
-  'Fitness':        'bg-green-100 text-green-700',
-  'Coaching':       'bg-blue-100 text-blue-700',
-  'Inmobiliario':   'bg-purple-100 text-purple-700',
-  'E-commerce':     'bg-orange-100 text-orange-700',
-  'Founders':       'bg-teal-100 text-teal-700',
-  'Bio IG':         'bg-pink-100 text-pink-700',
-  'Anuncios':       'bg-teal-100 text-teal-700',
+  'Anuncios': 'bg-gold-light text-gold-dark',
+  'Bio IG':   'bg-cream text-ink-2',
 };
 
 const FILTERS = [
@@ -39,7 +29,6 @@ export default function Agendas({ data = [] }) {
 
   const todayStart = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
 
-  // Filtrar por fecha de reunión (no por fecha de registro)
   const filtered = useMemo(() => {
     return data.filter(a => {
       if (!a.fechaReunion) return false;
@@ -59,7 +48,6 @@ export default function Agendas({ data = [] }) {
     });
   }, [data, filter, showPast, todayStart]);
 
-  // Agrupar por fecha de reunión → nicho
   const grouped = useMemo(() => {
     const byDate = {};
     filtered.forEach(a => {
@@ -74,7 +62,6 @@ export default function Agendas({ data = [] }) {
 
   const sortedDates = Object.keys(grouped).sort();
 
-  // Conteo por nicho (todos los filtrados)
   const nichoCounts = useMemo(() => {
     const counts = {};
     filtered.forEach(a => { const n = a.nicho || 'Sin nicho'; counts[n] = (counts[n] || 0) + 1; });
@@ -83,7 +70,6 @@ export default function Agendas({ data = [] }) {
 
   return (
     <div className="space-y-4">
-      {/* Filtros */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
         {FILTERS.map(f => (
           <button
@@ -92,8 +78,8 @@ export default function Agendas({ data = [] }) {
             className={clsx(
               'flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
               filter === f.id
-                ? 'bg-teal-700 text-white'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-teal-300'
+                ? 'bg-ink-1 text-white'
+                : 'bg-white text-ink-2 border border-cream hover:border-cream-dark'
             )}
           >
             {f.label}
@@ -103,7 +89,7 @@ export default function Agendas({ data = [] }) {
           onClick={() => setShowPast(p => !p)}
           className={clsx(
             'flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-            showPast ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 border border-gray-200'
+            showPast ? 'bg-ink-1 text-white' : 'bg-white text-ink-2 border border-cream'
           )}
         >
           {showPast ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -111,13 +97,12 @@ export default function Agendas({ data = [] }) {
         </button>
       </div>
 
-      {/* Resumen por nicho */}
       {Object.keys(nichoCounts).length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {Object.entries(nichoCounts).map(([nicho, count]) => (
             <span key={nicho} className={clsx(
               'text-xs px-2.5 py-1 rounded-full font-medium',
-              NICHO_BADGE[nicho] || 'bg-gray-100 text-gray-600'
+              NICHO_BADGE[nicho] || 'bg-cream text-ink-2'
             )}>
               {nicho}: {count}
             </span>
@@ -125,9 +110,8 @@ export default function Agendas({ data = [] }) {
         </div>
       )}
 
-      {/* Lista de agendas */}
       {sortedDates.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
+        <div className="bg-white rounded-xl border border-cream p-8 text-center text-ink-3">
           Sin agendas para el período seleccionado
         </div>
       ) : (
@@ -139,39 +123,37 @@ export default function Agendas({ data = [] }) {
 
           return (
             <div key={dateKey}>
-              {/* Encabezado de fecha */}
               <div className="flex items-center gap-2 mb-2">
-                <Calendar size={14} className="text-teal-600" />
-                <span className="text-sm font-semibold text-gray-700">{dateLabel}</span>
-                <span className="text-xs text-gray-400">({totalDia} agenda{totalDia !== 1 ? 's' : ''})</span>
+                <Calendar size={14} className="text-gold-dark" />
+                <span className="text-sm font-semibold text-ink-2">{dateLabel}</span>
+                <span className="text-xs text-ink-3">({totalDia} agenda{totalDia !== 1 ? 's' : ''})</span>
                 {isToday(dateObj) && (
-                  <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">Hoy</span>
+                  <span className="text-xs bg-gold-light text-gold-dark px-2 py-0.5 rounded-full font-medium">Hoy</span>
                 )}
                 {isTomorrow(dateObj) && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Mañana</span>
+                  <span className="text-xs bg-cream text-ink-2 px-2 py-0.5 rounded-full font-medium">Mañana</span>
                 )}
               </div>
 
-              {/* Grupos por nicho */}
               {Object.entries(nichos).map(([nicho, agendas]) => (
                 <div key={nicho} className={clsx(
                   'mb-3 rounded-xl border-l-4 overflow-hidden',
-                  NICHO_COLORS[nicho] || 'border-gray-300 bg-gray-50'
+                  NICHO_COLORS[nicho] || 'border-cream-dark bg-cream'
                 )}>
                   <div className="px-4 py-2 flex items-center gap-2 border-b border-white/50">
                     <span className={clsx(
                       'text-xs font-semibold px-2 py-0.5 rounded-full',
-                      NICHO_BADGE[nicho] || 'bg-gray-100 text-gray-600'
+                      NICHO_BADGE[nicho] || 'bg-cream text-ink-2'
                     )}>
                       {nicho}
                     </span>
-                    <span className="text-xs text-gray-500">{agendas.length} agenda{agendas.length !== 1 ? 's' : ''}</span>
+                    <span className="text-xs text-ink-3">{agendas.length} agenda{agendas.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="divide-y divide-white/60">
                     {agendas.map((a, i) => (
                       <div key={i} className="px-4 py-3 flex items-center justify-between gap-2">
-                        <span className="font-medium text-gray-900 text-sm">{a.nombre}</span>
-                        <span className="text-xs text-gray-400">
+                        <span className="font-medium text-ink-1 text-sm">{a.nombre}</span>
+                        <span className="text-xs text-ink-3">
                           Agendado: {a.fecha ? format(parseISO(a.fecha), 'dd/MM', { locale: es }) : '-'}
                         </span>
                       </div>
@@ -184,7 +166,7 @@ export default function Agendas({ data = [] }) {
         })
       )}
 
-      <p className="text-center text-xs text-gray-400 pb-2">
+      <p className="text-center text-xs text-ink-3 pb-2">
         Última actualización: {new Date().toLocaleString('es-AR')}
       </p>
     </div>

@@ -11,8 +11,8 @@ export default function MonthSelector({ months, selected, onChange }) {
           className={clsx(
             'flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
             selected === month.value
-              ? 'bg-teal-700 text-white'
-              : 'bg-white text-gray-600 border border-gray-200 hover:border-teal-300 hover:text-teal-700'
+              ? 'bg-ink-1 text-white'
+              : 'bg-white text-ink-2 border border-cream hover:border-cream-dark hover:text-ink-1'
           )}
         >
           {month.label}

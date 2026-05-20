@@ -28,16 +28,16 @@ export default function DataTable({ columns, data, className }) {
     : data;
 
   return (
-    <div className={clsx('overflow-x-auto rounded-xl border border-gray-100', className)}>
+    <div className={clsx('overflow-x-auto rounded-xl border border-cream', className)}>
       <table className="w-full min-w-max text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
+          <tr className="bg-page border-b border-cream">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={clsx(
-                  'px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
-                  col.sortable && 'cursor-pointer select-none hover:text-teal-700'
+                  'px-4 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide whitespace-nowrap',
+                  col.sortable && 'cursor-pointer select-none hover:text-gold-dark'
                 )}
                 onClick={() => col.sortable && handleSort(col.key)}
               >
@@ -54,15 +54,15 @@ export default function DataTable({ columns, data, className }) {
         <tbody>
           {sorted.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-400 text-sm">
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-ink-3 text-sm">
                 Sin datos para mostrar
               </td>
             </tr>
           ) : (
             sorted.map((row, i) => (
-              <tr key={i} className={clsx('border-b border-gray-50', i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
+              <tr key={i} className={clsx('border-b border-cream', i % 2 === 0 ? 'bg-white' : 'bg-cream/50')}>
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                  <td key={col.key} className="px-4 py-3 text-ink-2 whitespace-nowrap">
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
                   </td>
                 ))}

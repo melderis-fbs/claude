@@ -6,11 +6,11 @@ import DataTable from '../ui/DataTable.jsx';
 import clsx from 'clsx';
 
 const RESULTADO_BADGE = {
-  Cerrado: 'bg-teal-100 text-teal-700',
-  Interesado: 'bg-blue-100 text-blue-700',
-  Seguimiento: 'bg-yellow-100 text-yellow-700',
-  'No interesado': 'bg-red-100 text-red-600',
-  'Sin respuesta': 'bg-gray-100 text-gray-500',
+  Cerrado: 'bg-gold-light text-gold-dark',
+  Interesado: 'bg-cream text-ink-2',
+  Seguimiento: 'bg-gold-light text-gold-dark',
+  'No interesado': 'bg-neg-light text-neg',
+  'Sin respuesta': 'bg-cream text-ink-3',
 };
 
 function formatDate(d) {
@@ -41,7 +41,6 @@ export default function LlamadasSeguimientos({ data }) {
   const totalCierres = filtered.filter(l => l.resultado === 'Cerrado').length;
   const tasaCierre = totalLlamadas > 0 ? ((totalCierres / totalLlamadas) * 100).toFixed(1) : '0.0';
 
-  // Observations grouped by pattern
   const patrones = useMemo(() => {
     const obs = filtered.filter(l => l.observaciones && l.observaciones !== '-');
     const patterns = {};
@@ -68,7 +67,7 @@ export default function LlamadasSeguimientos({ data }) {
     {
       key: 'resultado', label: 'Resultado', sortable: true,
       render: (v) => (
-        <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', RESULTADO_BADGE[v] || 'bg-gray-100 text-gray-600')}>
+        <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', RESULTADO_BADGE[v] || 'bg-cream text-ink-2')}>
           {v}
         </span>
       )
@@ -80,12 +79,11 @@ export default function LlamadasSeguimientos({ data }) {
 
   return (
     <div className="space-y-5">
-      {/* Date picker */}
-      <div className="bg-white rounded-xl border border-gray-100 p-3 flex items-center justify-between shadow-sm">
+      <div className="bg-white rounded-xl border border-cream p-3 flex items-center justify-between shadow-sm">
         <button
           onClick={prevDate}
           disabled={dateIdx >= allDates.length - 1}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
+          className="p-2 rounded-lg hover:bg-cream disabled:opacity-30 transition-colors"
         >
           <ChevronLeft size={18} />
         </button>
@@ -93,64 +91,61 @@ export default function LlamadasSeguimientos({ data }) {
           <select
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className="text-sm font-semibold text-gray-800 bg-transparent border-none outline-none cursor-pointer text-center"
+            className="text-sm font-semibold text-ink-1 bg-transparent border-none outline-none cursor-pointer text-center"
           >
             {allDates.map(d => (
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
-          <p className="text-xs text-gray-400">Seleccioná una fecha</p>
+          <p className="text-xs text-ink-3">Seleccioná una fecha</p>
         </div>
         <button
           onClick={nextDate}
           disabled={dateIdx <= 0}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
+          className="p-2 rounded-lg hover:bg-cream disabled:opacity-30 transition-colors"
         >
           <ChevronRight size={18} />
         </button>
       </div>
 
-      {/* Summary row */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm">
-          <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+        <div className="bg-white rounded-xl border border-cream p-4 text-center shadow-sm">
+          <div className="flex items-center justify-center gap-1 text-ink-3 mb-1">
             <Phone size={14} />
             <span className="text-xs">Llamadas</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{totalLlamadas}</div>
+          <div className="text-2xl font-bold text-ink-1">{totalLlamadas}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm">
-          <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+        <div className="bg-white rounded-xl border border-cream p-4 text-center shadow-sm">
+          <div className="flex items-center justify-center gap-1 text-ink-3 mb-1">
             <Target size={14} />
             <span className="text-xs">Cierres</span>
           </div>
-          <div className="text-2xl font-bold text-teal-700">{totalCierres}</div>
+          <div className="text-2xl font-bold text-gold-dark">{totalCierres}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">Tasa</div>
-          <div className={clsx('text-2xl font-bold', parseFloat(tasaCierre) >= 30 ? 'text-teal-700' : 'text-gray-900')}>
+        <div className="bg-white rounded-xl border border-cream p-4 text-center shadow-sm">
+          <div className="text-xs text-ink-3 mb-1">Tasa</div>
+          <div className={clsx('text-2xl font-bold', parseFloat(tasaCierre) >= 30 ? 'text-gold-dark' : 'text-ink-1')}>
             {tasaCierre}%
           </div>
         </div>
       </div>
 
-      {/* Table */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Detalle de llamadas</h3>
+        <h3 className="text-sm font-semibold text-ink-2 mb-2">Detalle de llamadas</h3>
         <DataTable columns={columns} data={filtered} />
       </div>
 
-      {/* Lo que se puede mejorar */}
       {patrones.length > 0 && (
-        <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
-          <h3 className="text-sm font-semibold text-blue-800 mb-3">💡 Lo que se puede mejorar</h3>
+        <div className="bg-gold-light rounded-xl border border-gold/30 p-4">
+          <h3 className="text-sm font-semibold text-gold-dark mb-3">💡 Lo que se puede mejorar</h3>
           <div className="space-y-2">
             {patrones.map((p, i) => (
-              <div key={i} className="flex items-start gap-2 bg-white rounded-lg p-3 border border-blue-100">
-                <span className="text-blue-400 mt-0.5 flex-shrink-0">→</span>
-                <p className="text-sm text-gray-700">{p.text}</p>
+              <div key={i} className="flex items-start gap-2 bg-white rounded-lg p-3 border border-cream">
+                <span className="text-gold-dark mt-0.5 flex-shrink-0">→</span>
+                <p className="text-sm text-ink-2">{p.text}</p>
                 {p.count > 1 && (
-                  <span className="ml-auto flex-shrink-0 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">x{p.count}</span>
+                  <span className="ml-auto flex-shrink-0 text-xs bg-gold-light text-gold-dark px-2 py-0.5 rounded-full">x{p.count}</span>
                 )}
               </div>
             ))}
@@ -158,23 +153,22 @@ export default function LlamadasSeguimientos({ data }) {
         </div>
       )}
 
-      {/* Análisis de llamadas */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border border-cream p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
-          <FileText size={16} className="text-gray-500" />
-          <h3 className="text-sm font-semibold text-gray-700">Análisis de llamadas</h3>
+          <FileText size={16} className="text-ink-3" />
+          <h3 className="text-sm font-semibold text-ink-2">Análisis de llamadas</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[1, 2].map(n => (
-            <div key={n} className="border border-dashed border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center gap-2 text-gray-400 min-h-[80px]">
+            <div key={n} className="border border-dashed border-cream rounded-lg p-4 flex flex-col items-center justify-center gap-2 text-ink-3 min-h-[80px]">
               <FileText size={20} />
-              <span className="text-xs text-center">Análisis PDF {n}<br /><span className="text-gray-300">No adjuntado</span></span>
+              <span className="text-xs text-center">Análisis PDF {n}<br /><span className="text-ink-3/50">No adjuntado</span></span>
             </div>
           ))}
         </div>
       </div>
 
-      <p className="text-center text-xs text-gray-400 pb-2">
+      <p className="text-center text-xs text-ink-3 pb-2">
         Última actualización: {new Date().toLocaleString('es-AR')}
       </p>
     </div>
