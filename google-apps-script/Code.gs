@@ -30,7 +30,7 @@ var SPREADSHEET_ID = 'TU_ID_AQUI';
 var SHEET_NEGOCIO   = 'negocio';
 var SHEET_ANUNCIOS  = 'anuncios';
 var SHEET_CLOSERS   = 'closers';
-var SHEET_COBRANZAS = 'Ingresos 2026';
+var SHEET_COBRANZAS = 'cobranzas';
 var SHEET_EGRESOS   = 'egresos';
 var SHEET_AGENDAS   = 'agendas';
 var SHEET_LLAMADAS  = 'llamadas';
@@ -259,18 +259,20 @@ function getAnuncios() {
 }
 
 // ── INGRESOS Y EGRESOS ────────────────────────────────────────────────────────
-// Combina hoja "egresos" + hoja "Ingresos 2026" (formato ancho)
+// Combina hoja "egresos" + hoja "cobranzas"
 //
 // egresos: Mes | Sueldos | Publicidad | APPS | Gastos administrativos |
 //          Formacion | Impuestos | Extras
 //
-// Ingresos 2026 (formato ancho, 1 fila por cliente, hasta 4 pagos):
-//   Col 0: Tr | Col 1: Nombre
-//   Pago N (N=1..4) empieza en col 2 + (N-1)*4:
-//     +0 Monto | +1 Fecha | +2 Medio | +3 Estado (checkbox)
+// cobranzas (formato ancho, 1 fila por cliente, hasta 4 pagos):
+//   Col 0:  Nombre
+//   Pago N (N=1..4) empieza en col 1 + (N-1)*3:
+//     +0 Monto | +1 Fecha | +2 Estado
+//   Col 13: Comentarios
+//   Col 14: Fecha comentarios
 function getIngresos() {
   var egresosRows   = getRows(SHEET_EGRESOS, 2, 8);
-  var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 18);
+  var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 15);
   var hoy = new Date(); hoy.setHours(0,0,0,0);
 
   var egresos = egresosRows.map(function(r) {
@@ -291,56 +293,72 @@ function getIngresos() {
     };
   });
 
-  // Contar cuántos pagos tiene cada cliente (slots con monto > 0)
   var MAX_PAGOS = 4;
-  var cobranzas = [];
+  var cobranzas  = [];
+  var comentarios = [];
+
   cobranzasRows.forEach(function(r) {
-    var nombre = str(r[1]);
+    var nombre = str(r[0]);
     if (!nombre) return;
 
-    // Contar total de cuotas del cliente
+    // Contar cuotas reales (slots con monto > 0)
     var cantCuotas = 0;
     for (var n = 0; n < MAX_PAGOS; n++) {
-      if (num(r[2 + n * 4]) > 0) cantCuotas++;
+      if (num(r[1 + n * 3]) > 0) cantCuotas++;
     }
 
     for (var n = 0; n < MAX_PAGOS; n++) {
-      var base   = 2 + n * 4;
+      var base   = 1 + n * 3;
       var monto  = num(r[base]);
       var fecha  = r[base + 1];
-      var medio  = str(r[base + 2]);
-      var pagado = r[base + 3] === true || str(r[base + 3]).toLowerCase() === 'true';
+      var estadoRaw = r[base + 2];
 
-      if (!monto && !fecha) continue; // slot vacío
+      if (!monto && !fecha) continue;
 
       var fechaD = fecha ? new Date(fecha) : null;
       var estado;
-      if (pagado) {
+      // Estado puede ser checkbox (boolean) o texto
+      if (estadoRaw === true || str(estadoRaw).toLowerCase() === 'true') {
         estado = 'Cobrado';
+      } else if (str(estadoRaw) && str(estadoRaw) !== 'false') {
+        estado = str(estadoRaw); // texto directo: "Cobrado", "Pendiente", etc.
       } else if (fechaD && fechaD < hoy) {
         estado = 'Vencido';
       } else {
         estado = 'Pendiente';
       }
 
-      var mesCobranza = fechaD ? Utilities.formatDate(fechaD, Session.getScriptTimeZone(), 'yyyy-MM') : '';
+      var mesCobranza = fechaD
+        ? Utilities.formatDate(fechaD, Session.getScriptTimeZone(), 'yyyy-MM')
+        : '';
 
       cobranzas.push({
         mes:        mesCobranza,
         nombre:     nombre,
-        programa:   '',
         nCuota:     n + 1,
         cantCuotas: cantCuotas,
         montoCuota: monto,
         fechaCuota: fechaD ? fmtDate(fechaD) : '',
         fechaSort:  fechaD ? fmtDateISO(fechaD) : '',
-        medio:      medio,
         estado:     estado,
+      });
+    }
+
+    // Comentarios de seguimiento
+    var comentario     = str(r[13]);
+    var fechaComentario = r[14];
+    if (comentario) {
+      comentarios.push({
+        nombre:          nombre,
+        comentario:      comentario,
+        fecha:           fechaComentario ? fmtDate(fechaComentario) : '',
+        fechaSort:       fechaComentario ? fmtDateISO(fechaComentario) : '',
+        tieneVencido:    cobranzas.some(function(c) { return c.nombre === nombre && c.estado === 'Vencido'; }),
       });
     }
   });
 
-  return { egresos: egresos, cobranzas: cobranzas };
+  return { egresos: egresos, cobranzas: cobranzas, comentarios: comentarios };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

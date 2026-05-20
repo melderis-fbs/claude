@@ -39,7 +39,7 @@ const ESTADO_STYLE = {
 };
 
 export default function IngresosEgresos({ data = {}, months = [], selectedMonth, onMonthChange }) {
-  const { egresos = [], cobranzas = [] } = data;
+  const { egresos = [], cobranzas = [], comentarios = [] } = data;
 
   const mesEgresos = useMemo(
     () => egresos.find(r => r.mes === selectedMonth) || egresos[0] || {},
@@ -166,6 +166,33 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
           </div>
         )}
       </div>
+
+      {comentarios.length > 0 && (
+        <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-ink-2 mb-3">Seguimiento de clientes</h3>
+          <div className="space-y-2">
+            {[...comentarios]
+              .sort((a, b) => {
+                if (a.tieneVencido !== b.tieneVencido) return a.tieneVencido ? -1 : 1;
+                return (b.fechaSort || '').localeCompare(a.fechaSort || '');
+              })
+              .map((c, i) => (
+              <div key={i} className={`rounded-xl border p-3 ${c.tieneVencido ? 'border-neg/30 bg-neg-light' : 'border-cream bg-page'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-ink-1">{c.nombre}</span>
+                  <div className="flex items-center gap-2">
+                    {c.tieneVencido && (
+                      <span className="text-xs bg-neg-light text-neg px-2 py-0.5 rounded-full font-medium border border-neg/20">Deudor</span>
+                    )}
+                    {c.fecha && <span className="text-xs text-ink-3">{c.fecha}</span>}
+                  </div>
+                </div>
+                <p className="text-sm text-ink-2">{c.comentario}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="text-center text-xs text-ink-3 pb-2">
         Última actualización: {new Date().toLocaleString('es-AR')}
