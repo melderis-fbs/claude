@@ -21,6 +21,11 @@
 //     Action: "Webhooks by Zapier" → POST → URL del web app
 //       Body type: JSON | Data: { "type": "llamada", "text": [Message Text], "username": [Username] }
 
+// ► REEMPLAZÁ este ID con el de tu planilla.
+// Lo encontrás en la URL de Google Sheets:
+// https://docs.google.com/spreadsheets/d/  ESTE_ES_EL_ID  /edit
+var SPREADSHEET_ID = 'TU_ID_AQUI';
+
 // Nombres de las hojas en tu planilla — ajustá si son distintos
 var SHEET_NEGOCIO   = 'negocio';
 var SHEET_ANUNCIOS  = 'anuncios';
@@ -56,8 +61,14 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function getSpreadsheet() {
+  return SPREADSHEET_ID !== 'TU_ID_AQUI'
+    ? SpreadsheetApp.openById(SPREADSHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function getSheet(name) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  var sheet = getSpreadsheet().getSheetByName(name);
   if (!sheet) throw new Error('Hoja "' + name + '" no encontrada en la planilla.');
   return sheet;
 }
@@ -321,7 +332,7 @@ function doPost(e) {
 }
 
 function appendToSheet(sheetName, rowArray) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  var sheet = getSpreadsheet().getSheetByName(sheetName);
   if (!sheet) throw new Error('Hoja "' + sheetName + '" no encontrada.');
   sheet.appendRow(rowArray);
 }
@@ -340,10 +351,8 @@ function parseAgenda(text, username) {
   var fechaRaw  = extractField(lines, 'Fecha y hora:');
   var ocupacion = extractField(lines, 'Ocupación:');
 
-  // Detectar fuente: "Bio IG" si el mensaje dice "BIO" o el username es el bot de bio,
-  // "Anuncios" si viene de Mel (bot principal / canal de anuncios)
   var userLower = (username || '').toLowerCase();
-  var tipo = userLower === 'mel' ? 'Anuncios' : 'Bio IG';
+  var tipo = userLower === 'admin' ? 'Anuncios' : 'Bio IG';
 
   // Extraer nombre del cliente del título
   // "Sesión Asesoría Founders - Luis Prueba" → "Luis Prueba"
