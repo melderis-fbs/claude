@@ -1,5 +1,5 @@
 import {
-  getOverviewData,
+  getNegocioData,
   getAgendasData,
   getLlamadasData,
   getClosersData,
@@ -11,8 +11,8 @@ import Dashboard from '../components/Dashboard.jsx';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [overview, agendas, llamadas, closers, anuncios, ingresosEgresos] = await Promise.all([
-    getOverviewData(),
+  const [negocio, agendas, llamadas, closers, anuncios, ingresosEgresos] = await Promise.all([
+    getNegocioData(),
     getAgendasData(),
     getLlamadasData(),
     getClosersData(),
@@ -22,7 +22,7 @@ export default async function Home() {
 
   return (
     <Dashboard
-      overview={overview}
+      negocio={negocio}
       agendas={agendas}
       llamadas={llamadas}
       closers={closers}

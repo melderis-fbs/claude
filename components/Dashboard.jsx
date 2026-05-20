@@ -34,7 +34,7 @@ function getMonthsList() {
   });
 }
 
-export default function Dashboard({ overview, agendas, llamadas, closers, anuncios, ingresosEgresos }) {
+export default function Dashboard({ negocio, agendas, llamadas, closers, anuncios, ingresosEgresos }) {
   const [activeTab, setActiveTab] = useState('overview');
   const months = useMemo(() => getMonthsList(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => months[0].value);
@@ -75,7 +75,7 @@ export default function Dashboard({ overview, agendas, llamadas, closers, anunci
       {/* Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-5">
         {activeTab === 'overview' && (
-          <Overview data={overview} agendas={agendas} llamadas={llamadas} />
+          <Overview negocio={negocio} anuncios={anuncios} closers={closers} selectedMonth={selectedMonth} />
         )}
         {activeTab === 'agendas' && (
           <Agendas data={agendas} />
