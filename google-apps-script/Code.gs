@@ -313,7 +313,7 @@ function getIngresos() {
       var fecha  = r[base + 1];
       var estadoRaw = r[base + 2];
 
-      if (!monto && !fecha) continue;
+      if (!monto) continue; // sin monto = cuota inexistente
 
       var fechaD = fecha ? new Date(fecha) : null;
       var estado;
