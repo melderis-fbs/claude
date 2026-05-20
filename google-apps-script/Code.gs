@@ -362,24 +362,33 @@ function parseAgenda(text, username) {
   var dashIdx = titulo.lastIndexOf(' - ');
   if (dashIdx >= 0) nombre = titulo.slice(dashIdx + 3).trim();
 
-  // Parsear fecha de reunión (formato Calendly ES: "martes, 20 de mayo de 2026 15:00 - 15:30")
+  // Parsear fecha de reunión
+  // Soporta formato inglés Calendly: "Tuesday, May 26, 2026 5:30 PM"
+  // y formato español: "martes, 20 de mayo de 2026 15:00"
   var fechaReunion = '';
   try {
-    var MESES = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
-                  julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
-    var m = fechaRaw.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
-    if (m) {
-      var dia = parseInt(m[1], 10);
-      var mes2 = MESES[m[2].toLowerCase()];
-      var anio = parseInt(m[3], 10);
-      if (mes2) {
-        var d = new Date(anio, mes2 - 1, dia);
+    var MESES_ES = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
+                     julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
+    var MESES_EN = { january:1,february:2,march:3,april:4,may:5,june:6,
+                     july:7,august:8,september:9,october:10,november:11,december:12 };
+    // Inglés: "Month DD, YYYY"
+    var mEN = fechaRaw.match(/(\w+)\s+(\d{1,2}),\s+(\d{4})/i);
+    if (mEN && MESES_EN[mEN[1].toLowerCase()]) {
+      var d = new Date(parseInt(mEN[3],10), MESES_EN[mEN[1].toLowerCase()] - 1, parseInt(mEN[2],10));
+      if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
+    }
+    // Español: "DD de mes de YYYY"
+    if (!fechaReunion) {
+      var mES = fechaRaw.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+      if (mES && MESES_ES[mES[2].toLowerCase()]) {
+        var d = new Date(parseInt(mES[3],10), MESES_ES[mES[2].toLowerCase()] - 1, parseInt(mES[1],10));
         if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
       }
     }
+    // Fallback nativo
     if (!fechaReunion) {
-      var d2 = new Date(fechaRaw);
-      if (!isNaN(d2.getTime())) fechaReunion = fmt(d2, 'yyyy-MM-dd');
+      var d = new Date(fechaRaw);
+      if (!isNaN(d.getTime())) fechaReunion = fmt(d, 'yyyy-MM-dd');
     }
   } catch(e) {}
 
@@ -454,11 +463,13 @@ function parseLlamada(text, username) {
 function extractField(lines, fieldName) {
   var prefix = fieldName.toLowerCase();
   for (var i = 0; i < lines.length; i++) {
-    if (lines[i].toLowerCase().indexOf(prefix) === 0) {
-      var val = lines[i].slice(fieldName.length).trim();
-      // Si el siguiente campo aún no empezó, concatenar líneas de continuación
+    // Strip Slack bold markers (*) before comparing
+    var clean = lines[i].replace(/\*/g, '').toLowerCase();
+    if (clean.indexOf(prefix) === 0) {
+      // Remove the field label (with possible asterisks) from the raw line
+      var val = lines[i].replace(/\*/g, '').slice(fieldName.length).trim();
       for (var j = i + 1; j < lines.length; j++) {
-        var next = lines[j].trim();
+        var next = lines[j].replace(/\*/g, '').trim();
         if (!next || /^[A-ZÁÉÍÓÚ][^:]+:/.test(next)) break;
         val += ' ' + next;
       }
