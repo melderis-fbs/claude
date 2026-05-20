@@ -342,10 +342,8 @@ function parseAgenda(text, username) {
 
   // Detectar fuente: "Bio IG" si el mensaje dice "BIO" o el username es el bot de bio,
   // "Anuncios" si viene de Mel (bot principal / canal de anuncios)
-  var primeraLinea = (lines[0] || '').toLowerCase();
-  var userLower    = (username || '').toLowerCase();
-  var esBio = primeraLinea.indexOf('bio') >= 0 || userLower.indexOf('bio') >= 0;
-  var tipo  = esBio ? 'Bio IG' : 'Anuncios';
+  var userLower = (username || '').toLowerCase();
+  var tipo = userLower === 'mel' ? 'Anuncios' : 'Bio IG';
 
   // Extraer nombre del cliente del título
   // "Sesión Asesoría Founders - Luis Prueba" → "Luis Prueba"
