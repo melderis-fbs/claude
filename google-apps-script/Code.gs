@@ -30,7 +30,7 @@ var SPREADSHEET_ID = 'TU_ID_AQUI';
 var SHEET_NEGOCIO   = 'negocio';
 var SHEET_ANUNCIOS  = 'anuncios';
 var SHEET_CLOSERS   = 'closers';
-var SHEET_COBRANZAS = 'cobranzas';
+var SHEET_COBRANZAS = 'Ingresos 2026';
 var SHEET_EGRESOS   = 'egresos';
 var SHEET_AGENDAS   = 'agendas';
 var SHEET_LLAMADAS  = 'llamadas';
@@ -126,6 +126,8 @@ function fmtDisplay(val) {
 
 function num(v) { return parseFloat(String(v).replace(',','.')) || 0; }
 function str(v) { return String(v || '').trim(); }
+// Convierte porcentaje guardado como decimal en Google Sheets (0.208 → 20.8)
+function pctNum(v) { var n = num(v); return n > 0 && n <= 1 ? Math.round(n * 1000) / 10 : Math.round(n * 10) / 10; }
 
 // ── NEGOCIO ───────────────────────────────────────────────────────────────────
 // Columnas: Mes | Cant ventas nuevas | Cant ventas back | Ventas totales |
@@ -224,8 +226,8 @@ function getClosers() {
       ofertas:                   num(r[7]),
       senia:                     num(r[8]),
       cierres:                   num(r[9]),
-      pctCierre:                 num(r[10]),
-      pctAsistencia:             num(r[11]),
+      pctCierre:                 pctNum(r[10]),
+      pctAsistencia:             pctNum(r[11]),
     };
   });
 }
@@ -245,11 +247,11 @@ function getAnuncios() {
       costoAgenda:         num(r[3]),
       llamadasCalendario:  num(r[4]),
       asistencias:         num(r[5]),
-      pctAsistencia:       num(r[6]),
+      pctAsistencia:       pctNum(r[6]),
       costoAsistencia:     num(r[7]),
       cierres:             num(r[8]),
-      pctCierres:          num(r[9]),
-      pctLC:               num(r[10]),
+      pctCierres:          pctNum(r[9]),
+      pctLC:               pctNum(r[10]),
       roas:                num(r[11]),
       roasCash:            num(r[12]),
     };
@@ -257,16 +259,19 @@ function getAnuncios() {
 }
 
 // ── INGRESOS Y EGRESOS ────────────────────────────────────────────────────────
-// Combina hoja "egresos" + hoja "cobranzas"
+// Combina hoja "egresos" + hoja "Ingresos 2026" (formato ancho)
 //
 // egresos: Mes | Sueldos | Publicidad | APPS | Gastos administrativos |
 //          Formacion | Impuestos | Extras
 //
-// cobranzas: Mes | Nombre | Programa | N de cuota | Cant cuotas |
-//            MontoCuota | FechaCuota | Medio | Estado
+// Ingresos 2026 (formato ancho, 1 fila por cliente, hasta 4 pagos):
+//   Col 0: Tr | Col 1: Nombre
+//   Pago N (N=1..4) empieza en col 2 + (N-1)*4:
+//     +0 Monto | +1 Fecha | +2 Medio | +3 Estado (checkbox)
 function getIngresos() {
-  var egresosRows = getRows(SHEET_EGRESOS, 2, 8);
-  var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 9);
+  var egresosRows   = getRows(SHEET_EGRESOS, 2, 8);
+  var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 18);
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
 
   var egresos = egresosRows.map(function(r) {
     var sueldos = num(r[1]), publicidad = num(r[2]), apps = num(r[3]),
@@ -286,19 +291,53 @@ function getIngresos() {
     };
   });
 
-  var cobranzas = cobranzasRows.map(function(r) {
-    return {
-      mes:         mesKey(r[0]),
-      nombre:      str(r[1]),
-      programa:    str(r[2]),
-      nCuota:      num(r[3]),
-      cantCuotas:  num(r[4]),
-      montoCuota:  num(r[5]),
-      fechaCuota:  fmtDate(r[6]),
-      fechaSort:   fmtDateISO(r[6]),
-      medio:       str(r[7]),
-      estado:      str(r[8]),
-    };
+  // Contar cuántos pagos tiene cada cliente (slots con monto > 0)
+  var MAX_PAGOS = 4;
+  var cobranzas = [];
+  cobranzasRows.forEach(function(r) {
+    var nombre = str(r[1]);
+    if (!nombre) return;
+
+    // Contar total de cuotas del cliente
+    var cantCuotas = 0;
+    for (var n = 0; n < MAX_PAGOS; n++) {
+      if (num(r[2 + n * 4]) > 0) cantCuotas++;
+    }
+
+    for (var n = 0; n < MAX_PAGOS; n++) {
+      var base   = 2 + n * 4;
+      var monto  = num(r[base]);
+      var fecha  = r[base + 1];
+      var medio  = str(r[base + 2]);
+      var pagado = r[base + 3] === true || str(r[base + 3]).toLowerCase() === 'true';
+
+      if (!monto && !fecha) continue; // slot vacío
+
+      var fechaD = fecha ? new Date(fecha) : null;
+      var estado;
+      if (pagado) {
+        estado = 'Cobrado';
+      } else if (fechaD && fechaD < hoy) {
+        estado = 'Vencido';
+      } else {
+        estado = 'Pendiente';
+      }
+
+      var mesCobranza = fechaD ? Utilities.formatDate(fechaD, Session.getScriptTimeZone(), 'yyyy-MM') : '';
+
+      cobranzas.push({
+        mes:        mesCobranza,
+        nombre:     nombre,
+        programa:   '',
+        nCuota:     n + 1,
+        cantCuotas: cantCuotas,
+        montoCuota: monto,
+        fechaCuota: fechaD ? fmtDate(fechaD) : '',
+        fechaSort:  fechaD ? fmtDateISO(fechaD) : '',
+        medio:      medio,
+        estado:     estado,
+      });
+    }
   });
 
   return { egresos: egresos, cobranzas: cobranzas };
