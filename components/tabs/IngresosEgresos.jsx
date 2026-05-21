@@ -161,10 +161,7 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
   }, [cobranzas, selectedMonth]);
 
   const deudores = useMemo(() =>
-    clientes.filter(c =>
-      c.totalVencido > 0 ||
-      c.cuotas.some(q => q.estado === 'Pendiente' && isPastDue(q.fechaCuota))
-    ),
+    clientes.filter(c => c.totalVencido > 0),
     [clientes]
   );
 
@@ -281,7 +278,7 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
       {deudores.length > 0 && (
         <div className="bg-white rounded-xl border border-neg/20 shadow-sm p-4">
           <h3 className="text-xs font-semibold tracking-widest uppercase text-neg mb-3">
-            Deudores · {deudores.length} con cuotas atrasadas
+            Deudores · {deudores.length} con cuotas vencidas
           </h3>
           <div className="space-y-3">
             {deudores.map(d => {
