@@ -7,6 +7,14 @@ import clsx from 'clsx';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 
+function isPastDue(fechaStr) {
+  if (!fechaStr) return false;
+  try {
+    const d = new Date(fechaStr);
+    return !isNaN(d.getTime()) && d < new Date();
+  } catch { return false; }
+}
+
 const CAT_COLORS = {
   sueldos: '#3B82F6', publicidad: '#8B5CF6', apps: '#10B981',
   gastosAdmin: '#6B7280', formacion: '#F59E0B', impuestos: '#EF4444', extras: '#D1D5DB',
@@ -124,7 +132,10 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
   }, [cobranzas]);
 
   const deudores = useMemo(() =>
-    clientes.filter(c => c.totalVencido > 0),
+    clientes.filter(c =>
+      c.totalVencido > 0 ||
+      c.cuotas.some(q => q.estado === 'Pendiente' && isPastDue(q.fechaCuota))
+    ),
     [clientes]
   );
 
@@ -235,7 +246,7 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
       {deudores.length > 0 && (
         <div className="bg-white rounded-xl border border-neg/20 shadow-sm p-4">
           <h3 className="text-xs font-semibold tracking-widest uppercase text-neg mb-3">
-            Deudores · {deudores.length} con cuotas vencidas
+            Deudores · {deudores.length} con cuotas atrasadas
           </h3>
           <div className="space-y-3">
             {deudores.map(d => {

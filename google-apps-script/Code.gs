@@ -85,9 +85,24 @@ function mesKey(val) {
   if (!val) return '';
   if (val instanceof Date) return fmt(val, 'yyyy-MM');
   var s = String(val).trim();
-  // acepta "2024-05", "mayo 2024", "05/2024", etc.
+  // "2024-05"
   if (/^\d{4}-\d{2}$/.test(s)) return s;
+  // "05/2024"
   if (/^\d{2}\/\d{4}$/.test(s)) return s.slice(3) + '-' + s.slice(0, 2);
+  // Nombres de meses en español: "mayo", "Mayo 2026", "mayo de 2026", etc.
+  var MESES_ES = {
+    'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,
+    'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12
+  };
+  var lower = s.toLowerCase().trim();
+  for (var m in MESES_ES) {
+    if (lower.indexOf(m) === 0) {
+      var n = MESES_ES[m];
+      var ym = s.match(/\d{4}/);
+      var year = ym ? ym[0] : new Date().getFullYear().toString();
+      return year + '-' + (n < 10 ? '0' + n : '' + n);
+    }
+  }
   try {
     var d = new Date(s);
     if (!isNaN(d.getTime())) return fmt(d, 'yyyy-MM');
@@ -154,10 +169,10 @@ function getNegocio() {
       recoleccionRecurrenteFront: num(r[9]),
       recoleccionBack:            num(r[10]),
       recoleccionRecurrenteBack:  num(r[11]),
-      pctCC:                      num(r[12]),
+      pctCC:                      pctNum(r[12]),
       costosTotal:                num(r[13]),
       gananciaVentaNueva:         num(r[14]),
-      rentabilidadVentaNueva:     num(r[15]),
+      rentabilidadVentaNueva:     pctNum(r[15]),
       objetivoPesos:              num(r[16]),
       objetivoVentas:             num(r[17]),
       faltanteVentas:             num(r[18]),

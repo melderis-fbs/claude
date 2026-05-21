@@ -5,8 +5,12 @@ import StatCard from '../ui/StatCard.jsx';
 import { DollarSign, Calendar, Users, TrendingUp, Target, BarChart2 } from 'lucide-react';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
-function pct(n) { return `${Number(n || 0).toFixed(1)}%`; }
-function num(n) { return Number(n || 0).toFixed(2); }
+function pct(n) {
+  const v = Number(n || 0);
+  const p = (v > 0 && v <= 1) ? v * 100 : v;
+  return `${p.toFixed(1)}%`;
+}
+function num(n) { return Number(n || 0).toFixed(1); }
 
 export default function Anuncios({ data = [], months = [], selectedMonth, onMonthChange }) {
   const latest = useMemo(() => [...data].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [data]);
