@@ -10,7 +10,11 @@ function num(n) { return Number(n || 0).toFixed(2); }
 
 export default function Anuncios({ data = [], months = [], selectedMonth, onMonthChange }) {
   const latest = useMemo(() => [...data].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [data]);
-  const mes = useMemo(() => data.find(d => d.mes === selectedMonth) || latest, [data, selectedMonth, latest]);
+  const mes = useMemo(() => {
+    const found = data.find(d => d.mes === selectedMonth);
+    if (found && ((found.inversion || 0) > 0 || (found.agendasCualificadas || 0) > 0)) return found;
+    return latest;
+  }, [data, selectedMonth, latest]);
 
   const chartData = useMemo(
     () => [...data].reverse().slice(-4).map(r => ({
