@@ -24,7 +24,13 @@ function getTodayStr() {
 }
 
 export default function LlamadasSeguimientos({ data }) {
-  const [selectedDate, setSelectedDate]   = useState(getTodayStr());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (!data || data.length === 0) return getTodayStr();
+    const dates = [...new Set(data.map(l => l.fecha).filter(Boolean).map(d => {
+      try { return format(parseISO(d), 'yyyy-MM-dd'); } catch { return d; }
+    }))].sort().reverse();
+    return dates[0] || getTodayStr();
+  });
   const [ocultarClientes, setOcultar]     = useState(true);
 
   const allDates = useMemo(() => {
