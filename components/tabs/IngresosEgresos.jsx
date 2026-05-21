@@ -1,9 +1,10 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import MonthSelector from '../ui/MonthSelector.jsx';
 import StatCard from '../ui/StatCard.jsx';
 import { TrendingDown, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import clsx from 'clsx';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 
@@ -38,17 +39,15 @@ const ESTADO_STYLE = {
   'Vencido':  { bg: 'bg-neg-light',  text: 'text-neg',       icon: AlertCircle  },
 };
 
+const STATUS_ORDER = { Vencido: 0, Pendiente: 1, Cobrado: 2 };
+
 export default function IngresosEgresos({ data = {}, months = [], selectedMonth, onMonthChange }) {
   const { egresos = [], cobranzas = [], comentarios = [] } = data;
+  const [estadoFiltro, setEstadoFiltro] = useState('Todos');
 
   const mesEgresos = useMemo(
     () => egresos.find(r => r.mes === selectedMonth) || egresos[0] || {},
     [egresos, selectedMonth]
-  );
-
-  const mesCobranzas = useMemo(
-    () => cobranzas.filter(r => r.mes === selectedMonth).sort((a, b) => (a.fechaSort || '').localeCompare(b.fechaSort || '')),
-    [cobranzas, selectedMonth]
   );
 
   const pieData = useMemo(() => {
@@ -57,17 +56,32 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
       .map(k => ({ name: CAT_LABELS[k], value: mesEgresos[k], fill: CAT_COLORS[k] }));
   }, [mesEgresos]);
 
+  // Cobranzas: mostrar todas, ordenar vencido > pendiente > cobrado > fecha
+  const cobranzasOrdenadas = useMemo(() => {
+    return [...cobranzas].sort((a, b) => {
+      const so = (STATUS_ORDER[a.estado] ?? 3) - (STATUS_ORDER[b.estado] ?? 3);
+      if (so !== 0) return so;
+      return (a.fechaSort || '').localeCompare(b.fechaSort || '');
+    });
+  }, [cobranzas]);
+
+  const cobranzasFiltradas = useMemo(() => {
+    if (estadoFiltro === 'Todos') return cobranzasOrdenadas;
+    return cobranzasOrdenadas.filter(c => c.estado === estadoFiltro);
+  }, [cobranzasOrdenadas, estadoFiltro]);
+
   const cobStats = useMemo(() => {
-    const cobrado  = mesCobranzas.filter(c => c.estado === 'Cobrado').reduce((s, c) => s + (c.montoCuota || 0), 0);
-    const pendiente= mesCobranzas.filter(c => c.estado === 'Pendiente').reduce((s, c) => s + (c.montoCuota || 0), 0);
-    const vencido  = mesCobranzas.filter(c => c.estado === 'Vencido').reduce((s, c) => s + (c.montoCuota || 0), 0);
+    const cobrado   = cobranzas.filter(c => c.estado === 'Cobrado').reduce((s, c) => s + (c.montoCuota || 0), 0);
+    const pendiente = cobranzas.filter(c => c.estado === 'Pendiente').reduce((s, c) => s + (c.montoCuota || 0), 0);
+    const vencido   = cobranzas.filter(c => c.estado === 'Vencido').reduce((s, c) => s + (c.montoCuota || 0), 0);
     return { cobrado, pendiente, vencido };
-  }, [mesCobranzas]);
+  }, [cobranzas]);
 
   return (
     <div className="space-y-5">
       <MonthSelector months={months} selected={selectedMonth} onChange={onMonthChange} />
 
+      {/* Egresos */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={TrendingDown} label="Total egresos"  value={ars(mesEgresos.total)}      accent="red"    />
         <StatCard icon={TrendingDown} label="Sueldos"        value={ars(mesEgresos.sueldos)}     accent="teal"   />
@@ -111,47 +125,68 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
         </div>
       </div>
 
+      {/* Cobranzas — muestra todos los pagos, sin filtro de mes */}
       <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-ink-2 mb-3">Cobranzas del mes</h3>
+        <h3 className="text-sm font-semibold text-ink-2 mb-3">Cobranzas</h3>
 
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
-            { label: 'Cobrado',   val: cobStats.cobrado,   style: ESTADO_STYLE['Cobrado'],   icon: CheckCircle },
-            { label: 'Pendiente', val: cobStats.pendiente, style: ESTADO_STYLE['Pendiente'], icon: Clock       },
-            { label: 'Vencido',   val: cobStats.vencido,   style: ESTADO_STYLE['Vencido'],   icon: AlertCircle },
-          ].map(({ label, val, style, icon: Icon }) => (
-            <div key={label} className={`${style.bg} rounded-xl p-3 text-center`}>
-              <Icon size={16} className={`${style.text} mx-auto mb-1`} />
-              <p className="text-xs text-ink-3">{label}</p>
-              <p className={`text-sm font-bold ${style.text}`}>{ars(val)}</p>
-            </div>
+            { label: 'Cobrado',   val: cobStats.cobrado,   key: 'Cobrado'   },
+            { label: 'Pendiente', val: cobStats.pendiente, key: 'Pendiente' },
+            { label: 'Vencido',   val: cobStats.vencido,   key: 'Vencido'   },
+          ].map(({ label, val, key }) => {
+            const style = ESTADO_STYLE[key];
+            const Icon  = style.icon;
+            return (
+              <div key={key} className={`${style.bg} rounded-xl p-3 text-center`}>
+                <Icon size={16} className={`${style.text} mx-auto mb-1`} />
+                <p className="text-xs text-ink-3">{label}</p>
+                <p className={`text-sm font-bold ${style.text}`}>{ars(val)}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Filtro por estado */}
+        <div className="flex gap-2 mb-3 overflow-x-auto">
+          {['Todos', 'Vencido', 'Pendiente', 'Cobrado'].map(f => (
+            <button
+              key={f}
+              onClick={() => setEstadoFiltro(f)}
+              className={clsx(
+                'flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors',
+                estadoFiltro === f
+                  ? 'bg-ink-1 text-white'
+                  : 'bg-page text-ink-2 border border-cream hover:border-cream-dark'
+              )}
+            >
+              {f}
+            </button>
           ))}
         </div>
 
-        {mesCobranzas.length === 0 ? (
-          <p className="text-sm text-ink-3 text-center py-4">Sin cobranzas para este mes</p>
+        {cobranzasFiltradas.length === 0 ? (
+          <p className="text-sm text-ink-3 text-center py-4">Sin cobranzas</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-max text-sm">
               <thead>
                 <tr className="border-b border-cream">
-                  {['Nombre','Programa','Cuota','Monto','Fecha','Medio','Estado'].map(h => (
+                  {['Nombre', 'Cuota', 'Monto', 'Fecha', 'Estado'].map(h => (
                     <th key={h} className="pb-2 px-3 text-left text-xs text-ink-3 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {mesCobranzas.map((c, i) => {
-                  const est = ESTADO_STYLE[c.estado] || { bg: 'bg-cream', text: 'text-ink-2', icon: Clock };
+                {cobranzasFiltradas.map((c, i) => {
+                  const est  = ESTADO_STYLE[c.estado] || { bg: 'bg-cream', text: 'text-ink-2', icon: Clock };
                   const Icon = est.icon;
                   return (
                     <tr key={i} className={`border-b border-cream/50 ${i % 2 === 0 ? 'bg-white' : 'bg-cream/50'}`}>
                       <td className="py-2.5 px-3 font-medium text-ink-1 whitespace-nowrap">{c.nombre}</td>
-                      <td className="py-2.5 px-3 text-ink-2 whitespace-nowrap">{c.programa}</td>
-                      <td className="py-2.5 px-3 text-ink-3">{c.nCuota}/{c.cantCuotas}</td>
+                      <td className="py-2.5 px-3 text-ink-3 text-center">{c.nCuota}/{c.cantCuotas}</td>
                       <td className="py-2.5 px-3 font-semibold text-ink-1 whitespace-nowrap">{ars(c.montoCuota)}</td>
                       <td className="py-2.5 px-3 text-ink-3 whitespace-nowrap">{c.fechaCuota}</td>
-                      <td className="py-2.5 px-3 text-ink-3">{c.medio}</td>
                       <td className="py-2.5 px-3">
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${est.bg} ${est.text}`}>
                           <Icon size={11} />
@@ -167,6 +202,7 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
         )}
       </div>
 
+      {/* Seguimiento de clientes con comentarios */}
       {comentarios.length > 0 && (
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
           <h3 className="text-sm font-semibold text-ink-2 mb-3">Seguimiento de clientes</h3>
@@ -177,19 +213,19 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
                 return (b.fechaSort || '').localeCompare(a.fechaSort || '');
               })
               .map((c, i) => (
-              <div key={i} className={`rounded-xl border p-3 ${c.tieneVencido ? 'border-neg/30 bg-neg-light' : 'border-cream bg-page'}`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-ink-1">{c.nombre}</span>
-                  <div className="flex items-center gap-2">
-                    {c.tieneVencido && (
-                      <span className="text-xs bg-neg-light text-neg px-2 py-0.5 rounded-full font-medium border border-neg/20">Deudor</span>
-                    )}
-                    {c.fecha && <span className="text-xs text-ink-3">{c.fecha}</span>}
+                <div key={i} className={`rounded-xl border p-3 ${c.tieneVencido ? 'border-neg/30 bg-neg-light' : 'border-cream bg-page'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-ink-1">{c.nombre}</span>
+                    <div className="flex items-center gap-2">
+                      {c.tieneVencido && (
+                        <span className="text-xs bg-neg-light text-neg px-2 py-0.5 rounded-full font-medium border border-neg/20">Deudor</span>
+                      )}
+                      {c.fecha && <span className="text-xs text-ink-3">{c.fecha}</span>}
+                    </div>
                   </div>
+                  <p className="text-sm text-ink-2">{c.comentario}</p>
                 </div>
-                <p className="text-sm text-ink-2">{c.comentario}</p>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
