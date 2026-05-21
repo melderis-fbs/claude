@@ -25,7 +25,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Closers({ data = [], months = [], selectedMonth, onMonthChange }) {
-  const filtered = useMemo(() => data.filter(d => d.mes === selectedMonth), [data, selectedMonth]);
+  const latestMonth = useMemo(() => {
+    const months = [...new Set(data.map(d => d.mes))].sort().reverse();
+    return months[0] || selectedMonth;
+  }, [data]);
+  const effectiveMonth = useMemo(() => {
+    const hasData = data.some(d => d.mes === selectedMonth);
+    return hasData ? selectedMonth : latestMonth;
+  }, [data, selectedMonth, latestMonth]);
+  const filtered = useMemo(() => data.filter(d => d.mes === effectiveMonth), [data, effectiveMonth]);
   const sorted   = useMemo(() => [...filtered].sort((a, b) => b.cierres - a.cierres), [filtered]);
 
   const chartData = sorted.map(c => ({
@@ -113,13 +121,13 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
           <h2 className="text-sm font-semibold text-ink-2 mb-4">Comparativo del mes</h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} barSize={14} barGap={2}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="Agendadas"   fill="#E8E2D9" radius={[4,4,0,0]} />
-              <Bar dataKey="Asistencias" fill="#C4B49A" radius={[4,4,0,0]} />
-              <Bar dataKey="Cierres"     fill="#B8960C" radius={[4,4,0,0]} />
+              <Bar dataKey="Agendadas"   fill="#BFDBFE" radius={[4,4,0,0]} />
+              <Bar dataKey="Asistencias" fill="#8B5CF6" radius={[4,4,0,0]} />
+              <Bar dataKey="Cierres"     fill="#3B82F6" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -8,8 +8,8 @@ import clsx from 'clsx';
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 
 const CAT_COLORS = {
-  sueldos: '#B8960C', publicidad: '#C4B49A', apps: '#8B6E09',
-  gastosAdmin: '#A8A29E', formacion: '#6B6560', impuestos: '#7A4A42', extras: '#E8E2D9',
+  sueldos: '#3B82F6', publicidad: '#8B5CF6', apps: '#10B981',
+  gastosAdmin: '#6B7280', formacion: '#F59E0B', impuestos: '#EF4444', extras: '#D1D5DB',
 };
 const CAT_LABELS = {
   sueldos: 'Sueldos', publicidad: 'Publicidad', apps: 'APPS',
@@ -90,9 +90,14 @@ function ClienteCard({ cliente }) {
 export default function IngresosEgresos({ data = {}, months = [], selectedMonth, onMonthChange }) {
   const { egresos = [], cobranzas = [], comentarios = [] } = data;
 
+  const latestEgresos = useMemo(
+    () => [...egresos].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {},
+    [egresos]
+  );
+
   const mesEgresos = useMemo(
-    () => egresos.find(r => r.mes === selectedMonth) || egresos[0] || {},
-    [egresos, selectedMonth]
+    () => egresos.find(r => r.mes === selectedMonth) || latestEgresos,
+    [egresos, selectedMonth, latestEgresos]
   );
 
   const pieData = useMemo(() =>
