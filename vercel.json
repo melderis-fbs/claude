@@ -1,6 +1,4 @@
 {
-  "buildCommand": "next build",
-  "outputDirectory": ".next",
   "crons": [
     { "path": "/api/cron/refresh", "schedule": "0 9 * * *" },
     { "path": "/api/cron/refresh", "schedule": "0 17 * * *" }
