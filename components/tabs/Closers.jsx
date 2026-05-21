@@ -1,7 +1,6 @@
 'use client';
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import MonthSelector from '../ui/MonthSelector.jsx';
 
 const medals = ['🥇', '🥈', '🥉'];
 
@@ -38,7 +37,6 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
 
   return (
     <div className="space-y-5">
-      <MonthSelector months={months} selected={selectedMonth} onChange={onMonthChange} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {sorted.map((c, i) => (

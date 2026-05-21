@@ -5,6 +5,7 @@ import { LayoutDashboard, Calendar, Phone, Users, Megaphone, Wallet, RefreshCw }
 import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import TabNav from './ui/TabNav.jsx';
+import MonthSelector from './ui/MonthSelector.jsx';
 import Overview from './tabs/Overview.jsx';
 import Agendas from './tabs/Agendas.jsx';
 import LlamadasSeguimientos from './tabs/LlamadasSeguimientos.jsx';
@@ -37,7 +38,11 @@ function getMonthsList() {
 export default function Dashboard({ negocio, agendas, llamadas, closers, anuncios, ingresosEgresos }) {
   const [activeTab, setActiveTab] = useState('overview');
   const months = useMemo(() => getMonthsList(), []);
-  const [selectedMonth, setSelectedMonth] = useState(() => months[0].value);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const withData = (negocio || []).filter(r => (r.ventasTotales || 0) > 0 || (r.ventasTotal || 0) > 0 || (r.cashCollected || 0) > 0);
+    if (withData.length > 0) return [...withData].sort((a, b) => b.mes.localeCompare(a.mes))[0].mes;
+    return months[0].value;
+  });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -59,11 +64,12 @@ export default function Dashboard({ negocio, agendas, llamadas, closers, anuncio
               <p className="text-xs text-ink-3 capitalize">{todayCapitalized}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <MonthSelector months={months} selected={selectedMonth} onChange={setSelectedMonth} />
             <button
               onClick={handleRefresh}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-ink-1 bg-white text-ink-1 text-xs font-semibold hover:bg-ink-1 hover:text-white transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-ink-1 bg-white text-ink-1 text-xs font-semibold hover:bg-ink-1 hover:text-white transition-colors disabled:opacity-60 flex-shrink-0"
               title="Actualizar datos"
             >
               <RefreshCw size={13} className={isPending ? 'animate-spin' : ''} />

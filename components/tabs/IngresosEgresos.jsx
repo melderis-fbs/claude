@@ -1,7 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import MonthSelector from '../ui/MonthSelector.jsx';
 import StatCard from '../ui/StatCard.jsx';
 import { TrendingDown, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
@@ -136,7 +135,6 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
 
   return (
     <div className="space-y-5">
-      <MonthSelector months={months} selected={selectedMonth} onChange={onMonthChange} />
 
       {/* ── Egresos ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -1,7 +1,6 @@
 'use client';
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import MonthSelector from '../ui/MonthSelector.jsx';
 import StatCard from '../ui/StatCard.jsx';
 import { DollarSign, Calendar, Users, TrendingUp, Target, BarChart2 } from 'lucide-react';
 
@@ -10,7 +9,12 @@ function pct(n) { return `${Number(n || 0).toFixed(1)}%`; }
 function num(n) { return Number(n || 0).toFixed(2); }
 
 export default function Anuncios({ data = [], months = [], selectedMonth, onMonthChange }) {
-  const mes = useMemo(() => data.find(d => d.mes === selectedMonth) || data[0] || {}, [data, selectedMonth]);
+  const latest = useMemo(() => [...data].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [data]);
+  const mes = useMemo(() => {
+    const found = data.find(d => d.mes === selectedMonth);
+    if (found && ((found.inversion || 0) > 0 || (found.agendasCualificadas || 0) > 0)) return found;
+    return latest;
+  }, [data, selectedMonth, latest]);
 
   const chartData = useMemo(
     () => [...data].reverse().slice(-4).map(r => ({
@@ -26,7 +30,6 @@ export default function Anuncios({ data = [], months = [], selectedMonth, onMont
 
   return (
     <div className="space-y-5">
-      <MonthSelector months={months} selected={selectedMonth} onChange={onMonthChange} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={DollarSign}  label="Inversión"             value={ars(mes.inversion)}            accent="red"    />
