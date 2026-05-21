@@ -17,7 +17,7 @@ module.exports = {
         page: '#FAFAFA',
       },
       fontFamily: {
-        sans: ['var(--font-dm-sans)', ...defaultTheme.fontFamily.sans],
+        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
       },
     },
   },

@@ -38,7 +38,11 @@ function getMonthsList() {
 export default function Dashboard({ negocio, agendas, llamadas, closers, anuncios, ingresosEgresos }) {
   const [activeTab, setActiveTab] = useState('overview');
   const months = useMemo(() => getMonthsList(), []);
-  const [selectedMonth, setSelectedMonth] = useState(() => months[0].value);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const withData = (negocio || []).filter(r => (r.ventasTotales || 0) > 0 || (r.ventasTotal || 0) > 0 || (r.cashCollected || 0) > 0);
+    if (withData.length > 0) return [...withData].sort((a, b) => b.mes.localeCompare(a.mes))[0].mes;
+    return months[0].value;
+  });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 

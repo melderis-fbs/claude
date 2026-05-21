@@ -1,13 +1,9 @@
 'use client';
 import { useMemo } from 'react';
-import {
-  DollarSign, TrendingUp, TrendingDown, Target, Users,
-  ShoppingCart, BarChart2, CheckCircle,
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Users } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import StatCard from '../ui/StatCard.jsx';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 function pct(n) { return `${Number(n || 0).toFixed(1)}%`; }
@@ -24,18 +20,10 @@ const TooltipARS = ({ active, payload, label }) => {
   );
 };
 
-function ProgressBar({ label, value, max, color = 'gold' }) {
-  const pv = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  const cls = { gold: 'bg-gold', green: 'bg-pos', red: 'bg-neg', orange: 'bg-gold' };
+function BigCard({ bg, children }) {
   return (
-    <div>
-      <div className="flex justify-between text-xs text-ink-3 mb-1">
-        <span>{label}</span>
-        <span className="font-medium text-ink-2">{pv.toFixed(0)}%</span>
-      </div>
-      <div className="h-2 bg-cream rounded-full overflow-hidden">
-        <div className={`h-full ${cls[color] || 'bg-gold'} rounded-full`} style={{ width: `${pv}%` }} />
-      </div>
+    <div className={`rounded-xl p-4 ${bg}`}>
+      {children}
     </div>
   );
 }
@@ -48,8 +36,13 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
   const mesClosers = useMemo(() => closers.filter(r => r.mes === selectedMonth), [closers, selectedMonth]);
   const topCloser  = useMemo(() => [...mesClosers].sort((a, b) => b.cierres - a.cierres)[0] || null, [mesClosers]);
 
+  const totalCierres = mesClosers.reduce((s, c) => s + (c.cierres || 0), 0);
+  const tasaCierre   = mesClosers.length > 0
+    ? ((totalCierres / mesClosers.reduce((s, c) => s + (c.asistencias || 0), 0)) * 100 || 0).toFixed(1)
+    : '0.0';
+
   const chartData = useMemo(
-    () => [...negocio].reverse().slice(-4).map(r => ({
+    () => [...negocio].sort((a, b) => a.mes.localeCompare(b.mes)).slice(-4).map(r => ({
       mes:    r.mesLabel?.split(' ')[0] || r.mes,
       Ventas: r.ventasTotal,
       Cash:   r.cashCollected,
@@ -58,45 +51,151 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
     [negocio]
   );
 
+  const pctMeta = mes.objetivoPesos > 0
+    ? Math.min(100, ((mes.ventasTotal || 0) / mes.objetivoPesos) * 100)
+    : 0;
+
+  const alertas = useMemo(() => {
+    const list = [];
+    if (!mes.mes) return list;
+    const faltante = mes.faltanteObj || 0;
+    const obj = mes.objetivoPesos || 0;
+    if (obj > 0 && pctMeta < 50) {
+      const diasMes = 30;
+      const diasPasados = Math.max(1, new Date().getDate());
+      const diasRestantes = Math.max(1, diasMes - diasPasados);
+      const diario = faltante / diasRestantes;
+      list.push({
+        color: 'red',
+        title: `Objetivo mensual — ${ars(obj)} por recaudar`,
+        body: `Se recaudó el ${pctMeta.toFixed(0)}% del objetivo. Se necesitan ~${ars(diario)}/día para llegar.`,
+      });
+    }
+    const tc = parseFloat(tasaCierre);
+    if (tc < 20 && totalCierres >= 0 && mesClosers.length > 0) {
+      list.push({
+        color: 'orange',
+        title: `Tasa de cierre baja: ${tasaCierre}%`,
+        body: 'La conversión está por debajo del objetivo. Revisar calidad de leads y proceso de cierre.',
+      });
+    }
+    if (topCloser) {
+      list.push({
+        color: 'blue',
+        title: `Mejor closer: ${topCloser.closer}`,
+        body: `${topCloser.cierres} cierres este mes con ${topCloser.pctCierre}% de tasa de cierre.`,
+      });
+    }
+    return list;
+  }, [mes, pctMeta, tasaCierre, totalCierres, mesClosers, topCloser]);
+
+  const aiSummary = useMemo(() => {
+    if (!mes.mes) return 'Sin datos disponibles para el período seleccionado.';
+    const ventas = ars(mes.ventasTotal || 0);
+    const obj    = ars(mes.objetivoPesos || 0);
+    const tc     = tasaCierre;
+    const roas   = mesAds.roas ?? 0;
+    const falta  = ars(mes.faltanteObj || 0);
+    return `El mes acumula ${ventas} de ${obj} objetivo (${pctMeta.toFixed(0)}%). ${totalCierres} cierres con ${tc}% de conversión. ROAS de ${roas} en anuncios. Faltan ${falta} para llegar al objetivo.`;
+  }, [mes, mesAds, pctMeta, tasaCierre, totalCierres]);
+
   if (!mes.mes) return <p className="text-sm text-ink-3 py-8 text-center">Sin datos de negocio para este mes</p>;
+
+  const ALERT_STYLES = {
+    red:    'border-l-4 border-neg bg-neg-light',
+    orange: 'border-l-4 border-gold bg-gold-light',
+    blue:   'border-l-4 border-ink-3 bg-cream-light',
+  };
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={ShoppingCart} label="Ventas totales"    value={mes.ventasTotales}            accent="teal"   />
-        <StatCard icon={DollarSign}   label="Cash Collected"    value={ars(mes.cashCollected)}        accent="green"  />
-        <StatCard icon={TrendingDown} label="Costos totales"    value={ars(mes.costosTotal)}           accent="red"    />
-        <StatCard icon={TrendingUp}   label="Ganancia"          value={ars(mes.gananciaVentaNueva)}    accent={mes.gananciaVentaNueva >= 0 ? 'green' : 'red'} />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={BarChart2}    label="Rentabilidad"      value={pct(mes.rentabilidadVentaNueva)} accent="blue"   />
-        <StatCard icon={Target}       label="% Cash Collection" value={pct(mes.pctCC)}                  accent="purple" />
-        <StatCard icon={Users}        label="Mejor closer"      value={topCloser?.closer || '-'}        accent="orange" />
-        <StatCard icon={CheckCircle}  label="ROAS"              value={mesAds.roas ?? '-'}               accent="teal"   />
+      {/* AI summary */}
+      <div className="bg-ink-1 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-gold" />
+          <span className="text-xs font-semibold tracking-widest uppercase text-white/50">Análisis ejecutivo · IA</span>
+        </div>
+        <p className="text-sm text-white/90 leading-relaxed">{aiSummary}</p>
       </div>
 
+      {/* Estado del mes */}
+      <div>
+        <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Estado del mes</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <BigCard bg="bg-pos-light">
+            <p className="text-xs font-semibold tracking-widest uppercase text-pos/70 mb-1">Ventas del mes</p>
+            <p className="text-2xl font-bold text-pos">{ars(mes.ventasTotal)}</p>
+            <p className="text-xs text-ink-3 mt-1">{mes.ventasTotales || 0} ventas · de {ars(mes.objetivoPesos)} objetivo</p>
+          </BigCard>
+
+          <BigCard bg="bg-neg-light">
+            <p className="text-xs font-semibold tracking-widest uppercase text-neg/70 mb-1">Falta para objetivo</p>
+            <p className="text-2xl font-bold text-neg">{ars(mes.faltanteObj)}</p>
+            <p className="text-xs text-ink-3 mt-1">{mes.faltanteVentas || 0} ventas · faltan</p>
+          </BigCard>
+
+          <BigCard bg="bg-white border border-cream">
+            <p className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-1">Cierres del mes</p>
+            <p className="text-2xl font-bold text-ink-1">{totalCierres || '—'}</p>
+            <p className="text-xs text-ink-3 mt-1">tasa {tasaCierre}%</p>
+          </BigCard>
+
+          <BigCard bg="bg-gold-light">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gold-dark/70 mb-1">ROAS anuncios</p>
+            <p className="text-2xl font-bold text-gold-dark">{mesAds.roas ?? '—'}</p>
+            <p className="text-xs text-ink-3 mt-1">inv. {ars(mesAds.inversion)}</p>
+          </BigCard>
+        </div>
+      </div>
+
+      {/* Alertas */}
+      {alertas.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Alertas</h2>
+          <div className="space-y-2">
+            {alertas.map((a, i) => (
+              <div key={i} className={`rounded-lg p-3 ${ALERT_STYLES[a.color]}`}>
+                <p className="text-sm font-semibold text-ink-1">{a.title}</p>
+                <p className="text-xs text-ink-2 mt-0.5">{a.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Desglose + objetivos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4 space-y-4">
           <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3">Objetivos del mes</h2>
-          <ProgressBar
-            label={`Ventas: ${mes.ventasTotales} / ${mes.objetivoVentas}`}
-            value={mes.ventasTotales} max={mes.objetivoVentas}
-            color={mes.faltanteVentas === 0 ? 'green' : 'gold'}
-          />
-          <ProgressBar
-            label={`Objetivo $: ${ars(mes.ventasTotal)} / ${ars(mes.objetivoPesos)}`}
-            value={mes.ventasTotal} max={mes.objetivoPesos}
-            color={mes.faltanteObj === 0 ? 'green' : 'gold'}
-          />
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div>
+            <div className="flex justify-between text-xs text-ink-3 mb-1">
+              <span>Ventas: {mes.ventasTotales || 0} / {mes.objetivoVentas || 0}</span>
+              <span className="font-medium text-ink-2">{mes.objetivoVentas > 0 ? Math.min(100, ((mes.ventasTotales || 0) / mes.objetivoVentas) * 100).toFixed(0) : 0}%</span>
+            </div>
+            <div className="h-2 bg-cream rounded-full overflow-hidden">
+              <div className="h-full bg-pos rounded-full" style={{ width: `${mes.objetivoVentas > 0 ? Math.min(100, ((mes.ventasTotales || 0) / mes.objetivoVentas) * 100) : 0}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-ink-3 mb-1">
+              <span>Objetivo $: {ars(mes.ventasTotal)} / {ars(mes.objetivoPesos)}</span>
+              <span className="font-medium text-ink-2">{pctMeta.toFixed(0)}%</span>
+            </div>
+            <div className="h-2 bg-cream rounded-full overflow-hidden">
+              <div className="h-full bg-gold rounded-full" style={{ width: `${pctMeta}%` }} />
+            </div>
+          </div>
+          <div className="pt-1">
+            <p className="text-xs text-ink-3 font-medium mb-2">Recolección</p>
             {[
-              { label: 'Faltante ventas', val: mes.faltanteVentas,        fmt: v => v, bad: v => v > 0 },
-              { label: 'Faltante obj $',  val: mes.faltanteObj,            fmt: ars,    bad: v => v > 0 },
-              { label: 'Faltante gastos', val: mes.faltanteCubrirGastos,   fmt: v => v > 0 ? ars(v) : '✓ Cubierto', bad: v => v > 0 },
-            ].map(({ label, val, fmt, bad }) => (
-              <div key={label} className={`${bad(val) ? 'bg-gold-light' : 'bg-pos-light'} rounded-lg p-3 text-center`}>
-                <p className="text-xs text-ink-3">{label}</p>
-                <p className={`text-sm font-bold ${bad(val) ? 'text-gold-dark' : 'text-pos'}`}>{fmt(val)}</p>
+              { label: 'Venta nueva',       val: mes.recoleccionVentaNueva      },
+              { label: 'Recurrente front',  val: mes.recoleccionRecurrenteFront },
+              { label: 'Back',              val: mes.recoleccionBack            },
+              { label: 'Recurrente back',   val: mes.recoleccionRecurrenteBack  },
+            ].map(({ label, val }) => (
+              <div key={label} className="flex justify-between text-xs py-1 border-b border-cream/50">
+                <span className="text-ink-3">{label}</span>
+                <span className="font-medium text-ink-2">{ars(val)}</span>
               </div>
             ))}
           </div>
@@ -104,7 +203,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
 
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
           <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Desglose del mes</h2>
-          <div className="space-y-2">
+          <div className="space-y-2 mb-4">
             {[
               { label: 'Ventas nuevas', count: mes.cantVentasNuevas, monto: mes.ventasFront },
               { label: 'Ventas back',   count: mes.cantVentasBack,   monto: mes.ventasBack  },
@@ -112,45 +211,46 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
               <div key={row.label} className="flex items-center justify-between p-2 rounded-lg bg-page">
                 <span className="text-sm text-ink-2">{row.label}</span>
                 <div className="text-right">
-                  <span className="text-sm font-semibold text-ink-1 mr-3">{row.count} ventas</span>
+                  <span className="text-sm font-semibold text-ink-1 mr-3">{row.count || 0} ventas</span>
                   <span className="text-sm font-bold text-gold-dark">{ars(row.monto)}</span>
                 </div>
               </div>
             ))}
-            <div className="pt-2 border-t border-cream">
-              <p className="text-xs text-ink-3 font-medium mb-1">Recolección</p>
-              {[
-                { label: 'Venta nueva',       val: mes.recoleccionVentaNueva        },
-                { label: 'Recurrente front',  val: mes.recoleccionRecurrenteFront   },
-                { label: 'Back',              val: mes.recoleccionBack              },
-                { label: 'Recurrente back',   val: mes.recoleccionRecurrenteBack    },
-              ].map(({ label, val }) => (
-                <div key={label} className="flex justify-between text-xs py-1 border-b border-cream/50">
-                  <span className="text-ink-3">{label}</span>
-                  <span className="font-medium text-ink-2">{ars(val)}</span>
-                </div>
-              ))}
-            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Rentabilidad',  val: pct(mes.rentabilidadVentaNueva), ok: (mes.rentabilidadVentaNueva || 0) >= 0 },
+              { label: '% CC',          val: pct(mes.pctCC),                  ok: true },
+              { label: 'Cash Collected',val: ars(mes.cashCollected),           ok: true },
+              { label: 'Costos totales',val: ars(mes.costosTotal),             ok: false },
+            ].map(({ label, val, ok }) => (
+              <div key={label} className="rounded-lg p-3 bg-page">
+                <p className="text-xs text-ink-3">{label}</p>
+                <p className={`text-sm font-bold ${ok ? 'text-ink-1' : 'text-neg'}`}>{val}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Tendencia */}
       <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
         <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-4">Tendencia mensual</h2>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} barSize={18} barGap={3}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" />
-            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#A8A29E' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#999999' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} />
             <Tooltip content={<TooltipARS />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Ventas" fill="#B8960C" radius={[4,4,0,0]} />
-            <Bar dataKey="Cash"   fill="#C4B49A" radius={[4,4,0,0]} />
-            <Bar dataKey="Costos" fill="#7A4A42" radius={[4,4,0,0]} />
+            <Bar dataKey="Ventas" fill="#2D7A3A" radius={[4,4,0,0]} />
+            <Bar dataKey="Cash"   fill="#B8960C" radius={[4,4,0,0]} />
+            <Bar dataKey="Costos" fill="#C0392B" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
+      {/* Closers */}
       {mesClosers.length > 0 && (
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
           <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Resumen closers</h2>
