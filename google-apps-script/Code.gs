@@ -271,7 +271,7 @@ function getAnuncios() {
 //   Col 13: Comentarios
 //   Col 14: Fecha comentarios
 function getIngresos() {
-  var egresosRows   = getRows(SHEET_EGRESOS, 2, 8);
+  var egresosRows   = getRows(SHEET_EGRESOS, 2, 10);  // +2 cols: Meta cobranza, Cobrado real
   var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 15);
   var hoy = new Date(); hoy.setHours(0,0,0,0);
 
@@ -288,8 +288,10 @@ function getIngresos() {
       gastosAdmin:  gastosAdmin,
       formacion:    formacion,
       impuestos:    impuestos,
-      extras:       extras,
-      total:        sueldos + publicidad + apps + gastosAdmin + formacion + impuestos + extras,
+      extras:          extras,
+      total:           sueldos + publicidad + apps + gastosAdmin + formacion + impuestos + extras,
+      metaCobranza:    num(r[8]),
+      cobradoReal:     num(r[9]),
     };
   });
 
