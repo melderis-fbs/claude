@@ -53,7 +53,19 @@ function EstadoBadge({ estado }) {
   );
 }
 
-function ClienteCard({ cliente }) {
+function normDateToMonth(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  if (/^\d{4}-\d{2}/.test(str)) return str.slice(0, 7);
+  const dmy = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}`;
+  const my = str.match(/^(\d{2})\/(\d{4})$/);
+  if (my) return `${my[2]}-${my[1]}`;
+  try { const d = new Date(str); if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; } catch {}
+  return null;
+}
+
+function ClienteCard({ cliente, isNew }) {
   const [open, setOpen] = useState(false);
   const tieneVencido = cliente.cuotas.some(c => c.estado === 'Vencido');
   const tienePendiente = cliente.cuotas.some(c => c.estado === 'Pendiente');
@@ -61,7 +73,7 @@ function ClienteCard({ cliente }) {
   return (
     <div className={clsx(
       'rounded-xl border overflow-hidden',
-      tieneVencido ? 'border-neg/30' : tienePendiente ? 'border-cream' : 'border-cream'
+      tieneVencido ? 'border-neg/30' : 'border-cream'
     )}>
       <button
         onClick={() => setOpen(o => !o)}
@@ -70,6 +82,9 @@ function ClienteCard({ cliente }) {
         <div className="flex items-center gap-3">
           <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', tieneVencido ? 'bg-neg' : tienePendiente ? 'bg-gold' : 'bg-pos')} />
           <span className="text-sm font-semibold text-ink-1">{cliente.nombre}</span>
+          {isNew && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-pos-light text-pos font-semibold">Nuevo</span>
+          )}
           <span className="text-xs text-ink-3">{cliente.cuotas.length} cuota{cliente.cuotas.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -122,17 +137,28 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
   const clientes = useMemo(() => {
     const map = {};
     cobranzas.forEach(c => {
-      if (!map[c.nombre]) map[c.nombre] = { nombre: c.nombre, cuotas: [], totalCobrado: 0, totalPendiente: 0, totalVencido: 0 };
+      if (!map[c.nombre]) map[c.nombre] = {
+        nombre: c.nombre, cuotas: [],
+        totalCobrado: 0, totalPendiente: 0, totalVencido: 0,
+        fechaPrimerPago: c.fechaPrimerPago || null,
+      };
+      // Keep earliest fechaPrimerPago
+      if (c.fechaPrimerPago && (!map[c.nombre].fechaPrimerPago || c.fechaPrimerPago < map[c.nombre].fechaPrimerPago)) {
+        map[c.nombre].fechaPrimerPago = c.fechaPrimerPago;
+      }
       map[c.nombre].cuotas.push(c);
       if (c.estado === 'Cobrado')   map[c.nombre].totalCobrado   += c.montoCuota;
       if (c.estado === 'Pendiente') map[c.nombre].totalPendiente += c.montoCuota;
       if (c.estado === 'Vencido')   map[c.nombre].totalVencido   += c.montoCuota;
     });
     return Object.values(map).sort((a, b) => {
+      const aNew = normDateToMonth(a.fechaPrimerPago) === selectedMonth ? 1 : 0;
+      const bNew = normDateToMonth(b.fechaPrimerPago) === selectedMonth ? 1 : 0;
+      if (bNew !== aNew) return bNew - aNew;
       if (a.totalVencido !== b.totalVencido) return b.totalVencido - a.totalVencido;
       return a.nombre.localeCompare(b.nombre);
     });
-  }, [cobranzas]);
+  }, [cobranzas, selectedMonth]);
 
   const deudores = useMemo(() =>
     clientes.filter(c =>
@@ -240,7 +266,13 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
             Clientes · {clientes.length} activos
           </h3>
           <div className="space-y-2">
-            {clientes.map(c => <ClienteCard key={c.nombre} cliente={c} />)}
+            {clientes.map(c => (
+              <ClienteCard
+                key={c.nombre}
+                cliente={c}
+                isNew={normDateToMonth(c.fechaPrimerPago) === selectedMonth}
+              />
+            ))}
           </div>
         </div>
       )}

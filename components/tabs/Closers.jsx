@@ -1,6 +1,8 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { GitCompare } from 'lucide-react';
+import clsx from 'clsx';
 
 const medals = ['🥇', '🥈', '🥉'];
 
@@ -25,27 +27,129 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Closers({ data = [], months = [], selectedMonth, onMonthChange }) {
+  const [compareMode, setCompareMode]   = useState(false);
+  const [compareMonth, setCompareMonth] = useState('');
+
   const latestMonth = useMemo(() => {
-    const months = [...new Set(data.map(d => d.mes))].sort().reverse();
-    return months[0] || selectedMonth;
-  }, [data]);
+    const ms = [...new Set(data.map(d => d.mes))].sort().reverse();
+    return ms[0] || selectedMonth;
+  }, [data, selectedMonth]);
+
   const effectiveMonth = useMemo(() => {
-    const hasData = data.some(d => d.mes === selectedMonth);
-    return hasData ? selectedMonth : latestMonth;
+    return data.some(d => d.mes === selectedMonth) ? selectedMonth : latestMonth;
   }, [data, selectedMonth, latestMonth]);
-  const filtered = useMemo(() => data.filter(d => d.mes === effectiveMonth), [data, effectiveMonth]);
-  const sorted   = useMemo(() => [...filtered].sort((a, b) => b.cierres - a.cierres), [filtered]);
+
+  const filtered  = useMemo(() => data.filter(d => d.mes === effectiveMonth), [data, effectiveMonth]);
+  const sorted    = useMemo(() => [...filtered].sort((a, b) => b.cierres - a.cierres), [filtered]);
+
+  const filteredB = useMemo(() =>
+    compareMode && compareMonth ? data.filter(d => d.mes === compareMonth) : [],
+  [data, compareMode, compareMonth]);
 
   const chartData = sorted.map(c => ({
-    name:      c.closer.split(' ')[0],
-    Agendadas: c.agendadas,
+    name:        c.closer.split(' ')[0],
+    Agendadas:   c.agendadas,
     Asistencias: c.asistencias,
-    Cierres:   c.cierres,
+    Cierres:     c.cierres,
   }));
+
+  // Label for the effective month
+  const monthLabel = months.find(m => m.value === effectiveMonth)?.label || effectiveMonth;
+  const compareLbl = months.find(m => m.value === compareMonth)?.label  || compareMonth;
 
   return (
     <div className="space-y-5">
 
+      {/* Toggle comparar */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            setCompareMode(m => !m);
+            if (!compareMonth && months.length > 1) {
+              // Default: pick the previous available month
+              const otherMonths = months.filter(m => m.value !== effectiveMonth);
+              setCompareMonth(otherMonths[0]?.value || '');
+            }
+          }}
+          className={clsx(
+            'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors',
+            compareMode ? 'bg-ink-1 text-white border-ink-1' : 'bg-white text-ink-2 border-cream'
+          )}
+        >
+          <GitCompare size={12} />
+          {compareMode ? 'Salir de comparación' : 'Comparar meses'}
+        </button>
+      </div>
+
+      {/* Selector del mes de comparación */}
+      {compareMode && (
+        <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+          <p className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Comparar con</p>
+          <select
+            value={compareMonth}
+            onChange={e => setCompareMonth(e.target.value)}
+            className="text-sm font-medium text-ink-1 bg-white border border-cream rounded-full px-3 py-1.5 outline-none cursor-pointer"
+          >
+            <option value="">— Elegí un mes —</option>
+            {months.filter(m => m.value !== effectiveMonth).map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Tabla de comparación */}
+      {compareMode && filteredB.length > 0 && (
+        <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+          <h2 className="text-sm font-semibold text-ink-2 mb-4">
+            Comparativo: {monthLabel} vs {compareLbl}
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max text-sm">
+              <thead>
+                <tr className="border-b border-cream">
+                  <th className="pb-2 px-2 text-left text-xs text-ink-3 font-medium">Closer</th>
+                  <th className="pb-2 px-2 text-center text-xs text-ink-3 font-medium" colSpan={2}>{monthLabel}</th>
+                  <th className="pb-2 px-2 text-center text-xs text-ink-3 font-medium" colSpan={2}>{compareLbl}</th>
+                  <th className="pb-2 px-2 text-center text-xs text-ink-3 font-medium">Δ Cierres</th>
+                </tr>
+                <tr className="border-b border-cream/50">
+                  <th className="pb-1 px-2" />
+                  {['Cierres','%'].map(h => <th key={`a-${h}`} className="pb-1 px-2 text-xs text-ink-3 font-normal text-center">{h}</th>)}
+                  {['Cierres','%'].map(h => <th key={`b-${h}`} className="pb-1 px-2 text-xs text-ink-3 font-normal text-center">{h}</th>)}
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((c, i) => {
+                  const cb = filteredB.find(x => x.closer === c.closer);
+                  const delta = cb ? c.cierres - cb.cierres : null;
+                  return (
+                    <tr key={c.closer} className="border-b border-cream/50">
+                      <td className="py-2.5 px-2 font-medium text-ink-1 whitespace-nowrap">
+                        {medals[i] || ''} {c.closer}
+                      </td>
+                      <td className="py-2.5 px-2 text-center font-semibold text-ink-1">{c.cierres}</td>
+                      <td className="py-2.5 px-2 text-center text-gold-dark font-semibold">{c.pctCierre}%</td>
+                      <td className="py-2.5 px-2 text-center font-semibold text-ink-1">{cb?.cierres ?? '—'}</td>
+                      <td className="py-2.5 px-2 text-center text-ink-2">{cb ? `${cb.pctCierre}%` : '—'}</td>
+                      <td className="py-2.5 px-2 text-center font-bold">
+                        {delta === null ? '—' : (
+                          <span className={delta > 0 ? 'text-pos' : delta < 0 ? 'text-neg' : 'text-ink-3'}>
+                            {delta > 0 ? '+' : ''}{delta}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Cards normales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {sorted.map((c, i) => (
           <div key={c.closer} className="bg-white rounded-xl border border-cream shadow-sm p-4 text-center relative">
@@ -55,12 +159,12 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
 
             <div className="grid grid-cols-2 gap-1.5 mt-3">
               {[
-                { label: 'Agendadas',   val: c.agendadas,      bg: 'bg-page',      text: 'text-ink-1' },
-                { label: 'Asistencias', val: c.asistencias,    bg: 'bg-cream',     text: 'text-ink-2' },
+                { label: 'Agendadas',   val: c.agendadas,      bg: 'bg-page',       text: 'text-ink-1'     },
+                { label: 'Asistencias', val: c.asistencias,    bg: 'bg-cream',      text: 'text-ink-2'     },
                 { label: 'Reagenda',    val: c.reagenda,       bg: 'bg-gold-light', text: 'text-gold-dark' },
-                { label: '2da llamada', val: c.segundaLlamada, bg: 'bg-cream',     text: 'text-ink-2' },
+                { label: '2da llamada', val: c.segundaLlamada, bg: 'bg-cream',      text: 'text-ink-2'     },
                 { label: 'Ofertas',     val: c.ofertas,        bg: 'bg-gold-light', text: 'text-gold-dark' },
-                { label: 'Seña',        val: c.senia,          bg: 'bg-pos-light',  text: 'text-pos'  },
+                { label: 'Seña',        val: c.senia,          bg: 'bg-pos-light',  text: 'text-pos'       },
               ].map(({ label, val, bg, text }) => (
                 <div key={label} className={`${bg} rounded-lg p-1.5`}>
                   <p className={`text-base font-bold ${text}`}>{val}</p>

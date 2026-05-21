@@ -2,7 +2,7 @@
 import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { LayoutDashboard, Calendar, Phone, Users, Megaphone, Wallet, RefreshCw } from 'lucide-react';
-import { format, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import TabNav from './ui/TabNav.jsx';
 import MonthSelector from './ui/MonthSelector.jsx';
@@ -24,15 +24,16 @@ const TABS = [
 
 function getMonthsList() {
   const now = new Date();
-  return [0, 1, 2, 3].map(i => {
-    const d = subMonths(now, i);
+  const year = now.getFullYear();
+  return Array.from({ length: 12 }, (_, m) => {
+    const d = new Date(year, m, 1);
     const label = format(d, 'MMMM yyyy', { locale: es });
     return {
       label: label.charAt(0).toUpperCase() + label.slice(1),
       value: format(d, 'yyyy-MM'),
       date: d,
     };
-  });
+  }).reverse();
 }
 
 export default function Dashboard({ negocio, agendas, llamadas, closers, anuncios, ingresosEgresos }) {
