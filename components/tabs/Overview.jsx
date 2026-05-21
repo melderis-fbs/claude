@@ -31,16 +31,8 @@ function BigCard({ bg, children }) {
 export default function Overview({ negocio = [], anuncios = [], closers = [], selectedMonth }) {
   const latestNegocio = useMemo(() => [...negocio].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [negocio]);
   const latestAds     = useMemo(() => [...anuncios].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [anuncios]);
-  const mes        = useMemo(() => {
-    const found = negocio.find(r => r.mes === selectedMonth);
-    if (found && ((found.ventasTotales || 0) > 0 || (found.ventasTotal || 0) > 0 || (found.cashCollected || 0) > 0)) return found;
-    return latestNegocio;
-  }, [negocio, selectedMonth, latestNegocio]);
-  const mesAds     = useMemo(() => {
-    const found = anuncios.find(r => r.mes === selectedMonth);
-    if (found && ((found.inversion || 0) > 0 || (found.roas || 0) > 0)) return found;
-    return latestAds;
-  }, [anuncios, selectedMonth, latestAds]);
+  const mes        = useMemo(() => negocio.find(r => r.mes === selectedMonth) || latestNegocio, [negocio, selectedMonth, latestNegocio]);
+  const mesAds     = useMemo(() => anuncios.find(r => r.mes === selectedMonth) || latestAds, [anuncios, selectedMonth, latestAds]);
   const mesClosers = useMemo(() => closers.filter(r => r.mes === selectedMonth), [closers, selectedMonth]);
   const topCloser  = useMemo(() => [...mesClosers].sort((a, b) => b.cierres - a.cierres)[0] || null, [mesClosers]);
 
@@ -251,9 +243,9 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
             <YAxis tick={{ fontSize: 10, fill: '#999999' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} />
             <Tooltip content={<TooltipARS />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Ventas" fill="#2D7A3A" radius={[4,4,0,0]} />
-            <Bar dataKey="Cash"   fill="#B8960C" radius={[4,4,0,0]} />
-            <Bar dataKey="Costos" fill="#C0392B" radius={[4,4,0,0]} />
+            <Bar dataKey="Ventas" fill="#3B82F6" radius={[4,4,0,0]} />
+            <Bar dataKey="Cash"   fill="#10B981" radius={[4,4,0,0]} />
+            <Bar dataKey="Costos" fill="#EF4444" radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

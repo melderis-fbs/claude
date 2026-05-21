@@ -10,11 +10,7 @@ function num(n) { return Number(n || 0).toFixed(2); }
 
 export default function Anuncios({ data = [], months = [], selectedMonth, onMonthChange }) {
   const latest = useMemo(() => [...data].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [data]);
-  const mes = useMemo(() => {
-    const found = data.find(d => d.mes === selectedMonth);
-    if (found && ((found.inversion || 0) > 0 || (found.agendasCualificadas || 0) > 0)) return found;
-    return latest;
-  }, [data, selectedMonth, latest]);
+  const mes = useMemo(() => data.find(d => d.mes === selectedMonth) || latest, [data, selectedMonth, latest]);
 
   const chartData = useMemo(
     () => [...data].reverse().slice(-4).map(r => ({
@@ -62,14 +58,14 @@ export default function Anuncios({ data = [], months = [], selectedMonth, onMont
         <h3 className="text-sm font-semibold text-ink-2 mb-4">Tendencia: agendas → asistencias → cierres</h3>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={chartData} margin={{ right: 10, left: -20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" />
-            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: '#A8A29E' }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
             <Tooltip />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="Agendas"     stroke="#C4B49A" strokeWidth={2} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="Asistencias" stroke="#8B6E09" strokeWidth={2} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="Cierres"     stroke="#B8960C" strokeWidth={2} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="Agendas"     stroke="#3B82F6" strokeWidth={2} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="Asistencias" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 4 }} />
+            <Line type="monotone" dataKey="Cierres"     stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

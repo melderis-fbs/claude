@@ -1,10 +1,10 @@
-import { Inter } from 'next/font/google';
+import { Open_Sans } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+const openSans = Open_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-inter',
+  variable: '--font-open-sans',
 });
 
 export const metadata = {
@@ -21,7 +21,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body className={inter.variable}>{children}</body>
+      <body className={openSans.variable}>{children}</body>
     </html>
   );
 }
