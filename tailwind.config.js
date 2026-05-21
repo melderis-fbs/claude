@@ -9,12 +9,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: { 1: '#1C1917', 2: '#6B6560', 3: '#A8A29E' },
-        cream: { light: '#FAF7F2', DEFAULT: '#E8E2D9', dark: '#C4B49A' },
-        gold: { light: '#F7EFC8', DEFAULT: '#B8960C', dark: '#8B6E09' },
-        pos: { light: '#EAF0E9', DEFAULT: '#4A5C47' },
-        neg: { light: '#F5EDEC', DEFAULT: '#7A4A42' },
-        page: '#F5F2EC',
+        ink: { 1: '#111111', 2: '#555555', 3: '#999999' },
+        cream: { light: '#F5F5F5', DEFAULT: '#E5E5E5', dark: '#CCCCCC' },
+        gold: { light: '#FEF9E7', DEFAULT: '#B8960C', dark: '#8B6E09' },
+        pos: { light: '#EEFAF0', DEFAULT: '#2D7A3A' },
+        neg: { light: '#FEF0EF', DEFAULT: '#C0392B' },
+        page: '#FAFAFA',
       },
       fontFamily: {
         sans: ['var(--font-dm-sans)', ...defaultTheme.fontFamily.sans],

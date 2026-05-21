@@ -41,8 +41,10 @@ function ProgressBar({ label, value, max, color = 'gold' }) {
 }
 
 export default function Overview({ negocio = [], anuncios = [], closers = [], selectedMonth }) {
-  const mes        = useMemo(() => negocio.find(r => r.mes === selectedMonth) || negocio[0] || {}, [negocio, selectedMonth]);
-  const mesAds     = useMemo(() => anuncios.find(r => r.mes === selectedMonth) || anuncios[0] || {}, [anuncios, selectedMonth]);
+  const latestNegocio = useMemo(() => [...negocio].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [negocio]);
+  const latestAds     = useMemo(() => [...anuncios].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [anuncios]);
+  const mes        = useMemo(() => negocio.find(r => r.mes === selectedMonth) || latestNegocio, [negocio, selectedMonth, latestNegocio]);
+  const mesAds     = useMemo(() => anuncios.find(r => r.mes === selectedMonth) || latestAds, [anuncios, selectedMonth, latestAds]);
   const mesClosers = useMemo(() => closers.filter(r => r.mes === selectedMonth), [closers, selectedMonth]);
   const topCloser  = useMemo(() => [...mesClosers].sort((a, b) => b.cierres - a.cierres)[0] || null, [mesClosers]);
 

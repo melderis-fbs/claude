@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Phone, Target, FileText, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Phone, Target, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import DataTable from '../ui/DataTable.jsx';
 import clsx from 'clsx';
 
@@ -192,21 +192,6 @@ export default function LlamadasSeguimientos({ data }) {
           </div>
         </div>
       )}
-
-      <div className="bg-white rounded-xl border border-cream p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <FileText size={16} className="text-ink-3" />
-          <h3 className="text-sm font-semibold text-ink-2">Análisis de llamadas</h3>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[1, 2].map(n => (
-            <div key={n} className="border border-dashed border-cream rounded-lg p-4 flex flex-col items-center justify-center gap-2 text-ink-3 min-h-[80px]">
-              <FileText size={20} />
-              <span className="text-xs text-center">Análisis PDF {n}<br /><span className="text-ink-3/50">No adjuntado</span></span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <p className="text-center text-xs text-ink-3 pb-2">
         Última actualización: {new Date().toLocaleString('es-AR')}
