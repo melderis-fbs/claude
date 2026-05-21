@@ -7,7 +7,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-page text-ink-1;
+    @apply bg-page text-ink-1 font-sans;
   }
 }
 

@@ -14,7 +14,7 @@ module.exports = {
         gold: { light: '#F0F9FF', DEFAULT: '#0284C7', dark: '#0369A1' },
         pos: { light: '#F0FDF4', DEFAULT: '#16A34A' },
         neg: { light: '#FEF2F2', DEFAULT: '#DC2626' },
-        page: '#FFFFFF',
+        page: '#F5F2EE',
       },
       fontFamily: {
         sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],

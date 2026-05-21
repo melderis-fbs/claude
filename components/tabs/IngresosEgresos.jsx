@@ -7,6 +7,17 @@ import clsx from 'clsx';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 
+function isPastDue(fechaStr) {
+  if (!fechaStr) return false;
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    // Past due only if the cuota's month is before the current month
+    return d.getFullYear() * 12 + d.getMonth() < now.getFullYear() * 12 + now.getMonth();
+  } catch { return false; }
+}
+
 const CAT_COLORS = {
   sueldos: '#3B82F6', publicidad: '#8B5CF6', apps: '#10B981',
   gastosAdmin: '#6B7280', formacion: '#F59E0B', impuestos: '#EF4444', extras: '#D1D5DB',
@@ -42,7 +53,19 @@ function EstadoBadge({ estado }) {
   );
 }
 
-function ClienteCard({ cliente }) {
+function normDateToMonth(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  if (/^\d{4}-\d{2}/.test(str)) return str.slice(0, 7);
+  const dmy = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}`;
+  const my = str.match(/^(\d{2})\/(\d{4})$/);
+  if (my) return `${my[2]}-${my[1]}`;
+  try { const d = new Date(str); if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; } catch {}
+  return null;
+}
+
+function ClienteCard({ cliente, isNew }) {
   const [open, setOpen] = useState(false);
   const tieneVencido = cliente.cuotas.some(c => c.estado === 'Vencido');
   const tienePendiente = cliente.cuotas.some(c => c.estado === 'Pendiente');
@@ -50,7 +73,7 @@ function ClienteCard({ cliente }) {
   return (
     <div className={clsx(
       'rounded-xl border overflow-hidden',
-      tieneVencido ? 'border-neg/30' : tienePendiente ? 'border-cream' : 'border-cream'
+      tieneVencido ? 'border-neg/30' : 'border-cream'
     )}>
       <button
         onClick={() => setOpen(o => !o)}
@@ -59,6 +82,9 @@ function ClienteCard({ cliente }) {
         <div className="flex items-center gap-3">
           <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', tieneVencido ? 'bg-neg' : tienePendiente ? 'bg-gold' : 'bg-pos')} />
           <span className="text-sm font-semibold text-ink-1">{cliente.nombre}</span>
+          {isNew && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-pos-light text-pos font-semibold">Nuevo</span>
+          )}
           <span className="text-xs text-ink-3">{cliente.cuotas.length} cuota{cliente.cuotas.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -111,20 +137,34 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
   const clientes = useMemo(() => {
     const map = {};
     cobranzas.forEach(c => {
-      if (!map[c.nombre]) map[c.nombre] = { nombre: c.nombre, cuotas: [], totalCobrado: 0, totalPendiente: 0, totalVencido: 0 };
+      if (!map[c.nombre]) map[c.nombre] = {
+        nombre: c.nombre, cuotas: [],
+        totalCobrado: 0, totalPendiente: 0, totalVencido: 0,
+        fechaPrimerPago: c.fechaPrimerPago || null,
+      };
+      // Keep earliest fechaPrimerPago
+      if (c.fechaPrimerPago && (!map[c.nombre].fechaPrimerPago || c.fechaPrimerPago < map[c.nombre].fechaPrimerPago)) {
+        map[c.nombre].fechaPrimerPago = c.fechaPrimerPago;
+      }
       map[c.nombre].cuotas.push(c);
       if (c.estado === 'Cobrado')   map[c.nombre].totalCobrado   += c.montoCuota;
       if (c.estado === 'Pendiente') map[c.nombre].totalPendiente += c.montoCuota;
       if (c.estado === 'Vencido')   map[c.nombre].totalVencido   += c.montoCuota;
     });
     return Object.values(map).sort((a, b) => {
+      const aNew = normDateToMonth(a.fechaPrimerPago) === selectedMonth ? 1 : 0;
+      const bNew = normDateToMonth(b.fechaPrimerPago) === selectedMonth ? 1 : 0;
+      if (bNew !== aNew) return bNew - aNew;
       if (a.totalVencido !== b.totalVencido) return b.totalVencido - a.totalVencido;
       return a.nombre.localeCompare(b.nombre);
     });
-  }, [cobranzas]);
+  }, [cobranzas, selectedMonth]);
 
   const deudores = useMemo(() =>
-    clientes.filter(c => c.totalVencido > 0),
+    clientes.filter(c =>
+      c.totalVencido > 0 ||
+      c.cuotas.some(q => q.estado === 'Pendiente' && isPastDue(q.fechaCuota))
+    ),
     [clientes]
   );
 
@@ -226,7 +266,13 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
             Clientes · {clientes.length} activos
           </h3>
           <div className="space-y-2">
-            {clientes.map(c => <ClienteCard key={c.nombre} cliente={c} />)}
+            {clientes.map(c => (
+              <ClienteCard
+                key={c.nombre}
+                cliente={c}
+                isNew={normDateToMonth(c.fechaPrimerPago) === selectedMonth}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -235,22 +281,32 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
       {deudores.length > 0 && (
         <div className="bg-white rounded-xl border border-neg/20 shadow-sm p-4">
           <h3 className="text-xs font-semibold tracking-widest uppercase text-neg mb-3">
-            Deudores · {deudores.length} con cuotas vencidas
+            Deudores · {deudores.length} con cuotas atrasadas
           </h3>
           <div className="space-y-3">
             {deudores.map(d => {
+              const pastDuePending = d.cuotas
+                .filter(q => q.estado === 'Pendiente' && isPastDue(q.fechaCuota))
+                .reduce((s, q) => s + (q.montoCuota || 0), 0);
+              const adeudado = d.totalVencido + pastDuePending;
               const comentario = comentarios.find(c => c.nombre === d.nombre);
               return (
                 <div key={d.nombre} className="bg-neg-light rounded-xl p-3 border border-neg/20">
                   <div className="flex items-start justify-between mb-1">
                     <span className="text-sm font-semibold text-ink-1">{d.nombre}</span>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-neg">{ars(d.totalVencido)}</p>
-                      <p className="text-xs text-ink-3">vencido</p>
+                      <p className="text-sm font-bold text-neg">{ars(adeudado)}</p>
+                      <p className="text-xs text-ink-3">adeudado</p>
                     </div>
                   </div>
-                  {d.totalPendiente > 0 && (
-                    <p className="text-xs text-ink-3 mb-1">+ {ars(d.totalPendiente)} pendiente</p>
+                  {d.totalVencido > 0 && pastDuePending > 0 && (
+                    <p className="text-xs text-ink-3 mb-1">{ars(d.totalVencido)} vencido · {ars(pastDuePending)} pendiente atrasado</p>
+                  )}
+                  {d.totalVencido > 0 && pastDuePending === 0 && (
+                    <p className="text-xs text-ink-3 mb-1">cuotas vencidas sin cobrar</p>
+                  )}
+                  {d.totalVencido === 0 && pastDuePending > 0 && (
+                    <p className="text-xs text-ink-3 mb-1">cuotas de meses anteriores sin cobrar</p>
                   )}
                   {comentario && (
                     <p className="text-xs text-ink-2 mt-2 pt-2 border-t border-neg/20">
