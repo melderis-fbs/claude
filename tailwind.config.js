@@ -9,15 +9,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: { 1: '#111111', 2: '#555555', 3: '#999999' },
-        cream: { light: '#F5F5F5', DEFAULT: '#E5E5E5', dark: '#CCCCCC' },
-        gold: { light: '#FEF9E7', DEFAULT: '#B8960C', dark: '#8B6E09' },
-        pos: { light: '#EEFAF0', DEFAULT: '#2D7A3A' },
-        neg: { light: '#FEF0EF', DEFAULT: '#C0392B' },
-        page: '#FAFAFA',
+        ink: { 1: '#111111', 2: '#555555', 3: '#9CA3AF' },
+        cream: { light: '#F9FAFB', DEFAULT: '#E5E7EB', dark: '#D1D5DB' },
+        gold: { light: '#F0F9FF', DEFAULT: '#0284C7', dark: '#0369A1' },
+        pos: { light: '#F0FDF4', DEFAULT: '#16A34A' },
+        neg: { light: '#FEF2F2', DEFAULT: '#DC2626' },
+        page: '#FFFFFF',
       },
       fontFamily: {
-        sans: ['var(--font-open-sans)', ...defaultTheme.fontFamily.sans],
+        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
       },
     },
   },

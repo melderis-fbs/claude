@@ -6,7 +6,13 @@ import {
 } from 'recharts';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
-function pct(n) { return `${Number(n || 0).toFixed(1)}%`; }
+// Detecta automáticamente si el valor es fracción (0-1) o ya es porcentaje (>1)
+function pct(n) {
+  const v = Number(n || 0);
+  const p = (v > 0 && v <= 1) ? v * 100 : v;
+  return `${p.toFixed(1)}%`;
+}
+function dec1(n) { return Number(n || 0).toFixed(1); }
 
 const TooltipARS = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -94,7 +100,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
     const ventas = ars(mes.ventasTotal || 0);
     const obj    = ars(mes.objetivoPesos || 0);
     const tc     = tasaCierre;
-    const roas   = mesAds.roas ?? 0;
+    const roas   = mesAds.roas != null ? dec1(mesAds.roas) : '—';
     const falta  = ars(mes.faltanteObj || 0);
     return `El mes acumula ${ventas} de ${obj} objetivo (${pctMeta.toFixed(0)}%). ${totalCierres} cierres con ${tc}% de conversión. ROAS de ${roas} en anuncios. Faltan ${falta} para llegar al objetivo.`;
   }, [mes, mesAds, pctMeta, tasaCierre, totalCierres]);
@@ -142,7 +148,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
 
           <BigCard bg="bg-gold-light">
             <p className="text-xs font-semibold tracking-widest uppercase text-gold-dark/70 mb-1">ROAS anuncios</p>
-            <p className="text-2xl font-bold text-gold-dark">{mesAds.roas ?? '—'}</p>
+            <p className="text-2xl font-bold text-gold-dark">{mesAds.roas != null ? dec1(mesAds.roas) : '—'}</p>
             <p className="text-xs text-ink-3 mt-1">inv. {ars(mesAds.inversion)}</p>
           </BigCard>
         </div>
@@ -240,7 +246,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
           <BarChart data={chartData} barSize={18} barGap={3}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
             <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#999999' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#999999' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} />
+            <YAxis tick={{ fontSize: 10, fill: '#999999' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M` : v >= 1000 ? `$${Math.round(v/1000)}K` : `$${v}`} />
             <Tooltip content={<TooltipARS />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="Ventas" fill="#3B82F6" radius={[4,4,0,0]} />
