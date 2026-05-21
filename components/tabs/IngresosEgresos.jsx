@@ -11,7 +11,10 @@ function isPastDue(fechaStr) {
   if (!fechaStr) return false;
   try {
     const d = new Date(fechaStr);
-    return !isNaN(d.getTime()) && d < new Date();
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    // Past due only if the cuota's month is before the current month
+    return d.getFullYear() * 12 + d.getMonth() < now.getFullYear() * 12 + now.getMonth();
   } catch { return false; }
 }
 
@@ -250,18 +253,28 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
           </h3>
           <div className="space-y-3">
             {deudores.map(d => {
+              const pastDuePending = d.cuotas
+                .filter(q => q.estado === 'Pendiente' && isPastDue(q.fechaCuota))
+                .reduce((s, q) => s + (q.montoCuota || 0), 0);
+              const adeudado = d.totalVencido + pastDuePending;
               const comentario = comentarios.find(c => c.nombre === d.nombre);
               return (
                 <div key={d.nombre} className="bg-neg-light rounded-xl p-3 border border-neg/20">
                   <div className="flex items-start justify-between mb-1">
                     <span className="text-sm font-semibold text-ink-1">{d.nombre}</span>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-neg">{ars(d.totalVencido)}</p>
-                      <p className="text-xs text-ink-3">vencido</p>
+                      <p className="text-sm font-bold text-neg">{ars(adeudado)}</p>
+                      <p className="text-xs text-ink-3">adeudado</p>
                     </div>
                   </div>
-                  {d.totalPendiente > 0 && (
-                    <p className="text-xs text-ink-3 mb-1">+ {ars(d.totalPendiente)} pendiente</p>
+                  {d.totalVencido > 0 && pastDuePending > 0 && (
+                    <p className="text-xs text-ink-3 mb-1">{ars(d.totalVencido)} vencido · {ars(pastDuePending)} pendiente atrasado</p>
+                  )}
+                  {d.totalVencido > 0 && pastDuePending === 0 && (
+                    <p className="text-xs text-ink-3 mb-1">cuotas vencidas sin cobrar</p>
+                  )}
+                  {d.totalVencido === 0 && pastDuePending > 0 && (
+                    <p className="text-xs text-ink-3 mb-1">cuotas de meses anteriores sin cobrar</p>
                   )}
                   {comentario && (
                     <p className="text-xs text-ink-2 mt-2 pt-2 border-t border-neg/20">
