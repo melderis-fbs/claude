@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Phone, Target, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Phone, Target, FileText, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import DataTable from '../ui/DataTable.jsx';
 import clsx from 'clsx';
 
@@ -24,7 +24,8 @@ function getTodayStr() {
 }
 
 export default function LlamadasSeguimientos({ data }) {
-  const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [selectedDate, setSelectedDate]   = useState(getTodayStr());
+  const [ocultarClientes, setOcultar]     = useState(true);
 
   const allDates = useMemo(() => {
     if (!data) return [];
@@ -32,10 +33,17 @@ export default function LlamadasSeguimientos({ data }) {
     return [...set].sort().reverse();
   }, [data]);
 
-  const filtered = useMemo(() => {
+  const filteredByDate = useMemo(() => {
     if (!data) return [];
     return data.filter(l => formatDate(l.fecha) === selectedDate);
   }, [data, selectedDate]);
+
+  const filtered = useMemo(() => {
+    if (ocultarClientes) return filteredByDate.filter(l => !l.esCliente);
+    return filteredByDate;
+  }, [filteredByDate, ocultarClientes]);
+
+  const clientesHoy = useMemo(() => filteredByDate.filter(l => l.esCliente).length, [filteredByDate]);
 
   const totalLlamadas = filtered.length;
   const totalCierres = filtered.filter(l => l.resultado === 'Cerrado').length;
@@ -68,7 +76,18 @@ export default function LlamadasSeguimientos({ data }) {
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-cream text-ink-2">{v}</span>
       )
     },
-    { key: 'nombre', label: 'Nombre', sortable: true },
+    { key: 'nombre', label: 'Nombre', sortable: true,
+      render: (v, row) => (
+        <div className="flex items-center gap-1.5">
+          <span>{v}</span>
+          {row.esCliente && (
+            <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-pos-light text-pos font-medium">
+              <CheckCircle2 size={10} /> Cliente
+            </span>
+          )}
+        </div>
+      )
+    },
     {
       key: 'resultado', label: 'Resultado', sortable: true,
       render: (v) => (
@@ -137,7 +156,23 @@ export default function LlamadasSeguimientos({ data }) {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-ink-2 mb-2">Detalle de llamadas</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold tracking-widest uppercase text-ink-3">Detalle de llamadas</h3>
+          <button
+            onClick={() => setOcultar(o => !o)}
+            className={clsx(
+              'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors',
+              ocultarClientes
+                ? 'bg-pos-light text-pos border-pos/30'
+                : 'bg-white text-ink-2 border-cream'
+            )}
+          >
+            <CheckCircle2 size={12} />
+            {ocultarClientes
+              ? `Clientes ocultos${clientesHoy > 0 ? ` (${clientesHoy})` : ''}`
+              : 'Mostrar clientes'}
+          </button>
+        </div>
         <DataTable columns={columns} data={filtered} />
       </div>
 

@@ -189,20 +189,32 @@ function getAgendas() {
 // ── LLAMADAS ──────────────────────────────────────────────────────────────────
 // Columnas: Mes | Tipo | Fecha | Closer | Nombre | Resultado |
 //           Próximo paso | Fecha prox paso | Observaciones
+// esCliente se deriva cruzando nombres con la hoja de cobranzas
 function getLlamadas() {
   var rows = getRows(SHEET_LLAMADAS, 2, 9);
+
+  // Construir set de nombres que ya son clientes (aparecen en cobranzas)
+  var cobranzasRows = getRows(SHEET_COBRANZAS, 2, 1); // solo col Nombre
+  var clienteSet = {};
+  cobranzasRows.forEach(function(r) {
+    var n = str(r[0]).toLowerCase().trim();
+    if (n) clienteSet[n] = true;
+  });
+
   return rows.map(function(r) {
+    var nombre = str(r[4]);
     return {
       mes:                   mesKey(r[0]),
       tipo:                  str(r[1]),
       fecha:                 fmtDateISO(r[2]),
       fechaDisplay:          fmtDate(r[2]),
       closer:                str(r[3]),
-      nombre:                str(r[4]),
+      nombre:                nombre,
       resultado:             str(r[5]),
       proximoPaso:           str(r[6]),
       fechaProximoContacto:  fmtDate(r[7]),
       observaciones:         str(r[8]),
+      esCliente:             clienteSet[nombre.toLowerCase().trim()] === true,
     };
   }).sort(function(a, b) { return b.fecha < a.fecha ? -1 : 1; });
 }
