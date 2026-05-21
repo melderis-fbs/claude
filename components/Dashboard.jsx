@@ -52,15 +52,18 @@ export default function Dashboard({ negocio, agendas, llamadas, closers, anuncio
     <div className="min-h-screen bg-page flex flex-col">
       <header className="bg-white border-b border-cream sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-bold text-ink-1 leading-tight">Dashboard Comercial</h1>
-            <p className="text-xs text-ink-3 capitalize">{todayCapitalized}</p>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-ink-1 text-white text-sm font-bold flex-shrink-0">F</span>
+            <div>
+              <h1 className="text-lg font-bold text-ink-1 leading-tight">Dashboard Comercial</h1>
+              <p className="text-xs text-ink-3 capitalize">{todayCapitalized}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-light text-gold-dark text-xs font-medium hover:bg-gold/20 transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-ink-1 bg-white text-ink-1 text-xs font-semibold hover:bg-ink-1 hover:text-white transition-colors disabled:opacity-60"
               title="Actualizar datos"
             >
               <RefreshCw size={13} className={isPending ? 'animate-spin' : ''} />

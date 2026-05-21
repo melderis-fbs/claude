@@ -75,7 +75,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4 space-y-4">
-          <h2 className="text-sm font-semibold text-ink-2">Objetivos del mes</h2>
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3">Objetivos del mes</h2>
           <ProgressBar
             label={`Ventas: ${mes.ventasTotales} / ${mes.objetivoVentas}`}
             value={mes.ventasTotales} max={mes.objetivoVentas}
@@ -101,7 +101,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
         </div>
 
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
-          <h2 className="text-sm font-semibold text-ink-2 mb-3">Desglose del mes</h2>
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Desglose del mes</h2>
           <div className="space-y-2">
             {[
               { label: 'Ventas nuevas', count: mes.cantVentasNuevas, monto: mes.ventasFront },
@@ -134,7 +134,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
       </div>
 
       <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
-        <h2 className="text-sm font-semibold text-ink-2 mb-4">Tendencia mensual</h2>
+        <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-4">Tendencia mensual</h2>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} barSize={18} barGap={3}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" />
@@ -151,7 +151,7 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
 
       {mesClosers.length > 0 && (
         <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
-          <h2 className="text-sm font-semibold text-ink-2 mb-3">Resumen closers</h2>
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">Resumen closers</h2>
           <div className="overflow-x-auto">
             <table className="w-full min-w-max text-sm">
               <thead>

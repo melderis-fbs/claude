@@ -9,13 +9,12 @@ export default function TabNav({ tabs, active, onChange }) {
           key={tab.id}
           onClick={() => onChange(tab.id)}
           className={clsx(
-            'flex-shrink-0 flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+            'flex-shrink-0 px-4 py-3 text-xs font-semibold tracking-widest uppercase border-b-2 transition-colors whitespace-nowrap',
             active === tab.id
-              ? 'border-gold text-gold-dark'
-              : 'border-transparent text-ink-3 hover:text-ink-2 hover:border-cream-dark'
+              ? 'border-ink-1 text-ink-1'
+              : 'border-transparent text-ink-3 hover:text-ink-2'
           )}
         >
-          {tab.icon && <tab.icon size={15} />}
           {tab.label}
         </button>
       ))}
