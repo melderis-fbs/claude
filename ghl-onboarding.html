@@ -190,6 +190,65 @@
     font-weight: 300;
   }
 
+  /* SECTION LABEL */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 560px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .section-label span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #aaa;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #E8E3DC;
+  }
+
+  .section-label.now span { color: #1a1a1a; }
+  .section-label.next span { color: #C4B49A; }
+
+  /* PENDING BUTTON STATE */
+  .step-btn.pending {
+    opacity: 0.55;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  .step-btn.pending .step-badge {
+    background: #ccc;
+  }
+
+  .step-btn.pending .step-arrow {
+    color: #ccc;
+  }
+
+  .pending-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #C4B49A;
+    background: #F7F3EE;
+    border: 1px solid #E8E3DC;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-top: 4px;
+  }
+
   /* FOOTER NOTE */
   .footer-note {
     margin-top: 44px;
@@ -241,12 +300,14 @@
   <div class="hero">
     <p class="eyebrow">Founders · Business Strategists</p>
     <h1>Bienvenido/a,<br><span>{{contact.first_name}}</span> 👋</h1>
-    <p>Estos son tus próximos pasos para arrancar. Completa cada uno en orden — todo abre en una nueva pestaña para que no pierdas esta página.</p>
+    <p>Estos son tus próximos pasos para arrancar. Completa los dos primeros ahora — el resto te llegará en breve.</p>
   </div>
 
   <div class="divider"></div>
 
-  <!-- STEPS -->
+  <!-- SECCIÓN 1: INMEDIATO -->
+  <div class="section-label now"><span>Completa ahora</span></div>
+
   <div class="steps">
 
     <!-- PASO 1: FORM ONBOARDING -->
@@ -260,8 +321,8 @@
       <span class="step-arrow">→</span>
     </a>
 
-    <!-- PASO 2: CONTRATO -->
-    <a class="step-btn" href="URL_CONTRATO_DIGITAL" target="_blank" rel="noopener">
+    <!-- PASO 2: CONTRATO — variable por cliente -->
+    <a class="step-btn" href="{{contact.contract_link}}" target="_blank" rel="noopener">
       <span class="step-badge">Paso 2</span>
       <div class="step-icon">✍️</div>
       <div class="step-text">
@@ -270,6 +331,13 @@
       </div>
       <span class="step-arrow">→</span>
     </a>
+
+  </div>
+
+  <!-- SECCIÓN 2: SIGUIENTES PASOS -->
+  <div class="section-label next" style="margin-top:28px;"><span>A continuación</span></div>
+
+  <div class="steps">
 
     <!-- PASO 3: SKOOL -->
     <a class="step-btn" href="URL_SKOOL" target="_blank" rel="noopener">
@@ -293,13 +361,13 @@
       <span class="step-arrow">→</span>
     </a>
 
-    <!-- PASO 5: CALENDARIO -->
-    <a class="step-btn" href="URL_CALENDARIO_COACH" target="_blank" rel="noopener">
+    <!-- PASO 5: CALENDARIO — variable por coach asignado -->
+    <a id="cal-btn" class="step-btn" href="{{contact.coach_calendar_link}}" target="_blank" rel="noopener">
       <span class="step-badge">Paso 5</span>
       <div class="step-icon">📅</div>
       <div class="step-text">
         <h3>Agenda tu onboarding 1:1</h3>
-        <p>Reserva tu sesión de bienvenida con tu coach asignado.</p>
+        <p id="cal-desc">Reserva tu sesión de bienvenida con tu coach asignado.</p>
       </div>
       <span class="step-arrow">→</span>
     </a>
@@ -310,6 +378,21 @@
   <div class="footer-note">
     <p>¿Tienes alguna duda? Escríbenos directamente en Telegram o responde este correo.<br><strong>Founders · Business Strategists</strong></p>
   </div>
+
+<script>
+  // Si el link del calendario aún no fue asignado, muestra el botón como pendiente
+  (function() {
+    var btn = document.getElementById('cal-btn');
+    var href = btn.getAttribute('href') || '';
+    var isEmpty = href === '' || href === '{{contact.coach_calendar_link}}';
+    if (isEmpty) {
+      btn.classList.add('pending');
+      btn.removeAttribute('href');
+      document.getElementById('cal-desc').innerHTML =
+        'Te enviamos el link una vez que asignemos tu coach. <span class="pending-tag">Próximamente</span>';
+    }
+  })();
+</script>
 
 </body>
 </html>
