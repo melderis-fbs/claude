@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bienvenido a Founders</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #F0EDE8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  /* LOGO */
+  .logo-wrap {
+    margin-bottom: 36px;
+  }
+
+  .logo-wrap img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+  }
+
+  /* HERO TEXT */
+  .hero {
+    text-align: center;
+    max-width: 560px;
+    margin-bottom: 48px;
+  }
+
+  .hero .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #C4B49A;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 {
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+
+  .hero h1 span {
+    color: #C4B49A;
+  }
+
+  .hero p {
+    font-size: 15px;
+    color: #6b6b6b;
+    line-height: 1.6;
+  }
+
+  /* DIVIDER */
+  .divider {
+    width: 48px;
+    height: 3px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    margin: 0 auto 48px;
+  }
+
+  /* STEPS GRID */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .step-btn {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #ffffff;
+    border: 1.5px solid #E8E3DC;
+    border-radius: 14px;
+    padding: 20px 22px;
+    text-decoration: none;
+    color: #1a1a1a;
+    transition: all 0.22s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #1a1a1a;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+    z-index: 0;
+  }
+
+  .step-btn:hover::before {
+    transform: scaleX(1);
+  }
+
+  .step-btn:hover .step-icon,
+  .step-btn:hover .step-text h3,
+  .step-btn:hover .step-text p,
+  .step-btn:hover .step-arrow {
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.2);
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-btn:hover .step-icon {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .step-btn > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-badge {
+    position: absolute;
+    top: -1px;
+    right: 18px;
+    background: #C4B49A;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 0 0 7px 7px;
+    z-index: 2;
+  }
+
+  .step-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 12px;
+    background: #F0EDE8;
+    border: 1.5px solid #E8E3DC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: all 0.22s ease;
+  }
+
+  .step-text {
+    flex: 1;
+  }
+
+  .step-text h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 3px;
+    transition: color 0.22s ease;
+  }
+
+  .step-text p {
+    font-size: 13px;
+    color: #8a8a8a;
+    line-height: 1.4;
+    transition: color 0.22s ease;
+  }
+
+  .step-arrow {
+    font-size: 18px;
+    color: #C4B49A;
+    transition: color 0.22s ease;
+    font-weight: 300;
+  }
+
+  /* FOOTER NOTE */
+  .footer-note {
+    margin-top: 44px;
+    text-align: center;
+    max-width: 420px;
+  }
+
+  .footer-note p {
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.6;
+  }
+
+  .footer-note strong {
+    color: #1a1a1a;
+  }
+
+  /* MOBILE */
+  @media (max-width: 480px) {
+    body { padding: 30px 16px 50px; }
+    .step-btn { padding: 16px 16px; gap: 14px; }
+    .step-icon { width: 42px; height: 42px; min-width: 42px; font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- LOGO -->
+  <div class="logo-wrap">
+    <!--
+      Reemplaza el src con la URL de tu logo en GHL Media Library:
+      <img src="URL_DE_TU_LOGO" alt="Founders">
+
+      Si no tienes URL, usa este SVG placeholder con la U+flecha:
+    -->
+    <svg width="90" height="90" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" rx="24" fill="#F0EDE8"/>
+      <!-- Shadow/beige layer -->
+      <path d="M115 40 Q150 40 150 80 L150 140 Q150 175 115 175 L85 175 Q50 175 50 140 L50 80 Q50 40 85 40 Z" fill="#C4B49A" transform="translate(8,8)"/>
+      <!-- Main U shape -->
+      <path d="M65 40 L65 130 Q65 160 100 160 Q135 160 135 130 L135 40" stroke="#1a1a1a" stroke-width="28" stroke-linecap="round" fill="none"/>
+      <!-- Arrow up on right -->
+      <line x1="135" y1="95" x2="135" y2="30" stroke="#1a1a1a" stroke-width="28" stroke-linecap="round"/>
+      <polyline points="110,50 135,25 160,50" stroke="#1a1a1a" stroke-width="22" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+    </svg>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="eyebrow">Founders · Business Strategists</p>
+    <h1>Bienvenido/a,<br><span>{{contact.first_name}}</span> 👋</h1>
+    <p>Estos son tus próximos pasos para arrancar. Completa cada uno en orden — todo abre en una nueva pestaña para que no pierdas esta página.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STEPS -->
+  <div class="steps">
+
+    <!-- PASO 1: FORM ONBOARDING -->
+    <a class="step-btn" href="URL_FORM_ONBOARDING" target="_blank" rel="noopener">
+      <span class="step-badge">Paso 1</span>
+      <div class="step-icon">📋</div>
+      <div class="step-text">
+        <h3>Formulario de onboarding</h3>
+        <p>Cuéntanos sobre tu negocio para personalizar tu experiencia.</p>
+      </div>
+      <span class="step-arrow">→</span>
+    </a>
+
+    <!-- PASO 2: CONTRATO -->
+    <a class="step-btn" href="URL_CONTRATO_DIGITAL" target="_blank" rel="noopener">
+      <span class="step-badge">Paso 2</span>
+      <div class="step-icon">✍️</div>
+      <div class="step-text">
+        <h3>Firma tu contrato digital</h3>
+        <p>Firma en menos de 2 minutos desde cualquier dispositivo.</p>
+      </div>
+      <span class="step-arrow">→</span>
+    </a>
+
+    <!-- PASO 3: SKOOL -->
+    <a class="step-btn" href="URL_SKOOL" target="_blank" rel="noopener">
+      <span class="step-badge">Paso 3</span>
+      <div class="step-icon">🎓</div>
+      <div class="step-text">
+        <h3>Acceso a Skool</h3>
+        <p>Clases, biblioteca de recursos y comunidad de miembros.</p>
+      </div>
+      <span class="step-arrow">→</span>
+    </a>
+
+    <!-- PASO 4: TELEGRAM -->
+    <a class="step-btn" href="URL_TELEGRAM" target="_blank" rel="noopener">
+      <span class="step-badge">Paso 4</span>
+      <div class="step-icon">💬</div>
+      <div class="step-text">
+        <h3>Únete al grupo de Telegram</h3>
+        <p>Soporte directo, updates y comunidad en tiempo real.</p>
+      </div>
+      <span class="step-arrow">→</span>
+    </a>
+
+    <!-- PASO 5: CALENDARIO -->
+    <a class="step-btn" href="URL_CALENDARIO_COACH" target="_blank" rel="noopener">
+      <span class="step-badge">Paso 5</span>
+      <div class="step-icon">📅</div>
+      <div class="step-text">
+        <h3>Agenda tu onboarding 1:1</h3>
+        <p>Reserva tu sesión de bienvenida con tu coach asignado.</p>
+      </div>
+      <span class="step-arrow">→</span>
+    </a>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-note">
+    <p>¿Tienes alguna duda? Escríbenos directamente en Telegram o responde este correo.<br><strong>Founders · Business Strategists</strong></p>
+  </div>
+
+</body>
+</html>
