@@ -380,27 +380,29 @@ body {
     </div>
   </div>
 
-  <!-- STEPS: INMEDIATOS -->
+  <!-- STEPS: PRIMERO -->
   <div class="section-head"><span>Completa ahora</span></div>
 
   <div class="steps">
 
-    <a class="step" id="s1" href="URL_FORM_ONBOARDING" target="_blank" rel="noopener">
+    <!-- PASO 1: CONTRATO — siempre activo -->
+    <a class="step" id="s1" href="{{contact.contract_link}}" target="_blank" rel="noopener">
       <span class="s-badge">Paso 1</span>
-      <div class="s-icon-wrap">📋</div>
+      <div class="s-icon-wrap">✍️</div>
       <div class="s-text">
-        <div class="s-title">Formulario de onboarding</div>
-        <div class="s-sub" id="s1-sub">Cuéntanos sobre tu negocio</div>
+        <div class="s-title">Firma tu contrato</div>
+        <div class="s-sub" id="s1-sub">Firma en menos de 2 minutos</div>
       </div>
       <span class="s-arrow" id="s1-arrow">→</span>
     </a>
 
-    <a class="step" id="s2" href="{{contact.contract_link}}" target="_blank" rel="noopener">
+    <!-- PASO 2: FORM — bloqueado hasta que firmen -->
+    <a class="step locked" id="s2" href="URL_FORM_ONBOARDING" target="_blank" rel="noopener">
       <span class="s-badge">Paso 2</span>
-      <div class="s-icon-wrap">✍️</div>
+      <div class="s-icon-wrap">📋</div>
       <div class="s-text">
-        <div class="s-title">Firma tu contrato</div>
-        <div class="s-sub" id="s2-sub">Firma en menos de 2 minutos</div>
+        <div class="s-title">Formulario de onboarding</div>
+        <div class="s-sub" id="s2-sub">Cuéntanos sobre tu negocio</div>
       </div>
       <span class="s-arrow" id="s2-arrow">→</span>
     </a>
@@ -450,35 +452,39 @@ body {
     <strong>Founders · Business Strategists</strong></p>
   </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast">🔒 Firma el contrato para desbloquear los accesos</div>
+  <div class="toast" id="toast">🔒 Completa el paso anterior para continuar</div>
 
 <script>
 (function () {
 
-  // ── VARIABLES GHL ─────────────────────────────────────────────────────────
-  // GHL reemplaza estas al renderizar. Crea estos campos en tu CRM:
-  //   form_completed   → set "true" cuando el form es enviado (Workflow)
-  //   contract_signed  → set "true" cuando el contrato se firma (Workflow)
-  //   coach_calendar_link → URL del calendario del coach asignado
-  var formDone     = '{{contact.form_completed}}'      === 'true';
+  // ── VARIABLES GHL ──────────────────────────────────────────────────────────
+  // Workflows en GHL:
+  //   Contrato firmado  → contact.contract_signed  = "true"
+  //   Form enviado      → contact.form_completed   = "true"
+  //   Coach asignado    → contact.coach_calendar_link = [URL]
   var contractDone = '{{contact.contract_signed}}'     === 'true';
+  var formDone     = '{{contact.form_completed}}'      === 'true';
   var calURL       = '{{contact.coach_calendar_link}}';
   var calReady     = calURL && calURL !== '{{contact.coach_calendar_link}}';
-  // ──────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
 
-  // Paso 1
-  if (formDone) {
+  // Paso 1: Contrato
+  if (contractDone) {
     markDone('s1', 's1-sub', 's1-arrow', 'Completado');
   }
 
-  // Paso 2
+  // Paso 2: Form — se desbloquea si firmaron el contrato
   if (contractDone) {
-    markDone('s2', 's2-sub', 's2-arrow', 'Completado');
+    unlock('s2');
+    if (formDone) {
+      markDone('s2', 's2-sub', 's2-arrow', 'Completado');
+    }
+  } else {
+    addToastOnClick('s2', '🔒 Primero firmá el contrato');
   }
 
-  // Desbloquear accesos si el contrato está firmado
-  if (contractDone) {
+  // Pasos 3-5: se desbloquean cuando el form está completado
+  if (formDone) {
     unlock('s3');
     unlock('s4');
     if (calReady) {
@@ -487,21 +493,16 @@ body {
       document.getElementById('s5-sub').textContent = 'Tu coach te enviará el link pronto';
     }
   } else {
-    // Pasos 3-5 bloqueados: mostrar toast al hacer click
     ['s3','s4','s5'].forEach(function (id) {
-      var el = document.getElementById(id);
-      el.style.pointerEvents = 'auto';
-      el.addEventListener('click', function (e) {
-        e.preventDefault();
-        showToast();
-      });
+      addToastOnClick(id, contractDone
+        ? '🔒 Primero completá el formulario'
+        : '🔒 Primero firmá el contrato');
     });
   }
 
   function markDone(stepId, subId, arrowId, subText) {
-    var el = document.getElementById(stepId);
-    el.classList.add('done');
-    document.getElementById(subId).textContent  = subText;
+    document.getElementById(stepId).classList.add('done');
+    document.getElementById(subId).textContent   = subText;
     document.getElementById(arrowId).textContent = '✓';
   }
 
@@ -511,9 +512,19 @@ body {
     el.style.pointerEvents = '';
   }
 
+  function addToastOnClick(id, msg) {
+    var el = document.getElementById(id);
+    el.style.pointerEvents = 'auto';
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      showToast(msg);
+    });
+  }
+
   var toastTimer;
-  function showToast() {
+  function showToast(msg) {
     var t = document.getElementById('toast');
+    t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
