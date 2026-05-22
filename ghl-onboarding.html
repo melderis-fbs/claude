@@ -4,66 +4,90 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bienvenido a Founders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
 
-html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ====== LAYOUT ====== */
-.wrapper {
-  display: flex;
-  min-height: 100vh;
+:root {
+  --black:   #111111;
+  --beige:   #C4B49A;
+  --cream:   #F2EEE9;
+  --white:   #FFFFFF;
+  --muted:   #7A7A7A;
+  --border:  #E6E1DA;
+  --card-bg: #FAFAF9;
 }
 
-/* ====== LEFT PANEL ====== */
-.panel-left {
-  width: 42%;
-  min-width: 280px;
-  background: #161616;
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--cream);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 36px 32px 40px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  padding: 56px 20px 72px;
+  -webkit-font-smoothing: antialiased;
 }
 
-.logo-area {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  gap: 9px;
+/* ── LOGO ─────────────────────────────── */
+.logo {
+  margin-bottom: 40px;
 }
 
-.logo-area .logo-svg { width: 30px; height: 30px; }
-.logo-area .logo-name {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+/* ── HERO ─────────────────────────────── */
+.hero {
+  text-align: center;
+  max-width: 480px;
+  margin-bottom: 36px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  color: var(--beige);
+  margin-bottom: 14px;
 }
 
-.video-wrap { width: 100%; }
+.hero h1 {
+  font-size: clamp(28px, 5vw, 40px);
+  font-weight: 800;
+  color: var(--black);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
 
-.video-box {
+.hero h1 em {
+  font-style: normal;
+  color: var(--beige);
+}
+
+.hero p {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ── VIDEO ────────────────────────────── */
+.video-card {
   width: 100%;
-  aspect-ratio: 16/10;
-  background: #242424;
+  max-width: 520px;
+  background: var(--black);
   border-radius: 18px;
   overflow: hidden;
+  aspect-ratio: 16 / 9;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
+  margin-bottom: 48px;
   cursor: pointer;
 }
 
-.video-box iframe {
+.video-card iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -71,499 +95,402 @@ html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sa
   border: none;
 }
 
-.play-ring {
-  width: 58px;
-  height: 58px;
+.video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.play-btn {
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: #C4B49A;
+  background: var(--beige);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.22s ease, background 0.22s ease;
 }
 
-.video-box:hover .play-ring {
-  transform: scale(1.07);
-  background: #d4c4aa;
+.video-card:hover .play-btn {
+  transform: scale(1.1);
+  background: #D4C4AA;
 }
 
-.play-ring svg { width: 20px; height: 20px; fill: #161616; margin-left: 3px; }
+.play-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--black);
+  margin-left: 3px;
+}
 
 .video-label {
-  color: #666;
   font-size: 12px;
-  letter-spacing: 0.04em;
-}
-
-.brand-tag {
-  color: #C4B49A;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-/* ====== RIGHT PANEL ====== */
-.panel-right {
-  flex: 1;
-  background: #ECEAE5;
+/* ── SECTION DIVIDER ──────────────────── */
+.section-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 44px 28px 80px;
-  overflow-y: auto;
-}
-
-/* ====== CARD ====== */
-.card {
-  background: #fff;
-  border-radius: 22px;
-  padding: 34px 30px 28px;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  max-width: 430px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.07);
+  max-width: 520px;
+  margin-bottom: 12px;
 }
 
-.card-line {
-  width: 32px;
-  height: 3px;
-  background: #C4B49A;
-  border-radius: 2px;
-  margin: 0 auto 22px;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
+.section-head span {
+  font-size: 11px;
   font-weight: 700;
-  padding: 7px 15px;
-  border-radius: 100px;
-  margin-bottom: 20px;
-  transition: background 0.4s;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--black);
+  white-space: nowrap;
 }
 
-.status-pill.locked  { background: #2a2a2a; color: #aaa; }
-.status-pill.unlocked{ background: #1a1a1a; color: #fff; }
+.section-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
-.pill-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+/* ── STEP BUTTONS ─────────────────────── */
+.steps {
+  width: 100%;
+  max-width: 520px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-}
-
-.card h2 {
-  font-size: 21px;
-  font-weight: 800;
-  color: #1a1a1a;
-  line-height: 1.2;
-  margin-bottom: 6px;
-}
-
-.card .subtitle {
-  font-size: 13px;
-  color: #999;
-  margin-bottom: 26px;
-  line-height: 1.5;
-}
-
-/* ====== STEP ROWS ====== */
-.steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 26px; }
-
-.step {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 13px 15px;
-  border-radius: 13px;
-  border: 1px solid #F0EDE8;
-  background: #fff;
-  text-decoration: none;
-  color: #1a1a1a;
-  transition: border-color 0.2s, background 0.2s, transform 0.15s, opacity 0.3s;
-  position: relative;
-}
-
-/* clickable (unlocked active) */
-.step.active:hover {
-  border-color: #C4B49A;
-  background: #FEFCFA;
-  transform: translateX(3px);
-}
-
-/* done */
-.step.done { opacity: 0.55; }
-
-/* locked */
-.step.locked {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
-/* Step circle */
-.s-circle {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  border-radius: 50%;
-  background: #C4B49A;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  transition: background 0.3s;
-}
-
-.step.locked .s-circle { background: #ccc; }
-
-.s-info { flex: 1; }
-.s-info h4 { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-.s-info p  { font-size: 12px; color: #aaa; line-height: 1.4; }
-
-.s-icon { font-size: 15px; color: #C4B49A; }
-.step.locked .s-icon { color: #ccc; }
-.step.done .s-icon   { color: #C4B49A; }
-
-/* ====== PROGRESS ====== */
-.progress { border-top: 1px solid #F0EDE8; padding-top: 20px; }
-
-.prog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
-.prog-head span { font-size: 13px; color: #aaa; }
-.prog-head strong { font-size: 13px; font-weight: 800; color: #1a1a1a; }
-
-.prog-track {
-  width: 100%;
-  height: 6px;
-  background: #F0EDE8;
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 14px;
-}
-
-.prog-fill {
-  height: 100%;
-  background: #C4B49A;
-  border-radius: 3px;
-  transition: width 0.7s cubic-bezier(.4,0,.2,1);
-}
-
-.prog-items { display: flex; flex-direction: column; gap: 7px; }
-
-.prog-item {
+.step {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #888;
+  gap: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  text-decoration: none;
+  color: var(--black);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 
-.prog-check {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 50%;
-  background: #C4B49A;
+/* sweep hover */
+.step::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--black);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  z-index: 0;
+}
+
+.step:hover { border-color: var(--black); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.step:hover::before { transform: scaleX(1); }
+
+.step:hover .s-icon-wrap,
+.step:hover .s-title,
+.step:hover .s-sub,
+.step:hover .s-arrow { color: #fff; border-color: rgba(255,255,255,0.15); }
+.step:hover .s-icon-wrap { background: rgba(255,255,255,0.1); }
+
+/* all children above pseudo */
+.step > * { position: relative; z-index: 1; }
+
+/* badge */
+.s-badge {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  background: var(--beige);
   color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 0 0 8px 8px;
+  z-index: 2;
+  transition: background 0.2s;
+}
+
+.step:hover .s-badge { background: rgba(255,255,255,0.2); }
+
+/* icon */
+.s-icon-wrap {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 12px;
+  background: var(--cream);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 20px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
-/* ====== TOAST ====== */
+/* text */
+.s-text { flex: 1; }
+.s-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 2px;
+  transition: color 0.2s;
+}
+.s-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9A9A9A;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+/* arrow */
+.s-arrow {
+  font-size: 16px;
+  color: var(--beige);
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+/* ── LOCKED STATE ─────────────────────── */
+.step.locked {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.step.locked .s-badge { background: #bbb; }
+.step.locked .s-arrow { color: #bbb; }
+
+/* ── DONE STATE ───────────────────────── */
+.step.done {
+  opacity: 0.55;
+}
+
+/* ── FOOTER ───────────────────────────── */
+.footer {
+  margin-top: 40px;
+  text-align: center;
+  max-width: 380px;
+}
+
+.footer p {
+  font-size: 12px;
+  font-weight: 400;
+  color: #B0A89F;
+  line-height: 1.7;
+}
+
+.footer strong { color: var(--black); font-weight: 600; }
+
+/* ── TOAST ────────────────────────────── */
 .toast {
   position: fixed;
   bottom: 28px;
   left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: #1a1a1a;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--black);
   color: #fff;
   font-size: 13px;
   font-weight: 500;
-  padding: 10px 22px;
+  padding: 11px 22px;
   border-radius: 100px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s, transform 0.25s;
+  transition: opacity 0.2s, transform 0.2s;
   white-space: nowrap;
   z-index: 999;
+  font-family: 'Inter', sans-serif;
 }
 
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ───────────────────────── */
+@media (max-width: 560px) {
+  body { padding: 40px 16px 60px; }
+  .step { padding: 16px 16px; gap: 13px; }
+  .s-icon-wrap { width: 40px; height: 40px; min-width: 40px; font-size: 17px; }
+  .video-card { border-radius: 14px; }
 }
 
-/* ====== SCROLL BTN ====== */
-.scroll-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid #E0DBD4;
-  cursor: pointer;
-  font-size: 15px;
-  color: #999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-}
-
-.scroll-btn:hover { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-
-/* ====== MOBILE ====== */
-@media (max-width: 720px) {
-  .wrapper { flex-direction: column; }
-
-  .panel-left {
-    width: 100%;
-    height: auto;
-    position: relative;
-    padding: 28px 24px 32px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-  }
-
-  .video-wrap { order: 3; width: 100%; }
-  .brand-tag { order: 2; }
-
-  .panel-right { padding: 28px 16px 60px; }
-  .card { padding: 24px 20px 22px; }
-}
 </style>
 </head>
 <body>
 
-<div class="wrapper">
-
-  <!-- ═══════════ LEFT PANEL ═══════════ -->
-  <div class="panel-left">
-
-    <div class="logo-area">
-      <!--
-        LOGO: reemplaza el SVG con:
-        <img src="URL_DE_TU_LOGO_EN_GHL" alt="Founders" style="height:34px;">
-      -->
-      <svg class="logo-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M110 42 Q148 42 148 82 L148 138 Q148 172 110 172 L90 172 Q52 172 52 138 L52 82 Q52 42 90 42 Z"
-              fill="#C4B49A" transform="translate(7,7)" opacity="0.45"/>
-        <path d="M66 42 L66 132 Q66 162 100 162 Q134 162 134 132 L134 42"
-              stroke="#fff" stroke-width="25" stroke-linecap="round" fill="none"/>
-        <line x1="134" y1="96" x2="134" y2="30" stroke="#fff" stroke-width="25" stroke-linecap="round"/>
-        <polyline points="112,52 134,28 156,52"
-                  stroke="#fff" stroke-width="20" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
-      </svg>
-      <span class="logo-name">Founders</span>
-    </div>
-
-    <div class="video-wrap">
-      <div class="video-box">
-        <!--
-          VIDEO: reemplaza este bloque con tu embed, por ejemplo YouTube:
-          <iframe src="https://www.youtube.com/embed/TU_VIDEO_ID?rel=0&modestbranding=1"
-                  allow="autoplay; encrypted-media" allowfullscreen></iframe>
-
-          O Vimeo:
-          <iframe src="https://player.vimeo.com/video/TU_VIDEO_ID"
-                  allow="autoplay; fullscreen" allowfullscreen></iframe>
-        -->
-        <div class="play-ring">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <span class="video-label">Video de bienvenida</span>
-      </div>
-    </div>
-
-    <span class="brand-tag">Business Strategists</span>
+  <!-- LOGO -->
+  <div class="logo">
+    <!--
+      USA TU LOGO: reemplaza el SVG con:
+      <img src="URL_DE_TU_LOGO_EN_GHL" alt="Founders" style="height:80px;">
+    -->
+    <svg width="80" height="80" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M112 38 Q152 38 152 82 L152 138 Q152 172 112 172 L88 172 Q48 172 48 138 L48 82 Q48 38 88 38 Z"
+            fill="#C4B49A" transform="translate(7,7)" opacity="0.4"/>
+      <path d="M64 38 L64 132 Q64 162 100 162 Q136 162 136 132 L136 38"
+            stroke="#111" stroke-width="26" stroke-linecap="round" fill="none"/>
+      <line x1="136" y1="94" x2="136" y2="28" stroke="#111" stroke-width="26" stroke-linecap="round"/>
+      <polyline points="112,50 136,26 160,50"
+                stroke="#111" stroke-width="21" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+    </svg>
   </div>
 
+  <!-- HERO -->
+  <div class="hero">
+    <p class="eyebrow">Founders · Business Strategists</p>
+    <h1>Bienvenido/a,<br><em>{{contact.first_name}}</em> 👋</h1>
+    <p>Estos son tus próximos pasos. Completa el formulario y firma el contrato para desbloquear el resto de tus accesos.</p>
+  </div>
 
-  <!-- ═══════════ RIGHT PANEL ═══════════ -->
-  <div class="panel-right" id="right-panel">
-    <div class="card">
+  <!-- VIDEO -->
+  <div class="video-card">
+    <!--
+      AGREGA TU VIDEO. Reemplaza el div.video-placeholder con tu iframe:
 
-      <div class="card-line"></div>
+      YouTube:
+      <iframe src="https://www.youtube.com/embed/TU_VIDEO_ID?rel=0&modestbranding=1"
+              allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-      <!-- Status badge — JS lo actualiza -->
-      <div class="status-pill locked" id="status-pill">
-        <div class="pill-dot" id="pill-icon">🔒</div>
-        <span id="pill-text">Firma el contrato para desbloquear</span>
+      Vimeo:
+      <iframe src="https://player.vimeo.com/video/TU_VIDEO_ID?title=0&byline=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+    -->
+    <div class="video-placeholder">
+      <div class="play-btn">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </div>
-
-      <h2 id="card-title">Completa los primeros pasos</h2>
-      <p class="subtitle" id="card-sub">Firma el contrato y accedé a todos los recursos.</p>
-
-      <div class="steps">
-
-        <!-- PASO 1: FORM -->
-        <a class="step" id="s1" href="URL_FORM_ONBOARDING" target="_blank" rel="noopener">
-          <div class="s-circle" id="s1c">1</div>
-          <div class="s-info">
-            <h4>Formulario de onboarding</h4>
-            <p id="s1p">Cuéntanos sobre tu negocio</p>
-          </div>
-          <span class="s-icon" id="s1i">→</span>
-        </a>
-
-        <!-- PASO 2: CONTRATO (link variable por cliente) -->
-        <a class="step" id="s2" href="{{contact.contract_link}}" target="_blank" rel="noopener">
-          <div class="s-circle" id="s2c">2</div>
-          <div class="s-info">
-            <h4>Firma tu contrato digital</h4>
-            <p id="s2p">Firma en menos de 2 minutos</p>
-          </div>
-          <span class="s-icon" id="s2i">→</span>
-        </a>
-
-        <!-- PASO 3: SKOOL — bloqueado hasta firma -->
-        <a class="step locked" id="s3" href="URL_SKOOL" target="_blank" rel="noopener">
-          <div class="s-circle" id="s3c">3</div>
-          <div class="s-info">
-            <h4>Acceso a Skool</h4>
-            <p>Clases, biblioteca y comunidad</p>
-          </div>
-          <span class="s-icon">↗</span>
-        </a>
-
-        <!-- PASO 4: TELEGRAM — bloqueado hasta firma -->
-        <a class="step locked" id="s4" href="URL_TELEGRAM" target="_blank" rel="noopener">
-          <div class="s-circle" id="s4c">4</div>
-          <div class="s-info">
-            <h4>Grupo de Telegram</h4>
-            <p>Tu comunidad</p>
-          </div>
-          <span class="s-icon">↗</span>
-        </a>
-
-        <!-- PASO 5: CALENDARIO — variable por coach asignado -->
-        <a class="step locked" id="s5" href="{{contact.coach_calendar_link}}" target="_blank" rel="noopener">
-          <div class="s-circle" id="s5c">5</div>
-          <div class="s-info">
-            <h4>Agendá tu onboarding 1:1</h4>
-            <p id="s5p">Elegí el horario que mejor te quede</p>
-          </div>
-          <span class="s-icon">📅</span>
-        </a>
-
-      </div>
-
-      <!-- PROGRESS -->
-      <div class="progress">
-        <div class="prog-head">
-          <span>Tu progreso</span>
-          <strong id="prog-count">0 de 5 pasos</strong>
-        </div>
-        <div class="prog-track">
-          <div class="prog-fill" id="prog-fill" style="width:0%"></div>
-        </div>
-        <div class="prog-items" id="prog-items"></div>
-      </div>
-
+      <span class="video-label">Video de bienvenida</span>
     </div>
   </div>
 
-</div>
+  <!-- STEPS: INMEDIATOS -->
+  <div class="section-head"><span>Completa ahora</span></div>
 
-<!-- Toast de bloqueo -->
-<div class="toast" id="toast">🔒 Primero firmá el contrato para acceder</div>
+  <div class="steps">
 
-<!-- Scroll btn -->
-<button class="scroll-btn" title="Bajar"
-  onclick="document.getElementById('right-panel').scrollBy({top:300,behavior:'smooth'})">↓</button>
+    <a class="step" id="s1" href="URL_FORM_ONBOARDING" target="_blank" rel="noopener">
+      <span class="s-badge">Paso 1</span>
+      <div class="s-icon-wrap">📋</div>
+      <div class="s-text">
+        <div class="s-title">Formulario de onboarding</div>
+        <div class="s-sub" id="s1-sub">Cuéntanos sobre tu negocio</div>
+      </div>
+      <span class="s-arrow" id="s1-arrow">→</span>
+    </a>
 
+    <a class="step" id="s2" href="{{contact.contract_link}}" target="_blank" rel="noopener">
+      <span class="s-badge">Paso 2</span>
+      <div class="s-icon-wrap">✍️</div>
+      <div class="s-text">
+        <div class="s-title">Firma tu contrato</div>
+        <div class="s-sub" id="s2-sub">Firma en menos de 2 minutos</div>
+      </div>
+      <span class="s-arrow" id="s2-arrow">→</span>
+    </a>
+
+  </div>
+
+  <!-- STEPS: ACCESOS -->
+  <div class="section-head" style="margin-top:20px;"><span>Tus accesos</span></div>
+
+  <div class="steps">
+
+    <a class="step locked" id="s3" href="URL_SKOOL" target="_blank" rel="noopener">
+      <span class="s-badge">Paso 3</span>
+      <div class="s-icon-wrap">🎓</div>
+      <div class="s-text">
+        <div class="s-title">Acceso a Skool</div>
+        <div class="s-sub">Clases, biblioteca y comunidad</div>
+      </div>
+      <span class="s-arrow">↗</span>
+    </a>
+
+    <a class="step locked" id="s4" href="URL_TELEGRAM" target="_blank" rel="noopener">
+      <span class="s-badge">Paso 4</span>
+      <div class="s-icon-wrap">💬</div>
+      <div class="s-text">
+        <div class="s-title">Grupo de Telegram</div>
+        <div class="s-sub">Tu comunidad en tiempo real</div>
+      </div>
+      <span class="s-arrow">↗</span>
+    </a>
+
+    <a class="step locked" id="s5" href="{{contact.coach_calendar_link}}" target="_blank" rel="noopener">
+      <span class="s-badge">Paso 5</span>
+      <div class="s-icon-wrap">📅</div>
+      <div class="s-text">
+        <div class="s-title">Agenda tu onboarding 1:1</div>
+        <div class="s-sub" id="s5-sub">Reserva tu sesión con tu coach</div>
+      </div>
+      <span class="s-arrow">↗</span>
+    </a>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>¿Dudas? Escríbenos por Telegram o responde este correo.<br>
+    <strong>Founders · Business Strategists</strong></p>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">🔒 Firma el contrato para desbloquear los accesos</div>
 
 <script>
 (function () {
 
-  // ── VARIABLES GHL ──────────────────────────────────────────────────────────
-  // GHL reemplaza estas variables al renderizar la página.
-  //
-  // WORKFLOWS que necesitás crear en GHL:
-  //   • Cuando el form es enviado  → Update Contact Field: form_completed = "true"
-  //   • Cuando el contrato se firma → Update Contact Field: contract_signed = "true"
-  //   • Cuando asignás coach        → Update Contact Field: coach_calendar_link = [URL]
-  //
-  var formDone      = '{{contact.form_completed}}'      === 'true';
-  var contractDone  = '{{contact.contract_signed}}'     === 'true';
-  var calURL        = '{{contact.coach_calendar_link}}';
-  var calReady      = calURL && calURL !== '{{contact.coach_calendar_link}}';
-  // ───────────────────────────────────────────────────────────────────────────
+  // ── VARIABLES GHL ─────────────────────────────────────────────────────────
+  // GHL reemplaza estas al renderizar. Crea estos campos en tu CRM:
+  //   form_completed   → set "true" cuando el form es enviado (Workflow)
+  //   contract_signed  → set "true" cuando el contrato se firma (Workflow)
+  //   coach_calendar_link → URL del calendario del coach asignado
+  var formDone     = '{{contact.form_completed}}'      === 'true';
+  var contractDone = '{{contact.contract_signed}}'     === 'true';
+  var calURL       = '{{contact.coach_calendar_link}}';
+  var calReady     = calURL && calURL !== '{{contact.coach_calendar_link}}';
+  // ──────────────────────────────────────────────────────────────────────────
 
-  var done = 0;
-  var labels = [];
-
-  // ── PASO 1: FORM ────────────────────────────────────────────────────────────
+  // Paso 1
   if (formDone) {
-    markDone('s1', 's1c', 's1p', 's1i', 'Formulario completado', 'Completado');
-    done++;
-    labels.push('Formulario completado');
-  } else {
-    enableActive('s1');
+    markDone('s1', 's1-sub', 's1-arrow', 'Completado');
   }
 
-  // ── PASO 2: CONTRATO ────────────────────────────────────────────────────────
+  // Paso 2
   if (contractDone) {
-    markDone('s2', 's2c', 's2p', 's2i', 'Contrato firmado', 'Completado');
-    done++;
-    labels.push('Contrato firmado');
-  } else {
-    enableActive('s2');
+    markDone('s2', 's2-sub', 's2-arrow', 'Completado');
   }
 
-  // ── DESBLOQUEAR / BLOQUEAR PASOS 3-5 ───────────────────────────────────────
+  // Desbloquear accesos si el contrato está firmado
   if (contractDone) {
-    // Actualizar badge y títulos
-    var pill = document.getElementById('status-pill');
-    pill.classList.replace('locked', 'unlocked');
-    document.getElementById('pill-icon').textContent = '✓';
-    document.getElementById('pill-text').textContent  = 'Contrato firmado — accesos activos';
-    document.getElementById('card-title').textContent = 'Todo listo para empezar';
-    document.getElementById('card-sub').textContent   = 'Accedé a cada recurso cuando quieras.';
-
-    // Desbloquear Skool
-    unlock('s3', 's3c');
-    done++;
-
-    // Desbloquear Telegram
-    unlock('s4', 's4c');
-    done++;
-
-    // Paso 5: sólo si el link del coach ya fue asignado
+    unlock('s3');
+    unlock('s4');
     if (calReady) {
-      unlock('s5', 's5c');
-      done++;
+      unlock('s5');
     } else {
-      document.getElementById('s5p').textContent = 'Tu coach te enviará el link pronto';
-      // deja el paso como locked (ya está por defecto)
+      document.getElementById('s5-sub').textContent = 'Tu coach te enviará el link pronto';
     }
-
   } else {
-    // Pasos 3-5 bloqueados: interceptar click y mostrar toast
-    ['s3','s4','s5'].forEach(function(id) {
+    // Pasos 3-5 bloqueados: mostrar toast al hacer click
+    ['s3','s4','s5'].forEach(function (id) {
       var el = document.getElementById(id);
-      el.style.pointerEvents = 'auto'; // override none para poder capturar click
+      el.style.pointerEvents = 'auto';
       el.addEventListener('click', function (e) {
         e.preventDefault();
         showToast();
@@ -571,39 +498,16 @@ html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sa
     });
   }
 
-  // ── BARRA DE PROGRESO ───────────────────────────────────────────────────────
-  var pct = Math.round((done / 5) * 100);
-  document.getElementById('prog-fill').style.width  = pct + '%';
-  document.getElementById('prog-count').textContent = done + ' de 5 pasos';
-
-  var container = document.getElementById('prog-items');
-  labels.forEach(function (text) {
-    var d = document.createElement('div');
-    d.className = 'prog-item';
-    d.innerHTML = '<div class="prog-check">✓</div><span>' + text + '</span>';
-    container.appendChild(d);
-  });
-
-  // ── HELPERS ─────────────────────────────────────────────────────────────────
-  function markDone(stepId, circleId, subId, iconId, label, subText) {
+  function markDone(stepId, subId, arrowId, subText) {
     var el = document.getElementById(stepId);
-    el.classList.add('done', 'active');
-    el.classList.remove('locked');
-    document.getElementById(circleId).textContent = '✓';
-    document.getElementById(subId).textContent    = subText;
-    document.getElementById(iconId).textContent   = '✓';
+    el.classList.add('done');
+    document.getElementById(subId).textContent  = subText;
+    document.getElementById(arrowId).textContent = '✓';
   }
 
-  function enableActive(stepId) {
-    var el = document.getElementById(stepId);
-    el.classList.add('active');
+  function unlock(id) {
+    var el = document.getElementById(id);
     el.classList.remove('locked');
-  }
-
-  function unlock(stepId, circleId) {
-    var el = document.getElementById(stepId);
-    el.classList.remove('locked');
-    el.classList.add('active');
     el.style.pointerEvents = '';
   }
 
