@@ -263,6 +263,84 @@ function getClosers() {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// META ADS API — gasto mensual automático
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Credenciales en Script Properties (nunca en el código):
+//   META_ACCESS_TOKEN  → token de System User (Meta Business Suite)
+//   META_AD_ACCOUNT_ID → formato: act_123456789
+//
+// Cómo crearlas: Apps Script → ⚙️ Configuración del proyecto → Propiedades de script
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function normMes(val) {
+  if (!val) return '';
+  if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM');
+  var s = String(val).trim();
+  if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
+  try { var d = new Date(s); if (!isNaN(d)) return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM'); } catch(e){}
+  return '';
+}
+
+// Llama a la API de Meta y devuelve el gasto total del mes (en USD).
+function getMetaAdSpend(year, month) {
+  var props     = PropertiesService.getScriptProperties();
+  var token     = props.getProperty('META_ACCESS_TOKEN');
+  var accountId = props.getProperty('META_AD_ACCOUNT_ID');
+  if (!token || !accountId) throw new Error('Configurá META_ACCESS_TOKEN y META_AD_ACCOUNT_ID en Script Properties.');
+
+  var since = year + '-' + pad2(month) + '-01';
+  var until = year + '-' + pad2(month) + '-' + new Date(year, month, 0).getDate();
+  var url   = 'https://graph.facebook.com/v19.0/' + accountId + '/insights'
+              + '?fields=spend'
+              + '&time_range=' + encodeURIComponent('{"since":"' + since + '","until":"' + until + '"}')
+              + '&access_token=' + token;
+
+  var resp   = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  var result = JSON.parse(resp.getContentText());
+  if (result.error) throw new Error('Meta API: ' + result.error.message);
+
+  var spend = 0;
+  (result.data || []).forEach(function(d) { spend += parseFloat(d.spend || 0); });
+  return Math.round(spend * 100) / 100;
+}
+
+// Se ejecuta diariamente por trigger automático.
+// Actualiza (o crea) la fila "Meta" del mes actual en el sheet de ROAS.
+// Convencion del sheet de ROAS:
+//   - Filas de ventas: pipeline = nombre del pipeline, venta > 0, facturado > 0, gasto meta = 0
+//   - Fila de gasto:   pipeline = "Meta",              venta = 0, facturado = 0, gasto meta = [spend]
+function updateMetaSpend() {
+  var now   = new Date();
+  var year  = now.getFullYear();
+  var month = now.getMonth() + 1;
+  var mes   = year + '-' + pad2(month);
+  var spend = getMetaAdSpend(year, month);
+
+  var ss    = SpreadsheetApp.openById(ROAS_SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_ROAS_NAME) || ss.getSheets()[0];
+  var last  = sheet.getLastRow();
+  var found = -1;
+
+  if (last > 1) {
+    var vals = sheet.getRange(2, 1, last - 1, 5).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      if (normMes(vals[i][0]) === mes && String(vals[i][1]).trim().toLowerCase() === 'meta') {
+        found = i + 2; break;
+      }
+    }
+  }
+
+  if (found > 0) {
+    sheet.getRange(found, 5).setValue(spend);
+  } else {
+    sheet.appendRow([mes + '-01', 'Meta', 0, 0, spend, '', '']);
+  }
+  Logger.log('Meta spend ' + mes + ' = $' + spend);
+}
+
 // ── ROAS REAL (planilla separada) ────────────────────────────────────────────
 // Lee la planilla de tracking de ROAS y agrega por mes.
 // Columnas: fecha | pipeline | venta | facturado | gasto meta | ROAS | ROAS CASH
