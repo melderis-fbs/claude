@@ -27,13 +27,120 @@
 var SPREADSHEET_ID = 'TU_ID_AQUI';
 
 // Nombres de las hojas en tu planilla — ajustá si son distintos
-var SHEET_NEGOCIO   = 'negocio';
-var SHEET_ANUNCIOS  = 'anuncios';
-var SHEET_CLOSERS   = 'closers';
-var SHEET_COBRANZAS = 'cobranzas';
-var SHEET_EGRESOS   = 'egresos';
-var SHEET_AGENDAS   = 'agendas';
-var SHEET_LLAMADAS  = 'llamadas';
+var SHEET_NEGOCIO         = 'negocio';
+var SHEET_ANUNCIOS        = 'anuncios';
+var SHEET_CLOSERS         = 'closers';
+var SHEET_COBRANZAS       = 'cobranzas';
+var SHEET_EGRESOS         = 'egresos';
+var SHEET_AGENDAS         = 'agendas';
+var SHEET_LLAMADAS        = 'llamadas';
+var SHEET_CLIENTES_NUEVOS = 'Seguimiento clientes';
+var SHEET_RECOLECCION     = 'recoleccion';
+
+function clasificarMetodo(m) {
+  var s = str(m);
+  if (!s) return 'usa';
+  if (s.toLowerCase().indexOf('transferencia') === 0) return 'argentina';
+  if (s.toLowerCase() === 'efectivo') return 'efectivo';
+  return 'usa';
+}
+
+function estadoPagoCliente(estadoRaw, fechaVal) {
+  if (estadoRaw === true || str(estadoRaw).toLowerCase() === 'true') return 'Cobrado';
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  if (fechaVal) {
+    var d = (fechaVal instanceof Date) ? fechaVal : new Date(fechaVal);
+    if (!isNaN(d.getTime()) && d < hoy) return 'Vencido';
+  }
+  return 'Pendiente';
+}
+
+function getSeguimientoClientes() {
+  var rows = getRows(SHEET_CLIENTES_NUEVOS, 2, 34);
+  return rows.map(function(r) {
+    var pagos = [];
+    for (var i = 0; i < 4; i++) {
+      var base  = 10 + i * 4;
+      var monto = num(r[base]);
+      if (!monto) { pagos.push(null); continue; }
+      var fechaVal  = r[base + 1];
+      var metodo    = str(r[base + 2]);
+      var estadoRaw = r[base + 3];
+      var fechaISO  = fechaVal ? fmtDateISO(fechaVal) : '';
+      pagos.push({
+        n:             i + 1,
+        monto:         monto,
+        fecha:         fechaVal ? fmtDate(fechaVal) : '',
+        fechaISO:      fechaISO,
+        metodo:        metodo,
+        clasificacion: clasificarMetodo(metodo),
+        estado:        estadoPagoCliente(estadoRaw, fechaVal),
+      });
+    }
+    return {
+      nombre:      str(r[0]),
+      email:       str(r[1]),
+      telefono:    str(r[2]),
+      fuente:      str(r[3]),
+      programa:    str(r[4]),
+      montoTotal:  num(r[5]),
+      cuotas:      num(r[6]),
+      setter:      str(r[7]),
+      closer:      str(r[8]),
+      ingreso:     mesKey(r[9]),
+      pagos:       pagos,
+      montoPagado: num(r[26]),
+      completado:  r[27] === true || str(r[27]).toLowerCase() === 'true',
+      estatus:     str(r[28]),
+      cuotasPagas: num(r[29]),
+      notas:       str(r[30]),
+      crm:         r[31] === true || str(r[31]).toLowerCase() === 'true',
+      contrato:    r[32] === true || str(r[32]).toLowerCase() === 'true',
+      terminado:   r[33] === true || str(r[33]).toLowerCase() === 'true',
+    };
+  }).filter(function(c) { return c.nombre; });
+}
+
+function getRecoleccion() {
+  var rows = getRows(SHEET_RECOLECCION, 2, 29);
+  return rows.map(function(r) {
+    var pagos = [];
+    for (var i = 0; i < 4; i++) {
+      var base  = 8 + i * 4;
+      var monto = num(r[base]);
+      if (!monto) { pagos.push(null); continue; }
+      var fechaVal  = r[base + 1];
+      var metodo    = str(r[base + 2]);
+      var estadoRaw = r[base + 3];
+      var fechaISO  = fechaVal ? fmtDateISO(fechaVal) : '';
+      pagos.push({
+        n:             i + 1,
+        monto:         monto,
+        fecha:         fechaVal ? fmtDate(fechaVal) : '',
+        fechaISO:      fechaISO,
+        metodo:        metodo,
+        clasificacion: clasificarMetodo(metodo),
+        estado:        estadoPagoCliente(estadoRaw, fechaVal),
+      });
+    }
+    return {
+      nombre:       str(r[0]),
+      email:        str(r[1]),
+      telefono:     str(r[2]),
+      fuente:       str(r[3]),
+      programa:     str(r[4]),
+      montoTotal:   num(r[5]),
+      cuotas:       num(r[6]),
+      ingreso:      mesKey(r[7]),
+      pagos:        pagos,
+      montoAdeudado: num(r[24]),
+      completado:   r[25] === true || str(r[25]).toLowerCase() === 'true',
+      estatus:      str(r[26]),
+      cuotasPagas:  num(r[27]),
+      terminado:    r[28] === true || str(r[28]).toLowerCase() === 'true',
+    };
+  }).filter(function(c) { return c.nombre; });
+}
 
 function doGet(e) {
   var tab = (e.parameter && e.parameter.tab) ? e.parameter.tab : '';
@@ -45,7 +152,9 @@ function doGet(e) {
       case 'llamadas':  data = getLlamadas();  break;
       case 'closers':   data = getClosers();   break;
       case 'anuncios':  data = getAnuncios();  break;
-      case 'ingresos':  data = getIngresos();  break;
+      case 'ingresos':    data = getIngresos();             break;
+      case 'clientes':    data = getSeguimientoClientes();  break;
+      case 'recoleccion': data = getRecoleccion();          break;
       default:
         return json({ error: 'Tab inválido. Usar: negocio, agendas, llamadas, closers, anuncios, ingresos' });
     }

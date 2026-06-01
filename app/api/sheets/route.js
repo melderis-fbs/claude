@@ -6,6 +6,8 @@ import {
   getClosersData,
   getAnunciosData,
   getIngresosEgresosData,
+  getClientesNuevosData,
+  getRecoleccionData,
 } from '../../../lib/sheets.js';
 
 export async function GET(request) {
@@ -32,6 +34,12 @@ export async function GET(request) {
         break;
       case 'ingresos':
         data = await getIngresosEgresosData();
+        break;
+      case 'clientes':
+        data = await getClientesNuevosData();
+        break;
+      case 'recoleccion':
+        data = await getRecoleccionData();
         break;
       default:
         return NextResponse.json({ error: 'Tab no válido. Use: overview, agendas, llamadas, closers, anuncios, ingresos' }, { status: 400 });

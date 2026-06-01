@@ -1,6 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Target, Users } from 'lucide-react';
+import CobranzasSection from '../ui/CobranzasSection.jsx';
 
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 // Detecta automáticamente si el valor es fracción (0-1) o ya es porcentaje (>1)
@@ -19,7 +20,7 @@ function BigCard({ bg, children }) {
   );
 }
 
-export default function Overview({ negocio = [], anuncios = [], closers = [], selectedMonth }) {
+export default function Overview({ negocio = [], anuncios = [], closers = [], selectedMonth, clientesNuevos = [], recoleccion = [] }) {
   const latestNegocio = useMemo(() => [...negocio].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [negocio]);
   const latestAds     = useMemo(() => [...anuncios].sort((a, b) => b.mes.localeCompare(a.mes))[0] || {}, [anuncios]);
   const mes        = useMemo(() => negocio.find(r => r.mes === selectedMonth) || latestNegocio, [negocio, selectedMonth, latestNegocio]);
@@ -255,6 +256,9 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
           </div>
         </div>
       )}
+
+      {/* Cobranzas */}
+      <CobranzasSection clientesNuevos={clientesNuevos} recoleccion={recoleccion} />
     </div>
   );
 }
