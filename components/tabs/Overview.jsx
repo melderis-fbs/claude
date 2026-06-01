@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Target, Users } from 'lucide-react';
 import CobranzasSection from '../ui/CobranzasSection.jsx';
 
+function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
+
 function ars(n) { return `$ ${Number(n || 0).toLocaleString('es-AR')}`; }
 // Detecta automáticamente si el valor es fracción (0-1) o ya es porcentaje (>1)
 function pct(n) {
@@ -257,8 +259,279 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
         </div>
       )}
 
+      {/* Ventas por programa + ARG vs Afuera */}
+      <VentasDesglose clientesNuevos={clientesNuevos} recoleccion={recoleccion} selectedMonth={selectedMonth} />
+
       {/* Cobranzas */}
       <CobranzasSection clientesNuevos={clientesNuevos} recoleccion={recoleccion} />
+    </div>
+  );
+}
+
+// ── Desglose ventas por programa + ARG vs Afuera ──────────────────────────────
+
+const PROGRAMA_COLORS = {
+  'M1':      { bg: 'bg-blue-50',   text: 'text-blue-700',   bar: '#3B82F6' },
+  'M1+':     { bg: 'bg-indigo-50', text: 'text-indigo-700', bar: '#6366F1' },
+  'M1.1':    { bg: 'bg-cyan-50',   text: 'text-cyan-700',   bar: '#06B6D4' },
+  'M2':      { bg: 'bg-purple-50', text: 'text-purple-700', bar: '#9333EA' },
+  'Back':    { bg: 'bg-amber-50',  text: 'text-amber-700',  bar: '#F59E0B' },
+  'Starter': { bg: 'bg-green-50',  text: 'text-green-700',  bar: '#22C55E' },
+};
+
+const FUENTE_COLORS = {
+  'Automática':   '#6366F1',
+  'BIO':          '#3B82F6',
+  'ADS':          '#8B5CF6',
+  'IG - SETTER':  '#06B6D4',
+  'CRM - SETTER': '#0EA5E9',
+  'REPESCA':      '#F97316',
+  'YOUTUBE':      '#EF4444',
+  'BACK':         '#F59E0B',
+  'EMAIL':        '#9CA3AF',
+};
+
+function MiniBar({ value, max, color = '#0284C7' }) {
+  const w = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="flex-1 h-1.5 bg-cream rounded-full overflow-hidden">
+      <div className="h-full rounded-full" style={{ width: `${w}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
+function VentasDesglose({ clientesNuevos = [], recoleccion = [], selectedMonth }) {
+  // Filter clientes for selected month
+  const mesClientes = useMemo(
+    () => clientesNuevos.filter(c => c.ingreso === selectedMonth),
+    [clientesNuevos, selectedMonth]
+  );
+
+  // All clientes (all months) for ARG/USA totals
+  const allClientes = clientesNuevos;
+  const allRecoleccion = recoleccion;
+
+  // ── Por programa (current month) ──
+  const porPrograma = useMemo(() => {
+    const map = {};
+    mesClientes.forEach(c => {
+      const p = c.programa || 'Sin programa';
+      if (!map[p]) map[p] = { programa: p, cantidad: 0, ventas: 0, cobrado: 0 };
+      map[p].cantidad++;
+      map[p].ventas += c.montoTotal || 0;
+      map[p].cobrado += c.montoPagado || 0;
+    });
+    return Object.values(map).sort((a, b) => b.ventas - a.ventas);
+  }, [mesClientes]);
+
+  const maxVentas = Math.max(...porPrograma.map(p => p.ventas), 1);
+
+  // ── ARG vs Afuera (ALL months, all cobrado cuotas) ──
+  const argUsaTotals = useMemo(() => {
+    const result = { argentina: 0, usa: 0, efectivo: 0 };
+    function sumar(dataset) {
+      dataset.forEach(c => {
+        (c.pagos || []).forEach(p => {
+          if (!p || p.estado !== 'Cobrado') return;
+          if (p.clasificacion === 'argentina') result.argentina += p.monto || 0;
+          else if (p.clasificacion === 'usa') result.usa += p.monto || 0;
+          else if (p.clasificacion === 'efectivo') result.efectivo += p.monto || 0;
+        });
+      });
+    }
+    sumar(allClientes);
+    sumar(allRecoleccion);
+    return result;
+  }, [allClientes, allRecoleccion]);
+
+  // Same but only for selected month
+  const argUsaMes = useMemo(() => {
+    const result = { argentina: 0, usa: 0, efectivo: 0 };
+    mesClientes.forEach(c => {
+      (c.pagos || []).forEach(p => {
+        if (!p || p.estado !== 'Cobrado') return;
+        if (p.clasificacion === 'argentina') result.argentina += p.monto || 0;
+        else if (p.clasificacion === 'usa') result.usa += p.monto || 0;
+        else if (p.clasificacion === 'efectivo') result.efectivo += p.monto || 0;
+      });
+    });
+    return result;
+  }, [mesClientes]);
+
+  const totalMes = argUsaMes.argentina + argUsaMes.usa + argUsaMes.efectivo;
+  const totalGeneral = argUsaTotals.argentina + argUsaTotals.usa + argUsaTotals.efectivo;
+
+  // ── Por fuente (current month) ──
+  const porFuente = useMemo(() => {
+    const map = {};
+    mesClientes.forEach(c => {
+      const f = c.fuente || 'Sin fuente';
+      if (!map[f]) map[f] = { fuente: f, cantidad: 0, ventas: 0 };
+      map[f].cantidad++;
+      map[f].ventas += c.montoTotal || 0;
+    });
+    return Object.values(map).sort((a, b) => b.cantidad - a.cantidad);
+  }, [mesClientes]);
+
+  const maxFuente = Math.max(...porFuente.map(f => f.cantidad), 1);
+
+  if (mesClientes.length === 0 && totalGeneral === 0) return null;
+
+  const pctArg  = totalMes > 0 ? Math.round((argUsaMes.argentina / totalMes) * 100) : 0;
+  const pctUSA  = totalMes > 0 ? Math.round((argUsaMes.usa  / totalMes) * 100) : 0;
+  const pctEfe  = totalMes > 0 ? Math.round((argUsaMes.efectivo / totalMes) * 100) : 0;
+  const pctArgG = totalGeneral > 0 ? Math.round((argUsaTotals.argentina / totalGeneral) * 100) : 0;
+  const pctUSAG = totalGeneral > 0 ? Math.round((argUsaTotals.usa  / totalGeneral) * 100) : 0;
+  const pctEfeG = totalGeneral > 0 ? Math.round((argUsaTotals.efectivo / totalGeneral) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+
+      {/* ARG vs AFUERA — the most important section */}
+      <div className="bg-white rounded-xl border border-cream shadow-sm overflow-hidden">
+        <div className="px-4 pt-4 pb-3 border-b border-cream">
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3">
+            Argentina vs Afuera — cobrado
+          </h2>
+        </div>
+
+        {/* Stacked bar visual */}
+        <div className="px-4 pt-4">
+          <p className="text-xs text-ink-3 mb-1.5 font-medium">Este mes</p>
+          {totalMes > 0 ? (
+            <>
+              <div className="flex h-6 rounded-lg overflow-hidden gap-0.5 mb-2">
+                {argUsaMes.argentina > 0 && (
+                  <div className="bg-blue-500 flex items-center justify-center" style={{ width: `${pctArg}%` }} title={`ARG ${pctArg}%`}>
+                    {pctArg > 10 && <span className="text-white text-xs font-bold">{pctArg}%</span>}
+                  </div>
+                )}
+                {argUsaMes.usa > 0 && (
+                  <div className="bg-indigo-500 flex items-center justify-center" style={{ width: `${pctUSA}%` }} title={`USA ${pctUSA}%`}>
+                    {pctUSA > 10 && <span className="text-white text-xs font-bold">{pctUSA}%</span>}
+                  </div>
+                )}
+                {argUsaMes.efectivo > 0 && (
+                  <div className="bg-gray-400 flex items-center justify-center" style={{ width: `${pctEfe}%` }} title={`Efectivo ${pctEfe}%`}>
+                    {pctEfe > 10 && <span className="text-white text-xs font-bold">{pctEfe}%</span>}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
+                    <span className="text-xs text-ink-3 font-medium">Argentina</span>
+                  </div>
+                  <p className="text-base font-bold text-ink-1">{usd(argUsaMes.argentina)}</p>
+                  <p className="text-xs text-ink-3">{pctArg}%</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" />
+                    <span className="text-xs text-ink-3 font-medium">Afuera / USA</span>
+                  </div>
+                  <p className="text-base font-bold text-ink-1">{usd(argUsaMes.usa)}</p>
+                  <p className="text-xs text-ink-3">{pctUSA}%</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block" />
+                    <span className="text-xs text-ink-3 font-medium">Efectivo</span>
+                  </div>
+                  <p className="text-base font-bold text-ink-1">{usd(argUsaMes.efectivo)}</p>
+                  <p className="text-xs text-ink-3">{pctEfe}%</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-ink-3 mb-4">Sin cobros registrados este mes</p>
+          )}
+
+          {/* General totals (all months) */}
+          {totalGeneral > 0 && (
+            <div className="border-t border-cream pt-3 pb-4">
+              <p className="text-xs text-ink-3 mb-2 font-medium">Acumulado total</p>
+              <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-3">
+                {argUsaTotals.argentina > 0 && <div className="bg-blue-500 rounded-l-full" style={{ width: `${pctArgG}%` }} />}
+                {argUsaTotals.usa > 0 && <div className="bg-indigo-500" style={{ width: `${pctUSAG}%` }} />}
+                {argUsaTotals.efectivo > 0 && <div className="bg-gray-400 rounded-r-full" style={{ width: `${pctEfeG}%` }} />}
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div>
+                  <p className="font-semibold text-ink-1">{usd(argUsaTotals.argentina)}</p>
+                  <p className="text-ink-3">ARG ({pctArgG}%)</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-ink-1">{usd(argUsaTotals.usa)}</p>
+                  <p className="text-ink-3">USA ({pctUSAG}%)</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-ink-1">{usd(argUsaTotals.efectivo)}</p>
+                  <p className="text-ink-3">Efectivo ({pctEfeG}%)</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Por programa + Por fuente side by side */}
+      {(porPrograma.length > 0 || porFuente.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Por programa */}
+          {porPrograma.length > 0 && (
+            <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+              <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">
+                Ventas por programa · {mesClientes.length} clientes
+              </h2>
+              <div className="space-y-2.5">
+                {porPrograma.map(p => {
+                  const style = PROGRAMA_COLORS[p.programa] || { bg: 'bg-gray-50', text: 'text-gray-700', bar: '#9CA3AF' };
+                  return (
+                    <div key={p.programa} className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded font-semibold w-12 text-center flex-shrink-0 ${style.bg} ${style.text}`}>
+                        {p.programa}
+                      </span>
+                      <MiniBar value={p.ventas} max={maxVentas} color={style.bar} />
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-semibold text-ink-1">{usd(p.ventas)}</p>
+                        <p className="text-xs text-ink-3">{p.cantidad} cliente{p.cantidad !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Por fuente */}
+          {porFuente.length > 0 && (
+            <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+              <h2 className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-3">
+                Ventas por fuente
+              </h2>
+              <div className="space-y-2.5">
+                {porFuente.map(f => {
+                  const color = FUENTE_COLORS[f.fuente] || '#9CA3AF';
+                  return (
+                    <div key={f.fuente} className="flex items-center gap-2">
+                      <span className="text-xs text-ink-2 w-24 truncate flex-shrink-0">{f.fuente}</span>
+                      <MiniBar value={f.cantidad} max={maxFuente} color={color} />
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-semibold text-ink-1">{f.cantidad}</p>
+                        <p className="text-xs text-ink-3">{usd(f.ventas)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
     </div>
   );
 }
