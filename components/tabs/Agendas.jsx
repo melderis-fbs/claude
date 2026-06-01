@@ -20,7 +20,7 @@ function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 function dayStr(d) { return format(d, 'yyyy-MM-dd'); }
 
 export default function Agendas({ data = [] }) {
-  const [filter, setFilter]     = useState('today');
+  const [filter, setFilter]     = useState('week');
   const [showPast, setShowPast] = useState(false);
 
   const todayStart = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);

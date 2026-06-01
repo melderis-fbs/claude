@@ -116,9 +116,9 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
           </BigCard>
 
           <BigCard bg="bg-white border border-cream">
-            <p className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-1">Cant. ventas</p>
-            <p className="text-2xl font-bold text-ink-1">{mes.ventasTotales || '—'}</p>
-            <p className="text-xs text-ink-3 mt-1">tasa cierre {tasaCierre}%</p>
+            <p className="text-xs font-semibold tracking-widest uppercase text-ink-3 mb-1">Cash Collected</p>
+            <p className="text-2xl font-bold text-ink-1">{mes.cashCollected ? ars(mes.cashCollected) : '—'}</p>
+            <p className="text-xs text-ink-3 mt-1">{mes.ventasTotales || 0} ventas · {tasaCierre}% cierre</p>
           </BigCard>
 
           <BigCard bg="bg-gold-light">
@@ -211,7 +211,6 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
 
           <div className="border-t border-cream pt-3 space-y-2">
             {[
-              { label: 'Cash Collected', val: ars(mes.cashCollected),            cls: 'text-ink-1' },
               { label: 'Costos totales', val: ars(mes.costosTotal),              cls: 'text-neg'   },
               { label: 'Rentabilidad',   val: pct(mes.rentabilidadVentaNueva),   cls: (mes.rentabilidadVentaNueva || 0) >= 0 ? 'text-pos' : 'text-neg' },
               { label: '% CC',           val: pct(mes.pctCC),                    cls: 'text-ink-1' },

@@ -165,11 +165,24 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
     [clientes]
   );
 
-  const cobStats = useMemo(() => ({
-    cobrado:   cobranzas.filter(c => c.estado === 'Cobrado').reduce((s, c) => s + c.montoCuota, 0),
-    pendiente: cobranzas.filter(c => c.estado === 'Pendiente').reduce((s, c) => s + c.montoCuota, 0),
-    vencido:   cobranzas.filter(c => c.estado === 'Vencido').reduce((s, c) => s + c.montoCuota, 0),
-  }), [cobranzas]);
+  const cobStats = useMemo(() => {
+    const monthly = cobranzas.filter(c => normDateToMonth(c.fechaCuota) === selectedMonth);
+    return {
+      cobrado:   monthly.filter(c => c.estado === 'Cobrado').reduce((s, c) => s + c.montoCuota, 0),
+      pendiente: monthly.filter(c => c.estado === 'Pendiente').reduce((s, c) => s + c.montoCuota, 0),
+      vencido:   monthly.filter(c => c.estado === 'Vencido').reduce((s, c) => s + c.montoCuota, 0),
+    };
+  }, [cobranzas, selectedMonth]);
+
+  const pendientesMes = useMemo(() =>
+    clientes
+      .map(c => ({
+        ...c,
+        cuotasMes: c.cuotas.filter(q => q.estado === 'Pendiente' && normDateToMonth(q.fechaCuota) === selectedMonth),
+      }))
+      .filter(c => c.cuotasMes.length > 0),
+    [clientes, selectedMonth]
+  );
 
   const meta       = mesEgresos.metaCobranza || 0;
   const cobradoMes = mesEgresos.cobradoReal  || 0;
@@ -270,6 +283,35 @@ export default function IngresosEgresos({ data = {}, months = [], selectedMonth,
                 isNew={normDateToMonth(c.fechaPrimerPago) === selectedMonth}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Por cobrar este mes ── */}
+      {pendientesMes.length > 0 && (
+        <div className="bg-white rounded-xl border border-gold/30 shadow-sm p-4">
+          <h3 className="text-xs font-semibold tracking-widest uppercase text-gold-dark mb-3">
+            Por cobrar este mes · {pendientesMes.length} clientes
+          </h3>
+          <div className="divide-y divide-cream">
+            {pendientesMes.map(c => {
+              const total = c.cuotasMes.reduce((s, q) => s + q.montoCuota, 0);
+              return (
+                <div key={c.nombre} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <span className="text-sm font-semibold text-ink-1">{c.nombre}</span>
+                    <span className="ml-2 text-xs text-ink-3">{c.cuotasMes.length} cuota{c.cuotasMes.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <span className="text-sm font-bold text-gold-dark">{ars(total)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-cream mt-2 pt-2 flex justify-between">
+            <span className="text-xs font-semibold text-ink-3">Total pendiente</span>
+            <span className="text-sm font-bold text-gold-dark">
+              {ars(pendientesMes.reduce((s, c) => s + c.cuotasMes.reduce((ss, q) => ss + q.montoCuota, 0), 0))}
+            </span>
           </div>
         </div>
       )}
