@@ -40,7 +40,8 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
   }, [data, selectedMonth, latestMonth]);
 
   const filtered  = useMemo(() => data.filter(d => d.mes === effectiveMonth), [data, effectiveMonth]);
-  const sorted    = useMemo(() => [...filtered].sort((a, b) => b.cierres - a.cierres), [filtered]);
+  const todosRow  = useMemo(() => filtered.find(d => d.closer?.toUpperCase() === 'TODOS'), [filtered]);
+  const sorted    = useMemo(() => [...filtered].filter(d => d.closer?.toUpperCase() !== 'TODOS').sort((a, b) => b.cierres - a.cierres), [filtered]);
 
   const filteredB = useMemo(() =>
     compareMode && compareMonth ? data.filter(d => d.mes === compareMonth) : [],
@@ -216,6 +217,21 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
                     <td className="py-2 px-2 text-ink-2">{c.pctAsistencia}%</td>
                   </tr>
                 ))}
+                {todosRow && (
+                  <tr className="bg-page border-t-2 border-cream">
+                    <td className="py-2 px-2 text-xs text-ink-3">—</td>
+                    <td className="py-2 px-2 font-bold text-ink-1 whitespace-nowrap">Total</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.agendadas}</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.asistencias}</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.reagenda}</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.segundaLlamada}</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.ofertas}</td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.senia}</td>
+                    <td className="py-2 px-2 font-bold text-ink-1">{todosRow.cierres}</td>
+                    <td className="py-2 px-2"><span className="text-gold-dark font-bold">{todosRow.pctCierre}%</span></td>
+                    <td className="py-2 px-2 font-semibold text-ink-1">{todosRow.pctAsistencia}%</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
