@@ -21,7 +21,7 @@
 //     Action: "Webhooks by Zapier" → POST → URL del web app
 //       Body type: JSON | Data: { "type": "llamada", "text": [Message Text], "username": [Username] }
 
-// ► REEMPLAZÁ este ID con el de tu planilla.
+// ► REEMPLAZÁ este ID con el de tu planilla principal.
 // Lo encontrás en la URL de Google Sheets:
 // https://docs.google.com/spreadsheets/d/  ESTE_ES_EL_ID  /edit
 var SPREADSHEET_ID = 'TU_ID_AQUI';
@@ -34,6 +34,10 @@ var SHEET_COBRANZAS = 'cobranzas';
 var SHEET_EGRESOS   = 'egresos';
 var SHEET_AGENDAS   = 'agendas';
 var SHEET_LLAMADAS  = 'llamadas';
+
+// ► Planilla de ROAS (separada) — columnas: fecha | pipeline | venta | facturado | gasto meta | ROAS | ROAS CASH
+var ROAS_SPREADSHEET_ID = '1U77sB9rOR5ZrdMtLRATrd1X-P60PFq_fMI1j6dsi1JM';
+var SHEET_ROAS_NAME     = 'Hoja 1'; // ← cambiá por el nombre real de la pestaña si es distinto
 
 function doGet(e) {
   var tab = (e.parameter && e.parameter.tab) ? e.parameter.tab : '';
@@ -259,17 +263,61 @@ function getClosers() {
   });
 }
 
+// ── ROAS REAL (planilla separada) ────────────────────────────────────────────
+// Lee la planilla de tracking de ROAS y agrega por mes.
+// Columnas: fecha | pipeline | venta | facturado | gasto meta | ROAS | ROAS CASH
+function getRoasMonthly() {
+  try {
+    var ss    = SpreadsheetApp.openById(ROAS_SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_ROAS_NAME) || ss.getSheets()[0];
+    var last  = sheet.getLastRow();
+    if (last < 2) return {};
+    var vals = sheet.getRange(2, 1, last - 1, 5).getValues(); // solo A-E (fecha, pipeline, venta, facturado, gasto meta)
+    var byMonth = {};
+    vals.forEach(function(r) {
+      if (!r[0] && !r[4]) return; // fila vacía
+      var mes = '';
+      if (r[0] instanceof Date) {
+        mes = Utilities.formatDate(r[0], Session.getScriptTimeZone(), 'yyyy-MM');
+      } else {
+        var s = String(r[0] || '').trim();
+        if (/^\d{4}-\d{2}/.test(s)) mes = s.slice(0, 7);
+        else if (s) { try { var d = new Date(s); if (!isNaN(d)) mes = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM'); } catch(e){} }
+      }
+      if (!mes) return;
+      if (!byMonth[mes]) byMonth[mes] = { venta: 0, facturado: 0, gastoMeta: 0 };
+      byMonth[mes].venta     += num(r[2]);
+      byMonth[mes].facturado += num(r[3]);
+      byMonth[mes].gastoMeta += num(r[4]);
+    });
+    return byMonth;
+  } catch(e) {
+    return {}; // si falla el acceso, no rompe el dashboard
+  }
+}
+
 // ── ANUNCIOS ──────────────────────────────────────────────────────────────────
 // Columnas: Mes | Inversión | Agendas cualificadas | $Costo por agenda |
 //           Llamadas en calendario | Asistencias | %Asistencia | $Asistencia |
 //           Cierres | %Cierres | %LC | ROAS | ROAS CASH
 function getAnuncios() {
-  var rows = getRows(SHEET_ANUNCIOS, 2, 13);
+  var rows        = getRows(SHEET_ANUNCIOS, 2, 13);
+  var roasByMonth = getRoasMonthly(); // datos reales del sheet de ROAS
+
   return rows.map(function(r) {
+    var mes = mesKey(r[0]);
+    var rd  = roasByMonth[mes]; // datos reales para este mes (puede ser undefined)
+
+    // Usar gasto meta real si está disponible, sino el valor manual del sheet anuncios
+    var gastoMeta = (rd && rd.gastoMeta > 0) ? rd.gastoMeta : num(r[1]);
+    // Calcular ROAS y ROAS CASH desde los totales reales del mes
+    var roas     = (rd && rd.gastoMeta > 0) ? Math.round((rd.venta     / rd.gastoMeta) * 100) / 100 : num(r[11]);
+    var roasCash = (rd && rd.gastoMeta > 0) ? Math.round((rd.facturado / rd.gastoMeta) * 100) / 100 : num(r[12]);
+
     return {
-      mes:                 mesKey(r[0]),
+      mes:                 mes,
       mesLabel:            mesLabel(r[0]),
-      inversion:           num(r[1]),
+      inversion:           gastoMeta,
       agendasCualificadas: num(r[2]),
       costoAgenda:         num(r[3]),
       llamadasCalendario:  num(r[4]),
@@ -279,8 +327,12 @@ function getAnuncios() {
       cierres:             num(r[8]),
       pctCierres:          pctNum(r[9]),
       pctLC:               pctNum(r[10]),
-      roas:                num(r[11]),
-      roasCash:            num(r[12]),
+      roas:                roas,
+      roasCash:            roasCash,
+      // Totales del mes para referencia
+      ventaTotal:          rd ? rd.venta     : null,
+      facturadoTotal:      rd ? rd.facturado : null,
+      fuenteDatos:         rd ? 'real'       : 'manual',
     };
   });
 }

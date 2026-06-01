@@ -75,9 +75,10 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
     const ventas = ars(mes.ventasTotal || 0);
     const obj    = ars(mes.objetivoPesos || 0);
     const tc     = tasaCierre;
-    const roas   = mesAds.roas != null ? dec1(mesAds.roas) : '—';
+    const roas     = mesAds.roas     ? dec1(mesAds.roas)     : '—';
+    const roasCash = mesAds.roasCash ? dec1(mesAds.roasCash) : '—';
     const falta  = ars(mes.faltanteObj || 0);
-    return `El mes acumula ${ventas} de ${obj} objetivo (${pctMeta.toFixed(0)}%). ${mes.ventasTotales || 0} ventas · ${tc}% de conversión. ROAS de ${roas} en anuncios. Faltan ${falta} para llegar al objetivo.`;
+    return `El mes acumula ${ventas} de ${obj} objetivo (${pctMeta.toFixed(0)}%). ${mes.ventasTotales || 0} ventas · ${tc}% de conversión. ROAS ${roas} · ROAS Cash ${roasCash}. Faltan ${falta} para llegar al objetivo.`;
   }, [mes, mesAds, pctMeta, tasaCierre, totalCierres]);
 
   if (!mes.mes) return <p className="text-sm text-ink-3 py-8 text-center">Sin datos de negocio para este mes</p>;
@@ -122,8 +123,17 @@ export default function Overview({ negocio = [], anuncios = [], closers = [], se
           </BigCard>
 
           <BigCard bg="bg-gold-light">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gold-dark/70 mb-1">ROAS anuncios</p>
-            <p className="text-2xl font-bold text-gold-dark">{mesAds.roas != null ? dec1(mesAds.roas) : '—'}</p>
+            <p className="text-xs font-semibold tracking-widest uppercase text-gold-dark/70 mb-1">ROAS · ROAS Cash</p>
+            <div className="flex items-end gap-3">
+              <div>
+                <p className="text-2xl font-bold text-gold-dark leading-none">{mesAds.roas ? dec1(mesAds.roas) : '—'}</p>
+                <p className="text-xs text-ink-3 mt-0.5">ROAS</p>
+              </div>
+              <div className="pb-0.5">
+                <p className="text-lg font-bold text-gold-dark leading-none">{mesAds.roasCash ? dec1(mesAds.roasCash) : '—'}</p>
+                <p className="text-xs text-ink-3 mt-0.5">Cash</p>
+              </div>
+            </div>
             <p className="text-xs text-ink-3 mt-1">inv. {ars(mesAds.inversion)}</p>
           </BigCard>
         </div>
