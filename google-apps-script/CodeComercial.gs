@@ -5,16 +5,10 @@
 //   Who has access: Anyone
 //   → Copiá esa URL como APPS_SCRIPT_URL en Vercel
 
-// ► Reemplazá con el ID de tu planilla
-// Lo encontrás en la URL: docs.google.com/spreadsheets/d/ ESTE_ID /edit
-var SPREADSHEET_ID = '1CSHsgW9evTnPltELKmBfVUZq1vfzDaOzwUNu-cHOuQ8';
-
-// Nombres exactos de las hojas — ajustá si son distintos
-var SHEET_NEGOCIO         = 'negocio';
-var SHEET_CLOSERS         = 'closers';
-var SHEET_ANUNCIOS        = 'anuncios';
-var SHEET_CLIENTES_NUEVOS = 'Seguimiento clientes';
-var SHEET_RECOLECCION     = 'recoleccion';
+var SPREADSHEET_ID    = '1CSHsgW9evTnPltELKmBfVUZq1vfzDaOzwUNu-cHOuQ8';
+var SHEET_CLIENTES    = 'Seguimiento clientes';
+var SHEET_RECOLECCION = 'recoleccion';
+var SHEET_COMENTARIOS = 'comentarios';
 
 // ── ENTRY POINT ───────────────────────────────────────────────────────────────
 
@@ -23,13 +17,11 @@ function doGet(e) {
   var data;
   try {
     switch (tab) {
-      case 'negocio':     data = getNegocio();               break;
-      case 'closers':     data = getClosers();               break;
-      case 'anuncios':    data = getAnuncios();              break;
-      case 'clientes':    data = getSeguimientoClientes();   break;
-      case 'recoleccion': data = getRecoleccion();           break;
+      case 'clientes':    data = getSeguimientoClientes(); break;
+      case 'recoleccion': data = getRecoleccion();         break;
+      case 'comentarios': data = getComentarios();         break;
       default:
-        return json({ error: 'Tab inválido. Usar: negocio, closers, anuncios, clientes, recoleccion' });
+        return json({ error: 'Tab inválido. Usar: clientes, recoleccion, comentarios' });
     }
     return json({ data: data, tab: tab, timestamp: new Date().toISOString() });
   } catch (err) {
@@ -37,101 +29,36 @@ function doGet(e) {
   }
 }
 
-// ── NEGOCIO ───────────────────────────────────────────────────────────────────
-// Columnas: Mes | Cant ventas nuevas | Cant ventas back | Ventas totales |
-//           Ventas Front | Ventas Back | Ventas TOTAL | Cash Collected |
-//           Recolección venta nueva | Recolección recurrente front |
-//           Recolección back | Recolección recurrente back | %CC |
-//           Costos TOTAL | Ganancia | Rentabilidad |
-//           Objetivo$ | Objetivo ventas | Faltante ventas | Faltante obj | Faltante gastos
-function getNegocio() {
-  var rows = getRows(SHEET_NEGOCIO, 2, 21);
-  return rows.map(function(r) {
-    return {
-      mes:                        mesKey(r[0]),
-      mesLabel:                   mesLabel(r[0]),
-      cantVentasNuevas:           num(r[1]),
-      cantVentasBack:             num(r[2]),
-      ventasTotales:              num(r[3]),
-      ventasFront:                num(r[4]),
-      ventasBack:                 num(r[5]),
-      ventasTotal:                num(r[6]),
-      cashCollected:              num(r[7]),
-      recoleccionVentaNueva:      num(r[8]),
-      recoleccionRecurrenteFront: num(r[9]),
-      recoleccionBack:            num(r[10]),
-      recoleccionRecurrenteBack:  num(r[11]),
-      pctCC:                      pctNum(r[12]),
-      costosTotal:                num(r[13]),
-      gananciaVentaNueva:         num(r[14]),
-      rentabilidadVentaNueva:     pctNum(r[15]),
-      objetivoPesos:              num(r[16]),
-      objetivoVentas:             num(r[17]),
-      faltanteVentas:             num(r[18]),
-      faltanteObj:                num(r[19]),
-      faltanteCubrirGastos:       num(r[20]),
-    };
-  });
-}
-
-// ── CLOSERS ───────────────────────────────────────────────────────────────────
-// Columnas: Mes | Closer | Agendadas | Asistencias | Reagenda |
-//           Segunda llamada | Asistencia 2da | Ofertas | Seña | Cierres | %cierre | %asistencia
-function getClosers() {
-  var rows = getRows(SHEET_CLOSERS, 2, 12);
-  return rows.map(function(r) {
-    return {
-      mes:                      mesKey(r[0]),
-      mesLabel:                 mesLabel(r[0]),
-      closer:                   str(r[1]),
-      agendadas:                num(r[2]),
-      asistencias:              num(r[3]),
-      reagenda:                 num(r[4]),
-      segundaLlamada:           num(r[5]),
-      asistenciaSegundaLlamada: num(r[6]),
-      ofertas:                  num(r[7]),
-      senia:                    num(r[8]),
-      cierres:                  num(r[9]),
-      pctCierre:                pctNum(r[10]),
-      pctAsistencia:            pctNum(r[11]),
-    };
-  });
-}
-
-// ── ANUNCIOS ──────────────────────────────────────────────────────────────────
-// Columnas: Mes | Inversión | Agendas cualificadas | $Costo por agenda |
-//           Llamadas en calendario | Asistencias | %Asistencia | $Asistencia |
-//           Cierres | %Cierres | %LC | ROAS | ROAS CASH
-function getAnuncios() {
-  var rows = getRows(SHEET_ANUNCIOS, 2, 13);
-  return rows.map(function(r) {
-    return {
-      mes:                 mesKey(r[0]),
-      mesLabel:            mesLabel(r[0]),
-      inversion:           num(r[1]),
-      agendasCualificadas: num(r[2]),
-      costoAgenda:         num(r[3]),
-      llamadasCalendario:  num(r[4]),
-      asistencias:         num(r[5]),
-      pctAsistencia:       pctNum(r[6]),
-      costoAsistencia:     num(r[7]),
-      cierres:             num(r[8]),
-      pctCierres:          pctNum(r[9]),
-      pctLC:               pctNum(r[10]),
-      roas:                num(r[11]),
-      roasCash:            num(r[12]),
-    };
-  });
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    if (body.type === 'comentario') {
+      saveComentario(body.tipo, body.nombre, body.texto);
+      return json({ ok: true });
+    }
+    return json({ error: 'Tipo desconocido: ' + body.type });
+  } catch (err) {
+    return json({ ok: false, error: err.message });
+  }
 }
 
 // ── SEGUIMIENTO CLIENTES ──────────────────────────────────────────────────────
-// Col 0-9:   Nombre | Email | Teléfono | Fuente | Programa | MontoTotal | Cuotas | Setter | Closer | Ingreso
-// Col 10-25: Pago 1..4 (Monto | Fecha | Método | Estado) × 4
-// Col 26-33: MontoPagado | Completado | Estatus | CuotasPagas | Notas | CRM | Contrato | Terminado
+// 26 columns (0-25):
+// 0: Nombre, 1: Email, 2: Teléfono, 3: Fuente, 4: Programa, 5: Monto total ($5,000.00 format),
+// 6: Cuotas, 7: SETTER, 8: CLOSER, 9: Ingreso (bare Spanish month name)
+// 10-13: Pago 1 (monto, fecha, metodo, estado)
+// 14-17: Pago 2
+// 18-21: Pago 3
+// 22-25: Pago 4
+// esBack = fuente.toUpperCase() === 'BACK'
+// montoPagado = sum of pagos where estado === 'Cobrado'
 function getSeguimientoClientes() {
-  var rows = getRows(SHEET_CLIENTES_NUEVOS, 2, 34);
+  var rows = getRows(SHEET_CLIENTES, 2, 26);
   return rows.map(function(r) {
-    var pagos = [];
+    var fuente  = str(r[3]);
+    var esBack  = fuente.toUpperCase() === 'BACK';
+    var pagos   = [];
+    var montoPagado = 0;
     for (var i = 0; i < 4; i++) {
       var base  = 10 + i * 4;
       var monto = num(r[base]);
@@ -139,6 +66,8 @@ function getSeguimientoClientes() {
       var fechaVal = r[base + 1];
       var metodo   = str(r[base + 2]);
       var fechaISO = fechaVal ? fmtDateISO(fechaVal) : '';
+      var estado   = estadoPago(r[base + 3], fechaVal);
+      if (estado === 'Cobrado') montoPagado += monto;
       pagos.push({
         n:             i + 1,
         monto:         monto,
@@ -146,29 +75,23 @@ function getSeguimientoClientes() {
         fechaISO:      fechaISO,
         metodo:        metodo,
         clasificacion: clasificarMetodo(metodo),
-        estado:        estadoPago(r[base + 3], fechaVal),
+        estado:        estado,
       });
     }
     return {
       nombre:      str(r[0]),
       email:       str(r[1]),
       telefono:    str(r[2]),
-      fuente:      str(r[3]),
-      programa:    str(r[4]),
+      fuente:      fuente,
+      programa:    normalizePrograma(str(r[4])),
       montoTotal:  num(r[5]),
       cuotas:      num(r[6]),
       setter:      str(r[7]),
       closer:      str(r[8]),
       ingreso:     mesKey(r[9]),
       pagos:       pagos,
-      montoPagado: num(r[26]),
-      completado:  r[27] === true || str(r[27]).toLowerCase() === 'true',
-      estatus:     str(r[28]),
-      cuotasPagas: num(r[29]),
-      notas:       str(r[30]),
-      crm:         r[31] === true || str(r[31]).toLowerCase() === 'true',
-      contrato:    r[32] === true || str(r[32]).toLowerCase() === 'true',
-      terminado:   r[33] === true || str(r[33]).toLowerCase() === 'true',
+      montoPagado: montoPagado,
+      esBack:      esBack,
     };
   }).filter(function(c) { return c.nombre; });
 }
@@ -203,7 +126,7 @@ function getRecoleccion() {
       email:        str(r[1]),
       telefono:     str(r[2]),
       fuente:       str(r[3]),
-      programa:     str(r[4]),
+      programa:     normalizePrograma(str(r[4])),
       montoTotal:   num(r[5]),
       cuotas:       num(r[6]),
       ingreso:      mesKey(r[7]),
@@ -217,7 +140,66 @@ function getRecoleccion() {
   }).filter(function(c) { return c.nombre; });
 }
 
+// ── COMENTARIOS ───────────────────────────────────────────────────────────────
+// Sheet cols: tipo (A), nombre (B), texto (C), fecha (D)
+// Returns object keyed by "tipo|nombre"
+function getComentarios() {
+  var sheet;
+  try { sheet = getSheet(SHEET_COMENTARIOS); }
+  catch(e) { return {}; }
+
+  var last = sheet.getLastRow();
+  if (last < 2) return {};
+  var rows = sheet.getRange(2, 1, last - 1, 4).getValues();
+  var result = {};
+  rows.forEach(function(r) {
+    var tipo   = str(r[0]);
+    var nombre = str(r[1]);
+    var texto  = str(r[2]);
+    var fecha  = r[3] ? fmtDateISO(r[3]) : '';
+    if (!tipo || !nombre) return;
+    var key = tipo + '|' + nombre;
+    result[key] = { tipo: tipo, nombre: nombre, texto: texto, fecha: fecha };
+  });
+  return result;
+}
+
+// ── SAVE COMENTARIO ───────────────────────────────────────────────────────────
+function saveComentario(tipo, nombre, texto) {
+  var ss    = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_COMENTARIOS);
+
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_COMENTARIOS);
+    sheet.getRange(1, 1, 1, 4).setValues([['tipo', 'nombre', 'texto', 'fecha']]);
+  }
+
+  var last = sheet.getLastRow();
+  // Search for existing row
+  if (last >= 2) {
+    var data = sheet.getRange(2, 1, last - 1, 2).getValues();
+    for (var i = 0; i < data.length; i++) {
+      if (str(data[i][0]) === tipo && str(data[i][1]) === nombre) {
+        var rowNum = i + 2;
+        sheet.getRange(rowNum, 3, 1, 2).setValues([[texto, new Date()]]);
+        return;
+      }
+    }
+  }
+
+  // Append new row
+  sheet.appendRow([tipo, nombre, texto, new Date()]);
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
+
+// M1+ → M2, everything else unchanged
+function normalizePrograma(p) {
+  if (!p) return p;
+  if (p === 'M1+') return 'M2';
+  return p;
+}
 
 function clasificarMetodo(m) {
   var s = str(m).toLowerCase();
@@ -263,14 +245,15 @@ function getRows(sheetName, startRow, numCols) {
     .filter(function(r) { return r.some(function(c) { return c !== ''; }); });
 }
 
+// mesKey handles bare Spanish month names like "Enero" without a year (defaults to current year)
 function mesKey(val) {
   if (!val) return '';
   if (val instanceof Date) return fmt(val, 'yyyy-MM');
   var s = String(val).trim();
   if (/^\d{4}-\d{2}$/.test(s)) return s;
   if (/^\d{2}\/\d{4}$/.test(s)) return s.slice(3) + '-' + s.slice(0, 2);
-  var MESES = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,
-                julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
+  var MESES = { enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
+                julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12 };
   var lower = s.toLowerCase();
   for (var m in MESES) {
     if (lower.indexOf(m) === 0) {
@@ -305,6 +288,11 @@ function fmt(val, pattern) {
 function fmtDate(val)    { return fmt(val, 'dd/MM/yyyy'); }
 function fmtDateISO(val) { return fmt(val, 'yyyy-MM-dd'); }
 
-function num(v)    { return parseFloat(String(v).replace(',', '.')) || 0; }
+// Handles "$5,000.00" format: strip $ and commas before parseFloat
+function num(v) {
+  var s = String(v || '').trim().replace(/^\$/, '').replace(/,/g, '');
+  return parseFloat(s) || 0;
+}
+
 function str(v)    { return String(v || '').trim(); }
 function pctNum(v) { var n = num(v); return n > 0 && n <= 1 ? Math.round(n * 1000) / 10 : Math.round(n * 10) / 10; }

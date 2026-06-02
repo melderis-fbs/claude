@@ -1,7 +1,8 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
+import { useComentarios } from './useComentarios.js';
 
 function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
 
@@ -35,9 +36,26 @@ function EstadoBadge({ estado }) {
 
 // ── Pending payments list ──────────────────────────────────────────────────────
 
-function PendienteRow({ item, comment, onCommentChange }) {
+function PendienteRow({ item, getComentario, saveComentario, saving }) {
   const [open, setOpen] = useState(false);
-  const hasComment = !!comment?.trim();
+  const timerRef = useRef(null);
+  const comentarioKey = 'cobranza|' + item.nombre;
+  const [text, setText] = useState(() => getComentario('cobranza', item.nombre));
+  const hasComment = !!text?.trim();
+  const isSaving = saving[comentarioKey];
+
+  useEffect(() => {
+    setText(getComentario('cobranza', item.nombre));
+  }, [item.nombre, getComentario]);
+
+  function handleTextChange(e) {
+    const val = e.target.value;
+    setText(val);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      saveComentario('cobranza', item.nombre, val);
+    }, 800);
+  }
 
   return (
     <div className={clsx(
@@ -78,17 +96,24 @@ function PendienteRow({ item, comment, onCommentChange }) {
       {/* Expanded: comment field */}
       {open && (
         <div className="px-4 pb-3" onClick={e => e.stopPropagation()}>
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-1.5">
-            Comentario de seguimiento
-          </p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
+              Comentario de seguimiento
+            </p>
+            {isSaving
+              ? <span className="text-[10px] text-ink-3">Guardando...</span>
+              : text.trim()
+                ? <span className="text-[10px] text-pos">Guardado ✓</span>
+                : null
+            }
+          </div>
           <textarea
-            value={comment || ''}
-            onChange={e => onCommentChange(item.nombre, e.target.value)}
+            value={text}
+            onChange={handleTextChange}
             placeholder={`¿Cómo va el cobro con ${item.nombre.split(' ')[0]}? Prometió pagar el...`}
             rows={3}
             className="w-full text-sm border border-cream rounded-lg p-2.5 focus:outline-none focus:border-gold resize-none bg-white placeholder:text-ink-3"
           />
-          <p className="text-xs text-ink-3 mt-1">Guardado localmente en este dispositivo</p>
         </div>
       )}
     </div>
@@ -98,26 +123,10 @@ function PendienteRow({ item, comment, onCommentChange }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function CobranzasSection({ clientesNuevos = [], recoleccion = [] }) {
+  const { getComentario, saveComentario, saving } = useComentarios();
   const [sortField, setSortField] = useState('mes');
   const [sortDir, setSortDir] = useState('asc');
   const [filterEstado, setFilterEstado] = useState('todos'); // todos | vencido | pendiente
-  const [comments, setComments] = useState({});
-
-  // Load comments from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('cobranzas-comments') || '{}');
-      setComments(saved);
-    } catch {}
-  }, []);
-
-  function handleCommentChange(nombre, text) {
-    setComments(prev => {
-      const next = { ...prev, [nombre]: text };
-      try { localStorage.setItem('cobranzas-comments', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }
 
   // ── Monthly summary rows ──
   const rows = useMemo(() => {
@@ -210,7 +219,7 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
 
   const totalVencido = pendientes.filter(p => p.estado === 'Vencido').reduce((s, p) => s + p.monto, 0);
   const totalPendiente = pendientes.filter(p => p.estado === 'Pendiente').reduce((s, p) => s + p.monto, 0);
-  const conComentario = pendientes.filter(p => comments[p.nombre]?.trim()).length;
+  const conComentario = pendientes.filter(p => getComentario('cobranza', p.nombre)?.trim()).length;
 
   function SortIcon({ field }) {
     if (sortField !== field) return <span className="text-ink-3 opacity-40 ml-0.5">↕</span>;
@@ -327,8 +336,9 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
                 <PendienteRow
                   key={`${item.nombre}-${item.n}-${idx}`}
                   item={item}
-                  comment={comments[item.nombre] || ''}
-                  onCommentChange={handleCommentChange}
+                  getComentario={getComentario}
+                  saveComentario={saveComentario}
+                  saving={saving}
                 />
               ))
             )}

@@ -1,7 +1,8 @@
 'use client';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import clsx from 'clsx';
+import { useComentarios } from '../ui/useComentarios.js';
 
 function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
 
@@ -84,34 +85,53 @@ function CheckIcon({ val }) {
     : <span className="text-ink-3 text-sm">—</span>;
 }
 
-function NoteCell({ storageKey }) {
-  const [note, setNote] = useState('');
+function ComentarioCell({ nombre, getComentario, saveComentario, saving }) {
+  const key = 'cliente|' + nombre;
+  const [text, setText] = useState(() => getComentario('cliente', nombre));
+  const timerRef = useRef(null);
+
   useEffect(() => {
-    try { setNote(localStorage.getItem(storageKey) || ''); } catch {}
-  }, [storageKey]);
+    setText(getComentario('cliente', nombre));
+  }, [nombre, getComentario]);
 
   function handleChange(e) {
     const val = e.target.value;
-    setNote(val);
-    try { localStorage.setItem(storageKey, val); } catch {}
+    setText(val);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      saveComentario('cliente', nombre, val);
+    }, 800);
   }
 
+  const isSaving = saving[key];
+
   return (
-    <textarea
-      value={note}
-      onChange={handleChange}
-      onClick={e => e.stopPropagation()}
-      placeholder="Notas locales..."
-      rows={2}
-      className="w-full text-xs border border-cream rounded-lg p-2 resize-none text-ink-2 focus:outline-none focus:border-gold-dark bg-page"
-    />
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs font-semibold text-ink-3">Comentario</p>
+        {isSaving
+          ? <span className="text-[10px] text-ink-3">Guardando...</span>
+          : text.trim()
+            ? <span className="text-[10px] text-pos">Guardado ✓</span>
+            : null
+        }
+      </div>
+      <textarea
+        value={text}
+        onChange={handleChange}
+        onClick={e => e.stopPropagation()}
+        placeholder="Comentario compartido sobre este cliente..."
+        rows={2}
+        className="w-full text-xs border border-cream rounded-lg p-2 resize-none text-ink-2 focus:outline-none focus:border-gold-dark bg-page"
+      />
+    </div>
   );
 }
 
-function ExpandedRow({ cliente }) {
+function ExpandedRow({ cliente, getComentario, saveComentario, saving }) {
   return (
     <div className="p-4 bg-page border-t border-cream space-y-4" onClick={e => e.stopPropagation()}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
         <div>
           <p className="text-ink-3 mb-0.5">Email</p>
           <p className="text-ink-2 font-medium">{cliente.email || '—'}</p>
@@ -123,10 +143,6 @@ function ExpandedRow({ cliente }) {
         <div>
           <p className="text-ink-3 mb-0.5">Setter</p>
           <p className="text-ink-2 font-medium">{cliente.setter || '—'}</p>
-        </div>
-        <div>
-          <p className="text-ink-3 mb-0.5">Estatus</p>
-          <p className="text-ink-2 font-medium">{cliente.estatus || '—'}</p>
         </div>
       </div>
 
@@ -147,15 +163,18 @@ function ExpandedRow({ cliente }) {
         </div>
       </div>
 
-      <div>
-        <p className="text-xs font-semibold text-ink-3 mb-1">Notas</p>
-        <NoteCell storageKey={`seguimiento-note-${cliente.nombre}`} />
-      </div>
+      <ComentarioCell
+        nombre={cliente.nombre}
+        getComentario={getComentario}
+        saveComentario={saveComentario}
+        saving={saving}
+      />
     </div>
   );
 }
 
 export default function SeguimientoClientes({ data = [], months = [] }) {
+  const { getComentario, saveComentario, saving } = useComentarios();
   const [search, setSearch] = useState('');
   const [filterMes, setFilterMes] = useState('');
   const [filterFuente, setFilterFuente] = useState('');
@@ -181,8 +200,9 @@ export default function SeguimientoClientes({ data = [], months = [] }) {
       if (filterCloser  && c.closer    !== filterCloser)  return false;
       if (filterEstado) {
         const tieneVencido = (c.pagos || []).some(p => p && p.estado === 'Vencido');
-        if (filterEstado === 'completado' && !c.completado) return false;
-        if (filterEstado === 'pendiente'  && c.completado)  return false;
+        const todosCobrado = (c.pagos || []).filter(Boolean).every(p => p.estado === 'Cobrado');
+        if (filterEstado === 'completado' && !todosCobrado) return false;
+        if (filterEstado === 'pendiente'  && todosCobrado)  return false;
         if (filterEstado === 'en mora'    && !tieneVencido) return false;
       }
       return true;
@@ -282,7 +302,7 @@ export default function SeguimientoClientes({ data = [], months = [] }) {
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="border-b border-cream bg-page">
-                {['Cliente', 'Programa', 'Closer', 'Ingreso', 'Monto total', 'Cuotas', '% Cobrado', 'CRM', 'Contrato', ''].map(h => (
+                {['Cliente', 'Programa', 'Closer', 'Ingreso', 'Monto total', 'Cuotas', '% Cobrado', ''].map(h => (
                   <th key={h} className="pb-2 pt-3 px-3 text-left text-xs text-ink-3 font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -290,7 +310,7 @@ export default function SeguimientoClientes({ data = [], months = [] }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-sm text-ink-3">
+                  <td colSpan={8} className="py-8 text-center text-sm text-ink-3">
                     No hay clientes que coincidan con los filtros
                   </td>
                 </tr>
@@ -344,10 +364,6 @@ export default function SeguimientoClientes({ data = [], months = [] }) {
                       </div>
                       <p className="text-[10px] text-ink-3 mt-0.5">{usd(cobrado)}</p>
                     </td>
-                    {/* CRM */}
-                    <td className="py-3 px-3 text-center"><CheckIcon val={cliente.crm} /></td>
-                    {/* Contrato */}
-                    <td className="py-3 px-3 text-center"><CheckIcon val={cliente.contrato} /></td>
                     {/* Chevron */}
                     <td className="py-3 px-3 text-ink-3">
                       {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -355,8 +371,13 @@ export default function SeguimientoClientes({ data = [], months = [] }) {
                   </tr>,
                   isOpen && (
                     <tr key={`exp-${i}`} className="border-b border-cream/50">
-                      <td colSpan={10} className="p-0">
-                        <ExpandedRow cliente={cliente} />
+                      <td colSpan={8} className="p-0">
+                        <ExpandedRow
+                          cliente={cliente}
+                          getComentario={getComentario}
+                          saveComentario={saveComentario}
+                          saving={saving}
+                        />
                       </td>
                     </tr>
                   )

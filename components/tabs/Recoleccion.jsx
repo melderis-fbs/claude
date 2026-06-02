@@ -1,7 +1,8 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import clsx from 'clsx';
+import { useComentarios } from '../ui/useComentarios.js';
 
 function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
 
@@ -74,31 +75,50 @@ function PagoDot({ estado }) {
   return <span className={clsx('w-3 h-3 rounded-full inline-block', map[estado] || 'bg-cream')} title={estado} />;
 }
 
-function NoteCell({ storageKey }) {
-  const [note, setNote] = useState('');
+function ComentarioCell({ nombre, getComentario, saveComentario, saving }) {
+  const key = 'recoleccion|' + nombre;
+  const [text, setText] = useState(() => getComentario('recoleccion', nombre));
+  const timerRef = useRef(null);
+
   useEffect(() => {
-    try { setNote(localStorage.getItem(storageKey) || ''); } catch {}
-  }, [storageKey]);
+    setText(getComentario('recoleccion', nombre));
+  }, [nombre, getComentario]);
 
   function handleChange(e) {
     const val = e.target.value;
-    setNote(val);
-    try { localStorage.setItem(storageKey, val); } catch {}
+    setText(val);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      saveComentario('recoleccion', nombre, val);
+    }, 800);
   }
 
+  const isSaving = saving[key];
+
   return (
-    <textarea
-      value={note}
-      onChange={handleChange}
-      onClick={e => e.stopPropagation()}
-      placeholder="Notas locales..."
-      rows={2}
-      className="w-full text-xs border border-cream rounded-lg p-2 resize-none text-ink-2 focus:outline-none focus:border-gold-dark bg-page"
-    />
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs font-semibold text-ink-3">Comentario</p>
+        {isSaving
+          ? <span className="text-[10px] text-ink-3">Guardando...</span>
+          : text.trim()
+            ? <span className="text-[10px] text-pos">Guardado ✓</span>
+            : null
+        }
+      </div>
+      <textarea
+        value={text}
+        onChange={handleChange}
+        onClick={e => e.stopPropagation()}
+        placeholder="Comentario compartido sobre este cliente..."
+        rows={2}
+        className="w-full text-xs border border-cream rounded-lg p-2 resize-none text-ink-2 focus:outline-none focus:border-gold-dark bg-page"
+      />
+    </div>
   );
 }
 
-function ExpandedRow({ cliente }) {
+function ExpandedRow({ cliente, getComentario, saveComentario, saving }) {
   return (
     <div className="p-4 bg-page border-t border-cream space-y-4" onClick={e => e.stopPropagation()}>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
@@ -133,15 +153,18 @@ function ExpandedRow({ cliente }) {
         </div>
       </div>
 
-      <div>
-        <p className="text-xs font-semibold text-ink-3 mb-1">Notas</p>
-        <NoteCell storageKey={`recoleccion-note-${cliente.nombre}`} />
-      </div>
+      <ComentarioCell
+        nombre={cliente.nombre}
+        getComentario={getComentario}
+        saveComentario={saveComentario}
+        saving={saving}
+      />
     </div>
   );
 }
 
 export default function Recoleccion({ data = [] }) {
+  const { getComentario, saveComentario, saving } = useComentarios();
   const [search, setSearch]       = useState('');
   const [filterFuente, setFilterFuente] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -201,7 +224,7 @@ export default function Recoleccion({ data = [] }) {
         const tieneVencido = (c.pagos || []).some(p => p && p.estado === 'Vencido');
         if (filterEstado === 'completado' && !c.completado) return false;
         if (filterEstado === 'pendiente'  && c.completado)  return false;
-        if (filterEstado === 'en mora'    && !tieneVencido) return false;
+        if (filterEstado === 'en mora'    && !tieneVencido)  return false;
       }
       return true;
     });
@@ -364,7 +387,12 @@ export default function Recoleccion({ data = [] }) {
                   isOpen && (
                     <tr key={`exp-${i}`} className="border-b border-cream/50">
                       <td colSpan={8} className="p-0">
-                        <ExpandedRow cliente={cliente} />
+                        <ExpandedRow
+                          cliente={cliente}
+                          getComentario={getComentario}
+                          saveComentario={saveComentario}
+                          saving={saving}
+                        />
                       </td>
                     </tr>
                   )
