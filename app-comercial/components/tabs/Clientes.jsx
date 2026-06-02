@@ -2,7 +2,6 @@
 import { useState, useMemo } from 'react';
 
 const PROGRAMAS = ['Todos','M1','M1+','M1.1','M2','Back','Starter'];
-const CLOSERS_CONOCIDOS = ['Kevin','Vicky','Braian','Fabricio'];
 
 export default function Clientes({ clientes }) {
   const [busqueda, setBusqueda] = useState('');
@@ -35,59 +34,59 @@ export default function Clientes({ clientes }) {
       <div className="flex flex-wrap gap-3 items-center">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre, email…"
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-64" />
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 w-64 shadow-sm" />
         {[['Programa', programa, setPrograma, PROGRAMAS],
           ['Closer', closer, setCloser, closers],
           ['Estatus', estatus, setEstatus, estatuses]].map(([label, val, setter, opts]) => (
           <select key={label} value={val} onChange={e => setter(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+            className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500 shadow-sm">
             {opts.map(o => <option key={o}>{o}</option>)}
           </select>
         ))}
-        <span className="text-xs text-slate-500 ml-auto">{filtrados.length} resultados</span>
+        <span className="text-xs text-gray-400 ml-auto font-medium">{filtrados.length} resultados</span>
       </div>
 
       {/* Tabla */}
-      <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-800/80">
+            <thead className="bg-gray-50">
               <tr>
                 {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas pagas','Monto pagado','Estatus','Ingreso'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-gray-100">
               {filtrados.map(c => {
                 const completo = String(c['Completado']||'').toUpperCase() === 'SI';
                 return (
                   <tr key={c._rowIndex}
                     onClick={() => setClienteSel(clienteSel?._rowIndex === c._rowIndex ? null : c)}
                     className={`cursor-pointer transition-colors ${
-                      clienteSel?._rowIndex === c._rowIndex ? 'bg-blue-500/10' : 'hover:bg-slate-800/50'
+                      clienteSel?._rowIndex === c._rowIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                     }`}>
-                    <td className="px-4 py-3 font-medium text-white">{c['Nombre'] || '—'}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{c['Nombre'] || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-xs">{c['Programa'] || '—'}</span>
+                      <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{c['Fuente'] || '—'}</td>
-                    <td className="px-4 py-3 text-slate-300">{c['CLOSER'] || '—'}</td>
-                    <td className="px-4 py-3 text-slate-300">${Number(c['Monto total']||0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
+                    <td className="px-4 py-3 text-gray-700">{c['CLOSER'] || '—'}</td>
+                    <td className="px-4 py-3 text-gray-700">${Number(c['Monto total']||0).toLocaleString('es-AR')}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-900/60 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                         {c['Cuotas pagas'] || '0'}/{c['Cuotas'] || '?'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-300">${Number(c['Monto pagado']||0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-900/60 text-blue-400' :
-                        String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-900/60 text-red-400' :
-                        'bg-slate-700 text-slate-400'
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+                        String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600' :
+                        'bg-gray-100 text-gray-500'
                       }`}>{c['Estatus'] || '—'}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{c['Ingreso'] || '—'}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{c['Ingreso'] || '—'}</td>
                   </tr>
                 );
               })}
@@ -111,14 +110,14 @@ function FichaCliente({ cliente: c, onClose }) {
   ].filter(q => q.monto && String(q.monto).trim());
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-slate-800 flex items-start justify-between">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-100 flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">{c['Nombre']}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{c['Email']} · {c['Teléfono']}</p>
+            <h2 className="text-xl font-bold text-gray-900">{c['Nombre']}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{c['Email']} · {c['Teléfono']}</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none font-light">×</button>
         </div>
         <div className="p-6 space-y-5">
           {/* Info comercial */}
@@ -127,29 +126,29 @@ function FichaCliente({ cliente: c, onClose }) {
               ['Closer', c['CLOSER']], ['Setter', c['SETTER']], ['Estatus', c['Estatus']],
               ['CRM', c['CRM']], ['Contrato', c['Contrato']], ['Completado', c['Completado']]
             ].map(([label, val]) => (
-              <div key={label} className="bg-slate-800/50 rounded-lg px-3 py-2">
-                <p className="text-xs text-slate-500">{label}</p>
-                <p className="text-sm font-medium text-slate-200 mt-0.5">{val || '—'}</p>
+              <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-400 font-medium">{label}</p>
+                <p className="text-sm font-semibold text-gray-800 mt-0.5">{val || '—'}</p>
               </div>
             ))}
           </div>
 
           {/* Cuotas */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Cuotas</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cuotas</p>
             <div className="space-y-2">
               {cuotas.map(q => {
                 const pagado = String(q.estado||'').toUpperCase() === 'SI';
                 return (
-                  <div key={q.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado ? 'bg-emerald-950/40 border-emerald-800/50' : 'bg-slate-800/50 border-slate-700'}`}>
+                  <div key={q.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
                     <div className="flex items-center gap-3">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${pagado ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-400'}`}>{q.n}</span>
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${pagado ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>{q.n}</span>
                       <div>
-                        <p className="text-sm font-medium text-white">${Number(q.monto).toLocaleString()}</p>
-                        <p className="text-xs text-slate-500">{q.fecha || '—'} · {q.met || '—'}</p>
+                        <p className="text-sm font-semibold text-gray-900">${Number(q.monto).toLocaleString('es-AR')}</p>
+                        <p className="text-xs text-gray-400">{q.fecha || '—'} · {q.met || '—'}</p>
                       </div>
                     </div>
-                    <span className={`text-xs font-semibold ${pagado ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    <span className={`text-xs font-semibold ${pagado ? 'text-emerald-600' : 'text-gray-400'}`}>
                       {pagado ? '✓ Pagado' : 'Pendiente'}
                     </span>
                   </div>
@@ -159,21 +158,21 @@ function FichaCliente({ cliente: c, onClose }) {
           </div>
 
           {/* Totales */}
-          <div className="flex gap-4 pt-2 border-t border-slate-800">
+          <div className="flex gap-6 pt-3 border-t border-gray-100">
             <div>
-              <p className="text-xs text-slate-500">Monto total</p>
-              <p className="text-lg font-bold text-white">${Number(c['Monto total']||0).toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Monto total</p>
+              <p className="text-xl font-bold text-gray-900">${Number(c['Monto total']||0).toLocaleString('es-AR')}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Pagado</p>
-              <p className="text-lg font-bold text-emerald-400">${Number(c['Monto pagado']||0).toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Pagado</p>
+              <p className="text-xl font-bold text-emerald-600">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</p>
             </div>
           </div>
 
           {c['Notas'] && (
-            <div className="bg-slate-800/40 rounded-lg px-4 py-3">
-              <p className="text-xs text-slate-500 mb-1">Notas</p>
-              <p className="text-sm text-slate-300">{c['Notas']}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+              <p className="text-xs text-amber-600 font-semibold mb-1">Notas</p>
+              <p className="text-sm text-gray-700">{c['Notas']}</p>
             </div>
           )}
         </div>

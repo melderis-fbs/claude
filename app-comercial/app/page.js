@@ -1,5 +1,8 @@
 import { getClientes, getClientesHeaders, getEgresosTab } from '../lib/sheets.js';
-import { calcularResumenMensual, calcularComisiones, calcularCobranzas, calcularCobrosSemanales } from '../lib/calculos.js';
+import {
+  calcularResumenMensual, calcularComisiones,
+  calcularCobranzas, calcularCobrosSemanales, calcularPendientesPorMes,
+} from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
 export const dynamic = 'force-dynamic';
@@ -12,10 +15,11 @@ export default async function Home() {
       getEgresosTab('Egresos').catch(() => []),
     ]);
 
-    const resumen     = calcularResumenMensual(clientes, egresosRows);
-    const comisiones  = calcularComisiones(clientes);
-    const cobranzas   = calcularCobranzas(clientes);
-    const cobrosSemanales = calcularCobrosSemanales(clientes);
+    const resumen          = calcularResumenMensual(clientes, egresosRows);
+    const comisiones       = calcularComisiones(clientes);
+    const cobranzas        = calcularCobranzas(clientes);
+    const cobrosSemanales  = calcularCobrosSemanales(clientes);
+    const pendientesPorMes = calcularPendientesPorMes(clientes);
 
     return (
       <Dashboard
@@ -25,14 +29,15 @@ export default async function Home() {
         comisiones={comisiones}
         cobranzas={cobranzas}
         cobrosSemanales={cobrosSemanales}
+        pendientesPorMes={pendientesPorMes}
       />
     );
   } catch (err) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 bg-slate-950">
-        <div className="bg-red-900/30 border border-red-700 rounded-xl p-6 max-w-lg w-full">
-          <h2 className="text-red-400 font-semibold text-lg mb-2">Error al conectar</h2>
-          <p className="text-red-300 text-sm font-mono break-all">{err.message}</p>
+      <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-lg w-full">
+          <h2 className="text-red-700 font-semibold text-lg mb-2">Error al conectar</h2>
+          <p className="text-red-600 text-sm font-mono break-all">{err.message}</p>
         </div>
       </div>
     );

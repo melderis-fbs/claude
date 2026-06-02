@@ -1,95 +1,80 @@
 'use client';
 import { useState } from 'react';
-import { CUOTAS_DEF, parseMonto, normalizarMes, mesLabel } from '../../lib/calculos.js';
 
-const $ = n => `$${Math.round(n).toLocaleString('es-AR')}`;
+const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => `${n.toFixed(1)}%`;
 
-export default function Cobranzas({ cobranzas, clientes }) {
+export default function Cobranzas({ cobranzas, pendientesPorMes }) {
   const [vista, setVista] = useState('mensual');
-  const [mesSel, setMesSel] = useState(cobranzas[cobranzas.length - 1]?.mes ?? '');
+  const meses = cobranzas.map(m => m.mes);
+  const [mesSel, setMesSel] = useState(meses[meses.length - 1] ?? '');
 
-  // Detalle de pendientes del mes seleccionado
-  const pendientesMes = clientes.filter(c => {
-    return CUOTAS_DEF.some(q => {
-      if ((c[q.estado]||'').toUpperCase() === 'SI') return false;
-      const monto = parseMonto(c[q.monto]);
-      if (!monto) return false;
-      const mes = normalizarMes(c[q.fecha]);
-      return mes === mesSel;
-    });
-  });
+  const mesActual = cobranzas.find(x => x.mes === mesSel);
+  const pendientes = pendientesPorMes[mesSel] ?? [];
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* Toggle vista */}
+    <div className="space-y-5 max-w-5xl">
+      {/* Toggle */}
       <div className="flex gap-2">
-        {['mensual','pendientes'].map(v => (
+        {[['mensual','Resumen mensual'],['pendientes','Pagos pendientes']].map(([v,l]) => (
           <button key={v} onClick={() => setVista(v)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
-              vista === v ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}>{v}</button>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              vista===v ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>{l}</button>
         ))}
       </div>
 
-      {vista === 'mensual' && (
+      {/* Selector de mes */}
+      <div className="flex gap-1 flex-wrap">
+        {cobranzas.map(m => (
+          <button key={m.mes} onClick={() => setMesSel(m.mes)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              m.mes===mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>{m.label}</button>
+        ))}
+      </div>
+
+      {vista === 'mensual' && mesActual && (
         <>
-          {/* Cards resumen del mes */}
-          <div className="flex gap-2 flex-wrap">
-            {cobranzas.map(m => (
-              <button key={m.mes} onClick={() => setMesSel(m.mes)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}>{m.label}</button>
-            ))}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">A cobrar</p>
+              <p className="text-2xl font-bold text-gray-900">{fmt(mesActual.aCobrar)}</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cobrado</p>
+              <p className="text-2xl font-bold text-emerald-700">{fmt(mesActual.cobrado)}</p>
+              <p className="text-xs text-gray-500 mt-1">{pct(mesActual.pctCobrado)}</p>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pendiente</p>
+              <p className="text-2xl font-bold text-red-600">{fmt(mesActual.pendiente)}</p>
+            </div>
           </div>
 
-          {(() => {
-            const m = cobranzas.find(x => x.mes === mesSel);
-            if (!m) return null;
-            return (
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">A cobrar</p>
-                  <p className="text-2xl font-bold text-white">{$(m.aCobrar)}</p>
-                </div>
-                <div className="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-4">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Cobrado</p>
-                  <p className="text-2xl font-bold text-emerald-400">{$(m.cobrado)}</p>
-                  <p className="text-xs text-slate-500 mt-1">{pct(m.pctCobrado)} del total</p>
-                </div>
-                <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-4">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pendiente</p>
-                  <p className="text-2xl font-bold text-red-400">{$(m.pendiente)}</p>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Tabla mensual */}
-          <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-800/50">
+              <thead className="bg-gray-50">
                 <tr>
                   {['Mes','A cobrar','Cobrado','Pendiente','% cobrado'].map(h => (
-                    <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-gray-100">
                 {[...cobranzas].reverse().map(m => (
                   <tr key={m.mes} onClick={() => setMesSel(m.mes)}
-                    className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-blue-500/10' : 'hover:bg-slate-800/30'}`}>
-                    <td className="px-5 py-3 font-medium text-white">{m.label}</td>
-                    <td className="px-5 py-3 text-slate-300">{$(m.aCobrar)}</td>
-                    <td className="px-5 py-3 text-emerald-400">{$(m.cobrado)}</td>
-                    <td className="px-5 py-3 text-red-400">{$(m.pendiente)}</td>
+                    className={`cursor-pointer transition-colors ${m.mes===mesSel?'bg-blue-50':'hover:bg-gray-50'}`}>
+                    <td className="px-5 py-3 font-semibold text-gray-800">{m.label}</td>
+                    <td className="px-5 py-3 text-gray-700">{fmt(m.aCobrar)}</td>
+                    <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(m.cobrado)}</td>
+                    <td className="px-5 py-3 text-red-500 font-medium">{fmt(m.pendiente)}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-700 rounded-full h-1.5 max-w-24">
-                          <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${m.pctCobrado}%` }} />
+                        <div className="flex-1 bg-gray-200 rounded-full h-1.5 max-w-20">
+                          <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.min(m.pctCobrado,100)}%` }} />
                         </div>
-                        <span className={`text-xs font-medium ${m.pctCobrado >= 80 ? 'text-emerald-400' : m.pctCobrado >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                        <span className={`text-xs font-semibold ${m.pctCobrado>=80?'text-emerald-600':m.pctCobrado>=50?'text-amber-600':'text-red-500'}`}>
                           {pct(m.pctCobrado)}
                         </span>
                       </div>
@@ -103,52 +88,37 @@ export default function Cobranzas({ cobranzas, clientes }) {
       )}
 
       {vista === 'pendientes' && (
-        <div className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            {cobranzas.map(m => (
-              <button key={m.mes} onClick={() => setMesSel(m.mes)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}>{m.label}</button>
-            ))}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-800">Pagos pendientes — {mesActual?.label}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{pendientes.length} pagos pendientes</p>
           </div>
-
-          <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-800">
-              <h3 className="font-semibold text-white">Pagos pendientes — {mesLabel(mesSel)}</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{pendientesMes.length} clientes con pagos pendientes este mes</p>
-            </div>
+          {pendientes.length === 0 ? (
+            <div className="px-5 py-10 text-center text-gray-400 text-sm">No hay pagos pendientes para este mes.</div>
+          ) : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-800/50">
+              <thead className="bg-gray-50">
                 <tr>
                   {['Cliente','Programa','Closer','Cuota','Monto','Fecha','Método'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
-                {pendientesMes.flatMap(c =>
-                  CUOTAS_DEF.map((q, i) => {
-                    if ((c[q.estado]||'').toUpperCase() === 'SI') return null;
-                    const monto = parseMonto(c[q.monto]);
-                    if (!monto) return null;
-                    if (normalizarMes(c[q.fecha]) !== mesSel) return null;
-                    return (
-                      <tr key={`${c._rowIndex}-${i}`} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-white">{c['Nombre']}</td>
-                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-xs">{c['Programa']}</span></td>
-                        <td className="px-4 py-3 text-slate-300">{c['CLOSER'] || '—'}</td>
-                        <td className="px-4 py-3 text-slate-400">Cuota {i+1}</td>
-                        <td className="px-4 py-3 font-medium text-red-400">{$(monto)}</td>
-                        <td className="px-4 py-3 text-slate-400">{c[q.fecha] || '—'}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs">{c[q.metodo] || '—'}</td>
-                      </tr>
-                    );
-                  }).filter(Boolean)
-                )}
+              <tbody className="divide-y divide-gray-100">
+                {pendientes.map((p, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{p.nombre}</td>
+                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
+                    <td className="px-4 py-3 text-gray-700">{p.closer || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">Cuota {p.cuota}</td>
+                    <td className="px-4 py-3 font-semibold text-red-600">{fmt(p.monto)}</td>
+                    <td className="px-4 py-3 text-gray-500">{p.fecha || '—'}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </div>
+          )}
         </div>
       )}
     </div>
