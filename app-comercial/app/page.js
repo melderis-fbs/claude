@@ -3,6 +3,7 @@ import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
+  calcularProyeccion, calcularSeñasPorMes,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -22,6 +23,8 @@ export default async function Home() {
     const cobranzas        = calcularCobranzas(clientes);
     const cobrosSemanales  = calcularCobrosSemanales(clientes);
     const pendientesPorMes = calcularPendientesPorMes(clientes);
+    const proyeccion       = calcularProyeccion(clientes);
+    const señasPorMes      = calcularSeñasPorMes(clientes);
 
     return (
       <Dashboard
@@ -33,6 +36,8 @@ export default async function Home() {
         cobranzas={cobranzas}
         cobrosSemanales={cobrosSemanales}
         pendientesPorMes={pendientesPorMes}
+        proyeccion={proyeccion}
+        señasPorMes={señasPorMes}
       />
     );
   } catch (err) {

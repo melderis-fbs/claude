@@ -280,6 +280,104 @@ export function calcularPendientesPorMes(clientes) {
   return porMes;
 }
 
+// ── Proyección semanal ────────────────────────────────────────────────────────
+
+function parseFechaToDate(fechaStr) {
+  if (!fechaStr) return null;
+  const s = String(fechaStr).trim();
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) return new Date(+dmy[3], +dmy[2]-1, +dmy[1]);
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+  return null;
+}
+
+function semanaLabel(lunes, domingo) {
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const fl = `${lunes.getDate()} ${meses[lunes.getMonth()]}`;
+  const fd = `${domingo.getDate()} ${meses[domingo.getMonth()]} ${domingo.getFullYear()}`;
+  return `${fl} – ${fd}`;
+}
+
+export function calcularProyeccion(clientes, semanasAtras = 2, semanasAdelante = 10) {
+  const hoy = new Date();
+  const lunesHoy = new Date(hoy);
+  lunesHoy.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+  lunesHoy.setHours(0,0,0,0);
+
+  const semanas = [];
+  for (let w = -semanasAtras; w <= semanasAdelante; w++) {
+    const lunes  = new Date(lunesHoy); lunes.setDate(lunesHoy.getDate() + w*7);
+    const domingo = new Date(lunes);   domingo.setDate(lunes.getDate()+6); domingo.setHours(23,59,59,999);
+
+    const dias = {};
+    for (let d = 0; d < 7; d++) {
+      const dia = new Date(lunes); dia.setDate(lunes.getDate()+d);
+      dias[dia.toISOString().split('T')[0]] = [];
+    }
+
+    for (const c of clientes) {
+      CUOTAS_DEF.forEach((q, i) => {
+        const monto = parseMonto(c[q.monto]);
+        if (!monto) return;
+        const fecha = parseFechaToDate(c[q.fecha]);
+        if (!fecha || fecha < lunes || fecha > domingo) return;
+        const key = fecha.toISOString().split('T')[0];
+        if (!dias[key]) return;
+        dias[key].push({
+          nombre:   (c['Nombre']   || '').trim(),
+          programa: (c['Programa'] || '').trim(),
+          closer:   (c['CLOSER']   || '').trim(),
+          cuota: i+1, esSeña: i === 0, monto,
+          fecha: c[q.fecha] || '',
+          pagado:      String(c[q.estado]||'').toUpperCase().trim() === 'SI',
+          metodo:      c[q.metodo] || '',
+          rowIndex:    c._rowIndex,
+          campoEstado: q.estado,
+        });
+      });
+    }
+
+    const todos = Object.values(dias).flat();
+    semanas.push({
+      offset: w, esActual: w === 0,
+      lunes: lunes.toISOString().split('T')[0],
+      domingo: domingo.toISOString().split('T')[0],
+      label: semanaLabel(lunes, domingo),
+      dias,
+      totalEsperado: todos.reduce((a,c) => a+c.monto, 0),
+      totalCobrado:  todos.filter(c => c.pagado).reduce((a,c) => a+c.monto, 0),
+      totalPendiente:todos.filter(c => !c.pagado).reduce((a,c) => a+c.monto, 0),
+    });
+  }
+  return semanas;
+}
+
+// ── Señas por mes (solo primer pago = seña/depósito) ─────────────────────────
+
+export function calcularSeñasPorMes(clientes) {
+  const porMes = {};
+  const q = CUOTAS_DEF[0]; // solo cuota 1
+  for (const c of clientes) {
+    const monto = parseMonto(c[q.monto]);
+    if (!monto) continue;
+    const mes = normalizarMes(c[q.fecha]);
+    if (!mes || mes.startsWith('__')) continue;
+    if (!porMes[mes]) porMes[mes] = [];
+    porMes[mes].push({
+      nombre:      (c['Nombre']   || '').trim(),
+      programa:    (c['Programa'] || '').trim(),
+      closer:      (c['CLOSER']   || '').trim(),
+      monto, fecha: c[q.fecha]||'',
+      metodo:      c[q.metodo] || '',
+      pagado:      String(c[q.estado]||'').toUpperCase().trim() === 'SI',
+      rowIndex:    c._rowIndex,
+      campoEstado: q.estado,
+    });
+  }
+  return porMes;
+}
+
 // ── Cobros esta semana ────────────────────────────────────────────────────────
 
 export function calcularCobrosSemanales(clientes) {
