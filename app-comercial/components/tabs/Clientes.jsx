@@ -13,11 +13,11 @@ const MES_ORDER = [
 ];
 
 function mesKey(ingreso) {
-  if (!ingreso) return '~sin-ingreso';
+  if (!ingreso) return '0000-99';
   const s = String(ingreso).toLowerCase().trim();
   const parts = s.split(/\s+/);
   const mesIdx = MES_ORDER.findIndex(m => parts[0].startsWith(m));
-  const year   = parts.length >= 2 ? parts[parts.length - 1] : '0000';
+  const year   = parts.length >= 2 ? parts[parts.length - 1].padStart(4, '0') : '0000';
   const idx    = mesIdx >= 0 ? String(mesIdx).padStart(2, '0') : '99';
   return `${year}-${idx}`;
 }
