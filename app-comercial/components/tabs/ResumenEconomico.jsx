@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => n == null ? '—' : `${n.toFixed(1)}%`;
 
-const COST_CATS = ['Sueldos','Publicidad','Apps','Impuestos','Formación','Gastos Admin','Extras','Retiros'];
 
 function EgresosDiag() {
   const [result, setResult] = useState(null);
@@ -161,11 +160,12 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card label="Ventas nuevas"      value={m.ventasNuevas} sub={fmt(m.montoFront)} color="blue" />
-        <Card label="Recolección"        value={fmt(m.cashTotal)} sub={`${pct(m.pctCC)} de cobro`} color="green" />
-        <Card label="Ganancia"           value={fmt(m.ganancia)} sub={hayCostos ? `Rent. ${pct(m.rentabilidad)}` : 'Sin datos de costos'} color={m.ganancia >= 0 ? 'purple' : 'red'} />
-        <Card label="Cobros esta semana" value={fmt(cobradoSemana)} sub={`de ${fmt(esperadoSemana)} esperados`} color="amber" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card label="Ventas nuevas"         value={m.ventasNuevas} sub="ventas del mes" color="blue" />
+        <Card label="Monto total ventas"    value={fmt(m.montoFront)} sub={`${m.ventasNuevas} clientes`} color="blue" />
+        <Card label="Recolección"           value={fmt(m.cashTotal)} sub={`${pct(m.pctCC)} de cobro`} color="green" />
+        <Card label="Ganancia"              value={fmt(m.ganancia)} sub={hayCostos ? `Rent. ${pct(m.rentabilidad)}` : 'Sin datos de costos'} color={m.ganancia >= 0 ? 'purple' : 'red'} />
+        <Card label="Cobros esta semana"    value={fmt(cobradoSemana)} sub={`de ${fmt(esperadoSemana)} esperados`} color="amber" />
       </div>
 
       {/* Detalle del mes */}
@@ -278,10 +278,8 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
           {hayCostos ? (
             <table className="w-full text-sm">
               <tbody className="divide-y divide-gray-100">
-                {COST_CATS.map(cat => {
-                  const entry = Object.entries(m.costos).find(([k]) => k.toLowerCase().includes(cat.toLowerCase()));
-                  const val = entry?.[1] ?? 0;
-                  const pctVal = m.cashFront > 0 ? (val/m.cashFront)*100 : 0;
+                {Object.entries(m.costos).map(([cat, val]) => {
+                  const pctVal = m.montoFront > 0 ? (val / m.montoFront) * 100 : 0;
                   return (
                     <tr key={cat}>
                       <td className="py-2 text-gray-500">{cat}</td>
@@ -293,7 +291,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
                 <tr className="border-t-2 border-gray-300 font-semibold">
                   <td className="py-2 text-gray-900">TOTAL COSTOS</td>
                   <td className="py-2 text-right text-gray-900">{fmt(m.totalCostos)}</td>
-                  <td className="py-2 text-right text-gray-500">{m.cashFront > 0 ? pct((m.totalCostos/m.cashFront)*100) : '—'}</td>
+                  <td className="py-2 text-right text-gray-500">{m.montoFront > 0 ? pct((m.totalCostos / m.montoFront) * 100) : '—'}</td>
                 </tr>
               </tbody>
             </table>

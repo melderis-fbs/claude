@@ -463,6 +463,7 @@ export function calcularCobrosSemanales(clientes) {
   const cobros = [];
   for (const c of clientes) {
     CUOTAS_DEF.forEach((q, i) => {
+      if (i === 0) return; // primer pago no cuenta como cobro semanal
       const monto = parseMonto(c[q.monto]);
       if (!monto) return;
       const fechaStr = c[q.fecha];
