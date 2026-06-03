@@ -1,10 +1,7 @@
 // Conexión a Google Sheets vía Google Apps Script Web App.
-// Sin Service Account ni credenciales: el script corre con los permisos
-// de la cuenta de Google que lo deployó.
-//
-// Variables de entorno necesarias:
-//   APPS_SCRIPT_CLIENTES_URL  → URL del Web App deployado en la planilla de clientes
-//   APPS_SCRIPT_EGRESOS_URL   → URL del Web App deployado en la planilla de egresos
+// Variables de entorno:
+//   APPS_SCRIPT_CLIENTES_URL  → Web App de la planilla de clientes
+//   APPS_SCRIPT_EGRESOS_URL   → Web App de la planilla de egresos
 
 export const MOCK_MODE =
   !process.env.APPS_SCRIPT_CLIENTES_URL && !process.env.APPS_SCRIPT_EGRESOS_URL;
@@ -58,10 +55,22 @@ export async function updateClienteRow(rowIndex, rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'update', rowIndex, rowValues });
 }
 
-// Actualiza un único campo de un cliente por nombre de columna
 export async function updateClienteField(rowIndex, headerName, value) {
   if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'updateField', rowIndex, headerName, value });
+}
+
+// ── ABONOS (pestaña "Abono" en la planilla de clientes) ──────────────────────
+
+export async function getAbonos() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getAbonos' });
+  return data.abonos ?? [];
+}
+
+export async function appendAbono(rowValues) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendAbono', rowValues });
 }
 
 // ── EGRESOS ───────────────────────────────────────────────────────────────────

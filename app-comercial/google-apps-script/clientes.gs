@@ -5,12 +5,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TAB_CLIENTES = 'Seguimiento clientes';
+const TAB_ABONOS   = 'Abono';
 
 function doGet(e) {
   const action = e.parameter.action;
   try {
     if (action === 'getClientes') return ok(getClientes());
     if (action === 'getHeaders')  return ok(getHeaders());
+    if (action === 'getAbonos')   return ok(getAbonos());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -24,6 +26,7 @@ function doPost(e) {
     if (action === 'append')      return ok(appendRow(body.rowValues));
     if (action === 'update')      return ok(updateRow(body.rowIndex, body.rowValues));
     if (action === 'updateField') return ok(updateField(body.rowIndex, body.headerName, body.value));
+    if (action === 'appendAbono') return ok(appendAbono(body.rowValues));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -54,7 +57,6 @@ function getClientes() {
       headers.forEach((h, j) => {
         if (!h) return;
         const val = row[j];
-        // Serializar fechas como DD/MM/YYYY para que el frontend las parsee siempre igual
         if (val instanceof Date && val.getTime() > 0) {
           obj[h] = Utilities.formatDate(val, tz, 'dd/MM/yyyy');
         } else {
@@ -71,6 +73,39 @@ function getClientes() {
   return { clientes };
 }
 
+function getAbonos() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ABONOS);
+  if (!sheet) return { abonos: [] };
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return { abonos: [] };
+
+  const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers   = allValues[0].map(h => h.toString().trim());
+  const tz        = Session.getScriptTimeZone();
+
+  const abonos = allValues.slice(1)
+    .map((row, i) => {
+      const obj = { _rowIndex: i + 2 };
+      headers.forEach((h, j) => {
+        if (!h) return;
+        const val = row[j];
+        if (val instanceof Date && val.getTime() > 0) {
+          obj[h] = Utilities.formatDate(val, tz, 'dd/MM/yyyy');
+        } else {
+          obj[h] = val !== null && val !== undefined ? val : '';
+        }
+      });
+      return obj;
+    })
+    .filter(obj => {
+      const { _rowIndex, ...fields } = obj;
+      return Object.values(fields).some(v => v !== '' && v !== null && v !== undefined);
+    });
+
+  return { abonos };
+}
+
 // ── Escritura ─────────────────────────────────────────────────────────────────
 
 function appendRow(rowValues) {
@@ -81,12 +116,10 @@ function appendRow(rowValues) {
 
 function updateRow(rowIndex, rowValues) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_CLIENTES);
-  const range = sheet.getRange(rowIndex, 1, 1, rowValues.length);
-  range.setValues([rowValues]);
+  sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
   return { ok: true };
 }
 
-// Actualiza una sola celda identificada por nombre de columna
 function updateField(rowIndex, headerName, value) {
   const sheet   = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_CLIENTES);
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -94,6 +127,13 @@ function updateField(rowIndex, headerName, value) {
   if (colIndex === -1) throw new Error('Columna no encontrada: ' + headerName);
   sheet.getRange(rowIndex, colIndex + 1).setValue(value);
   return { ok: true, rowIndex, headerName, value };
+}
+
+function appendAbono(rowValues) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ABONOS);
+  if (!sheet) throw new Error('Pestaña Abono no encontrada');
+  sheet.appendRow(rowValues);
+  return { ok: true };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
