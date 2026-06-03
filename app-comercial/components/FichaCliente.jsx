@@ -40,6 +40,17 @@ export function getCuotasInfo(c) {
 
 const COMMENT_COLS = ['Notas', 'Comentario', 'Comentarios', 'Observaciones'];
 
+const PROGRAMA_OPTIONS = ['M1','M1+','M1.1','M2','Back','Starter'];
+const CLOSER_OPTIONS   = ['Kevin','Vicky','Braian','Fabricio'];
+
+const INFO_FIELDS = [
+  { label: 'Programa', key: 'Programa', type: 'select', options: PROGRAMA_OPTIONS },
+  { label: 'Fuente',   key: 'Fuente',   type: 'text' },
+  { label: 'Ingreso',  key: 'Ingreso',  type: 'text' },
+  { label: 'Closer',   key: 'CLOSER',   type: 'select', options: CLOSER_OPTIONS },
+  { label: 'Setter',   key: 'SETTER',   type: 'text' },
+];
+
 export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   const [marcando, setMarcando] = useState(new Set());
   const [error, setError] = useState('');
@@ -49,6 +60,68 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   const [guardandoNota, setGuardandoNota] = useState(false);
   const [notaGuardada, setNotaGuardada] = useState(false);
 
+  // ── Terminado toggle ─────────────────────────────────────────────────────────
+  const [terminado, setTerminado] = useState(esPagadoLocal(c['Completado']));
+  const [togglingTerminado, setTogglingTerminado] = useState(false);
+
+  const toggleTerminado = async () => {
+    const newVal = !terminado;
+    setTerminado(newVal); // optimistic update
+    setTogglingTerminado(true);
+    setError('');
+    try {
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: 'Completado', value: newVal ? 'SI' : 'NO' }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      onPagadoUpdated();
+    } catch (err) {
+      setTerminado(!newVal); // revert on error
+      setError(err.message);
+    } finally {
+      setTogglingTerminado(false);
+    }
+  };
+
+  // ── Edit mode ────────────────────────────────────────────────────────────────
+  const [editMode, setEditMode] = useState(false);
+  const [editValues, setEditValues] = useState(() =>
+    Object.fromEntries(INFO_FIELDS.map(f => [f.key, c[f.key] || '']))
+  );
+  const [saving, setSaving] = useState(false);
+
+  const enterEdit = () => {
+    setEditValues(Object.fromEntries(INFO_FIELDS.map(f => [f.key, c[f.key] || ''])));
+    setEditMode(true);
+  };
+
+  const cancelEdit = () => setEditMode(false);
+
+  const saveEdit = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const changed = INFO_FIELDS.filter(f => editValues[f.key] !== (c[f.key] || ''));
+      for (const field of changed) {
+        const res = await fetch('/api/update-pago', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rowIndex: c._rowIndex, headerName: field.key, value: editValues[field.key] }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      }
+      onPagadoUpdated();
+      setEditMode(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Cuotas ───────────────────────────────────────────────────────────────────
   const cuotas = CUOTA_COLS.map((q, i) => ({
     n: i+1, q,
     monto:  c[q.monto],
@@ -97,27 +170,84 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="p-6 border-b border-gray-100 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{c['Nombre']}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{c['Email'] || '—'} · {c['Teléfono'] || '—'}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-4">×</button>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            {/* Terminado toggle */}
+            <button
+              onClick={toggleTerminado}
+              disabled={togglingTerminado}
+              title={terminado ? 'Marcar como no terminado' : 'Marcar como terminado'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
+                terminado
+                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}>
+              {terminado ? '✓ Terminado' : '○ Terminado'}
+            </button>
+            {/* Edit pencil */}
+            {!editMode && (
+              <button
+                onClick={enterEdit}
+                title="Editar datos"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-8.5 8.5a2 2 0 01-.878.515l-3 .75a.5.5 0 01-.607-.607l.75-3a2 2 0 01.515-.878l8.5-8.5z"/>
+                </svg>
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
         </div>
+
         <div className="p-6 space-y-5">
           {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
+          {/* Info grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[['Programa',c['Programa'],false],['Fuente',c['Fuente'],false],['Ingreso',c['Ingreso'],false],
-              ['Closer',c['CLOSER'],false],['Setter',c['SETTER'],false],['Estatus',c['Estatus'],false],
-              ['CRM',c['CRM'],true],['Contrato',c['Contrato'],true],['Completado',c['Completado'],true]
-            ].map(([label, val, isBoolean]) => (
-              <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+            {INFO_FIELDS.map(({ label, key, type, options }) => (
+              <div key={key} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
                 <p className="text-xs text-gray-400 font-medium">{label}</p>
-                <p className="text-sm font-semibold text-gray-800 mt-0.5">{isBoolean ? traducirBoolean(val) : (val || '—')}</p>
+                {editMode ? (
+                  type === 'select' ? (
+                    <select
+                      value={editValues[key]}
+                      onChange={e => setEditValues(v => ({ ...v, [key]: e.target.value }))}
+                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500">
+                      <option value="">—</option>
+                      {options.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={editValues[key]}
+                      onChange={e => setEditValues(v => ({ ...v, [key]: e.target.value }))}
+                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500"
+                    />
+                  )
+                ) : (
+                  <p className="text-sm font-semibold text-gray-800 mt-0.5">{c[key] || '—'}</p>
+                )}
               </div>
             ))}
           </div>
+
+          {/* Edit action buttons */}
+          {editMode && (
+            <div className="flex justify-end gap-2">
+              <button onClick={cancelEdit} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={saveEdit} disabled={saving}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50">
+                {saving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cuotas</p>

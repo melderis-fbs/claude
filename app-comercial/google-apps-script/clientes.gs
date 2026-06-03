@@ -7,6 +7,7 @@
 const TAB_CLIENTES = 'Seguimiento clientes';
 const TAB_ABONOS   = 'Abono';
 const TAB_DEUDORES = 'Deudores';
+const TAB_FACTURAS = 'Facturas';
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -15,6 +16,7 @@ function doGet(e) {
     if (action === 'getHeaders')   return ok(getHeaders());
     if (action === 'getAbonos')    return ok(getAbonos());
     if (action === 'getDeudores')  return ok(getDeudores());
+    if (action === 'getFacturas')  return ok(getFacturas());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -30,6 +32,7 @@ function doPost(e) {
     if (action === 'updateField')  return ok(updateField(body.rowIndex, body.headerName, body.value));
     if (action === 'appendAbono')  return ok(appendAbono(body.rowValues));
     if (action === 'upsertDeudor') return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario));
+    if (action === 'appendFactura') return ok(appendFactura(body.rowValues));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -177,6 +180,44 @@ function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
   }
 
   sheet.appendRow([rowIndex, cuotaNum, estado, comentario, new Date().toISOString()]);
+  return { ok: true };
+}
+
+// ── Facturas ──────────────────────────────────────────────────────────────────
+
+function getFacturas() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_FACTURAS);
+  if (!sheet) return { facturas: [] };
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { facturas: [] };
+  const allValues = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+  const headers = allValues[0].map(h => h.toString().trim());
+  const tz = Session.getScriptTimeZone();
+  return {
+    facturas: allValues.slice(1).map((row, i) => {
+      const obj = { _rowIndex: i + 2 };
+      headers.forEach((h, j) => {
+        if (!h) return;
+        const val = row[j];
+        obj[h] = val instanceof Date && val.getTime() > 0
+          ? Utilities.formatDate(val, tz, 'dd/MM/yyyy')
+          : (val !== null && val !== undefined ? val : '');
+      });
+      return obj;
+    }).filter(obj => {
+      const { _rowIndex, ...fields } = obj;
+      return Object.values(fields).some(v => v !== '' && v !== null);
+    })
+  };
+}
+
+function appendFactura(rowValues) {
+  let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_FACTURAS);
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(TAB_FACTURAS);
+    sheet.appendRow(['Fecha','FechaPago','Numero','Tipo','ClienteProveedor','Concepto','Monto','Estado']);
+  }
+  sheet.appendRow(rowValues);
   return { ok: true };
 }
 

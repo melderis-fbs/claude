@@ -1,4 +1,4 @@
-import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores } from '../lib/sheets.js';
+import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
@@ -11,12 +11,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   try {
-    const [clientes, headers, egresosRows, abonos, deudoresRecords] = await Promise.all([
+    const [clientes, headers, egresosRows, abonos, deudoresRecords, facturas] = await Promise.all([
       getClientes(),
       getClientesHeaders(),
       getEgresosTab('Consolidado').catch(() => []),
       getAbonos().catch(() => []),
       getDeudores().catch(() => []),
+      getFacturas().catch(() => []),
     ]);
 
     const resumen          = calcularResumenMensual(clientes, egresosRows);
@@ -41,6 +42,7 @@ export default async function Home() {
         proyeccion={proyeccion}
         abonos={abonos}
         deudores={deudores}
+        facturas={facturas}
       />
     );
   } catch (err) {

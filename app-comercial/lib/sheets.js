@@ -73,6 +73,19 @@ export async function appendAbono(rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendAbono', rowValues });
 }
 
+// ── FACTURAS ──────────────────────────────────────────────────────────────────
+
+export async function getFacturas() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getFacturas' });
+  return data.facturas ?? [];
+}
+
+export async function appendFactura(rowValues) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendFactura', rowValues });
+}
+
 // ── DEUDORES ──────────────────────────────────────────────────────────────────
 
 export async function getDeudores() {

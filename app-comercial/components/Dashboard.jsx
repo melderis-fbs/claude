@@ -5,6 +5,7 @@ import Ventas          from './tabs/Ventas.jsx';
 import Cobranzas       from './tabs/Cobranzas.jsx';
 import Abonos          from './tabs/Abonos.jsx';
 import Comisiones      from './tabs/Comisiones.jsx';
+import Facturas        from './tabs/Facturas.jsx';
 import Clientes        from './tabs/Clientes.jsx';
 
 const TABS = [
@@ -13,13 +14,14 @@ const TABS = [
   { id: 'cobranzas',  label: 'Cobranzas' },
   { id: 'abonos',     label: 'Abonos' },
   { id: 'comisiones', label: 'Comisiones' },
+  { id: 'facturas',   label: 'Facturas' },
   { id: 'clientes',   label: 'Clientes' },
 ];
 
 export default function Dashboard({
   clientes, headers, resumen, ventasPorMes, comisiones,
   cobranzas, cobrosSemanales, pendientesPorMes,
-  proyeccion, abonos, deudores,
+  proyeccion, abonos, deudores, facturas,
 }) {
   const [tab, setTab] = useState('resumen');
 
@@ -54,6 +56,7 @@ export default function Dashboard({
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
+        {tab === 'facturas'   && <Facturas facturas={facturas} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
       </main>
     </div>
