@@ -5,7 +5,7 @@ import FichaCliente, { getCuotasInfo, esPagadoLocal, CUOTA_COLS } from '../Ficha
 
 const PROGRAMAS = ['M1','M1+','M1.1','M2','Back','Starter'];
 const CLOSERS   = ['Kevin','Vicky','Braian','Fabricio'];
-const METODOS   = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS'];
+const METODOS   = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS','Efectivo'];
 
 export default function Clientes({ clientes, headers }) {
   const router = useRouter();
@@ -185,6 +185,21 @@ function AddClienteModal({ headers, onClose, onSaved }) {
         <div className="p-6 space-y-4">
           {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
+          {/* Cuotas selector — prominente arriba */}
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cantidad de pagos</label>
+            <div className="flex gap-2">
+              {[['1','Pago full'],['2','2 pagos'],['3','3 pagos'],['4','4 pagos']].map(([n, lbl]) => (
+                <button key={n} type="button" onClick={() => set('Cuotas', n)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
+                    (g('Cuotas') || '1') === n
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                  }`}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nombre" required value={g('Nombre')} onChange={v => set('Nombre', v)} />
             <Field label="Email" type="email" value={g('Email')} onChange={v => set('Email', v)} />
@@ -196,13 +211,6 @@ function AddClienteModal({ headers, onClose, onSaved }) {
             <Field label="Ingreso" value={g('Ingreso')} onChange={v => set('Ingreso', v)} placeholder="Enero 2025" />
             <Sel   label="Estatus" value={g('Estatus')} onChange={v => set('Estatus', v)} options={['Activo','Baja','Pausa']} />
             <Field label="Monto total" type="number" value={g('Monto total')} onChange={v => set('Monto total', v)} />
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Cantidad de cuotas</label>
-              <select value={g('Cuotas') || '1'} onChange={e => set('Cuotas', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 bg-white">
-                {[1,2,3,4].map(n => <option key={n} value={n}>{n} {n===1?'(pago full)':'cuota'+( n>1?'s':'')}</option>)}
-              </select>
-            </div>
           </div>
 
           {/* Cuotas */}

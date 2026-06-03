@@ -312,16 +312,6 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
     return texto.trim();
   };
 
-  if (!initialDeudores.length) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-16 text-center">
-        <p className="text-3xl mb-2">✅</p>
-        <p className="text-gray-700 font-semibold">Sin deudores</p>
-        <p className="text-gray-400 text-sm mt-1">No hay pagos vencidos pendientes.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 max-w-5xl">
       {errorMsg && (
@@ -361,6 +351,13 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
         </button>
       </div>
 
+      {visibles.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-16 text-center">
+          <p className="text-3xl mb-2">✅</p>
+          <p className="text-gray-700 font-semibold">Sin deudores</p>
+          <p className="text-gray-400 text-sm mt-1">No hay pagos vencidos pendientes.</p>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -412,6 +409,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
           </table>
         </div>
       </div>
+      )}
 
       {/* Modal estado */}
       {editando && (
