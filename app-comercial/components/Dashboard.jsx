@@ -3,7 +3,6 @@ import { useState } from 'react';
 import ResumenEconomico from './tabs/ResumenEconomico.jsx';
 import Ventas          from './tabs/Ventas.jsx';
 import Cobranzas       from './tabs/Cobranzas.jsx';
-import Proyeccion      from './tabs/Proyeccion.jsx';
 import Abonos          from './tabs/Abonos.jsx';
 import Comisiones      from './tabs/Comisiones.jsx';
 import Clientes        from './tabs/Clientes.jsx';
@@ -12,7 +11,6 @@ const TABS = [
   { id: 'resumen',    label: 'Resumen' },
   { id: 'ventas',     label: 'Ventas' },
   { id: 'cobranzas',  label: 'Cobranzas' },
-  { id: 'proyeccion', label: 'Proyección' },
   { id: 'abonos',     label: 'Abonos' },
   { id: 'comisiones', label: 'Comisiones' },
   { id: 'clientes',   label: 'Clientes' },
@@ -53,8 +51,7 @@ export default function Dashboard({
       <main className="flex-1 overflow-auto p-6">
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} />}
         {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
-        {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
-        {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
+        {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}

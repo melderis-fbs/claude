@@ -1,11 +1,95 @@
 'use client';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import FichaCliente, { getCuotasInfo, esPagadoLocal, CUOTA_COLS } from '../FichaCliente.jsx';
 
 const PROGRAMAS = ['M1','M1+','M1.1','M2','Back','Starter'];
 const CLOSERS   = ['Kevin','Vicky','Braian','Fabricio'];
 const METODOS   = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS','Efectivo'];
+
+const MES_ORDER = [
+  'enero','febrero','marzo','abril','mayo','junio',
+  'julio','agosto','septiembre','octubre','noviembre','diciembre',
+];
+
+function mesKey(ingreso) {
+  if (!ingreso) return '~sin-ingreso';
+  const s = String(ingreso).toLowerCase().trim();
+  const parts = s.split(/\s+/);
+  if (parts.length >= 2) {
+    const mesIdx = MES_ORDER.findIndex(m => parts[0].startsWith(m));
+    const year   = parts[1] || '0000';
+    const idx    = mesIdx >= 0 ? String(mesIdx).padStart(2, '0') : '99';
+    return `${year}-${idx}`;
+  }
+  return s;
+}
+
+function ClienteRow({ c, clienteSel, setClienteSel }) {
+  const cuotasInfo = getCuotasInfo(c);
+  const completo   = cuotasInfo !== '—' && cuotasInfo.split('/')[0] === cuotasInfo.split('/')[1];
+  const isSelected = clienteSel?._rowIndex === c._rowIndex;
+  return (
+    <tr onClick={() => setClienteSel(isSelected ? null : c)}
+      className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+      <td className="px-4 py-3 font-medium text-gray-900">{c['Nombre'] || '—'}</td>
+      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span></td>
+      <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
+      <td className="px-4 py-3 text-gray-700">{c['CLOSER'] || '—'}</td>
+      <td className="px-4 py-3 text-gray-700">${Number(c['Monto total']||0).toLocaleString('es-AR')}</td>
+      <td className="px-4 py-3 text-center">
+        <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cuotasInfo}</span>
+      </td>
+      <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
+      <td className="px-4 py-3">
+        {c['Estatus'] ? (
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+            String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+            String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
+            'bg-gray-100 text-gray-500'
+          }`}>{c['Estatus']}</span>
+        ) : <span className="text-gray-300">—</span>}
+      </td>
+      <td className="px-4 py-3 text-gray-400 text-xs text-right">
+        <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300'}`}>›</span>
+      </td>
+    </tr>
+  );
+}
+
+function GrupoMes({ label, clientes, defaultOpen, clienteSel, setClienteSel }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-gray-800 capitalize">{label}</span>
+          <span className="text-xs text-gray-400 font-medium">{clientes.length} cliente{clientes.length !== 1 ? 's' : ''}</span>
+        </div>
+        <span className={`text-gray-400 text-lg transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+      </button>
+      {open && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-t border-gray-100">
+              <tr>
+                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus',''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {clientes.map(c => (
+                <ClienteRow key={c._rowIndex} c={c} clienteSel={clienteSel} setClienteSel={setClienteSel} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Clientes({ clientes, headers }) {
   const router = useRouter();
@@ -39,6 +123,21 @@ export default function Clientes({ clientes, headers }) {
     return true;
   }), [clientes, busqueda, programa, closer, estatus]);
 
+  const grupos = useMemo(() => {
+    const map = new Map();
+    for (const c of filtrados) {
+      const key   = mesKey(c['Ingreso']);
+      const label = c['Ingreso'] || 'Sin ingreso';
+      if (!map.has(key)) map.set(key, { label, clientes: [] });
+      map.get(key).clientes.push(c);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, val]) => ({ key, ...val }));
+  }, [filtrados]);
+
+  const primerKey = grupos[0]?.key;
+
   return (
     <div className="space-y-4 max-w-full">
       {/* Filtros */}
@@ -61,56 +160,12 @@ export default function Clientes({ clientes, headers }) {
         </button>
       </div>
 
-      {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus','Ingreso'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtrados.map(c => {
-                const cuotasInfo = getCuotasInfo(c);
-                const completo   = cuotasInfo !== '—' && cuotasInfo.split('/')[0] === cuotasInfo.split('/')[1];
-                const isSelected = clienteSel?._rowIndex === c._rowIndex;
-                return (
-                  <tr key={c._rowIndex}
-                    onClick={() => setClienteSel(isSelected ? null : c)}
-                    className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{c['Nombre'] || '—'}</td>
-                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span></td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
-                    <td className="px-4 py-3 text-gray-700">{c['CLOSER'] || '—'}</td>
-                    <td className="px-4 py-3 text-gray-700">${Number(c['Monto total']||0).toLocaleString('es-AR')}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cuotasInfo}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
-                    <td className="px-4 py-3">
-                      {c['Estatus'] ? (
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
-                          String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
-                          'bg-gray-100 text-gray-500'
-                        }`}>{c['Estatus']}</span>
-                      ) : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{c['Ingreso'] || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs text-right">
-                      <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300 group-hover:text-gray-500'}`}>›</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Grupos por mes */}
+      {grupos.map(g => (
+        <GrupoMes key={g.key} label={g.label} clientes={g.clientes}
+          defaultOpen={g.key === primerKey}
+          clienteSel={clienteSel} setClienteSel={setClienteSel} />
+      ))}
 
       {clienteSel && (
         <FichaCliente cliente={clienteSel} onClose={() => setClienteSel(null)}
