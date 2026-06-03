@@ -2,6 +2,14 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
+function formatFecha(val) {
+  if (!val) return '—';
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return s;
+}
+
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => `${n.toFixed(1)}%`;
 
@@ -144,7 +152,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes }) {
                       <td className="px-4 py-3 text-gray-700">{p.closer || '—'}</td>
                       <td className="px-4 py-3 text-gray-500">Cuota {p.cuota}</td>
                       <td className="px-4 py-3 font-semibold text-red-600">{fmt(p.monto)}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.fecha || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatFecha(p.fecha)}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
                       <td className="px-4 py-3">
                         <button

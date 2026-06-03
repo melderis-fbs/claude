@@ -51,19 +51,26 @@ export function normalizarMes(val) {
 }
 
 // Normaliza el campo Ingreso: si solo tiene mes sin año, infiere el año
-// mirando las fechas de pago del mismo cliente
+// usando el AÑO MÍNIMO encontrado en las fechas de pago del cliente.
+// Esto evita que un cliente de Mayo 2025 quede en Mayo 2026 solo porque
+// su cuota 2 cae en 2026.
 function normalizarIngreso(ingreso, cliente) {
   const raw = normalizarMes(ingreso);
   if (!raw) return null;
   if (!raw.startsWith('__SIN_ANIO__')) return raw;
 
   const mesNum = raw.split('-')[1];
+  let minAnio = null;
   for (const q of CUOTAS_DEF) {
     const fecha = cliente[q.fecha];
     if (!fecha) continue;
     const m = String(fecha).match(/(\d{4})/);
-    if (m) return `${m[1]}-${mesNum}`;
+    if (m) {
+      const anio = parseInt(m[1]);
+      if (!minAnio || anio < minAnio) minAnio = anio;
+    }
   }
+  if (minAnio) return `${minAnio}-${mesNum}`;
   return `${new Date().getFullYear() - 1}-${mesNum}`;
 }
 
@@ -85,8 +92,9 @@ export function esBack(cliente) {
 }
 
 function esPagado(val) {
+  if (val === true) return true; // Google Sheets checkbox devuelve booleano true
   const s = String(val || '').toUpperCase().trim();
-  return s === 'SI' || s === 'SÍ' || s === 'YES' || s === '1';
+  return s === 'SI' || s === 'SÍ' || s === 'YES' || s === '1' || s === 'TRUE';
 }
 
 export function getPagosCliente(cliente) {

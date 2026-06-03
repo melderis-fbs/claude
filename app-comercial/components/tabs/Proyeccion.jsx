@@ -3,6 +3,14 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
+
+function formatFecha(val) {
+  if (!val) return '—';
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return s;
+}
 const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
 export default function Proyeccion({ proyeccion }) {
