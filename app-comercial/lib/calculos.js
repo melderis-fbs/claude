@@ -161,24 +161,24 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       cashPorMes[mes].total += monto;
       const isBack = esBack(c);
       const met = c[q.metodo] || 'Otro';
-      if (isBack) cashPorMes[mes].back += monto;
+      if (isBack) cashPorMes[mes].back  += monto;
       else        cashPorMes[mes].front += monto;
       cashPorMes[mes].porMetodo[met] = (cashPorMes[mes].porMetodo[met] || 0) + monto;
-      if (!isBack) {
-        const isEf  = esEfectivo(met);
-        const isExt = esExterior(met);
-        if (qi === 0) {
+      const isEf  = esEfectivo(met);
+      const isExt = esExterior(met);
+      if (qi === 0) {
+        if (!isBack) {
           if (Number(c['Cuotas'] || 1) <= 1) cashPorMes[mes].nuevoFull += monto;
           else cashPorMes[mes].nuevoFinanciado += monto;
-          if (isEf)       cashPorMes[mes].nuevoEfectivo += monto;
-          else if (isExt) cashPorMes[mes].nuevoExt       += monto;
-          else            cashPorMes[mes].nuevoAR         += monto;
-        } else {
-          cashPorMes[mes].cuotaTotal += monto;
-          if (isEf)       cashPorMes[mes].cuotaEfectivo += monto;
-          else if (isExt) cashPorMes[mes].cuotaExt       += monto;
-          else            cashPorMes[mes].cuotaAR         += monto;
         }
+        if (isEf)       cashPorMes[mes].nuevoEfectivo += monto;
+        else if (isExt) cashPorMes[mes].nuevoExt       += monto;
+        else            cashPorMes[mes].nuevoAR         += monto;
+      } else {
+        cashPorMes[mes].cuotaTotal += monto;
+        if (isEf)       cashPorMes[mes].cuotaEfectivo += monto;
+        else if (isExt) cashPorMes[mes].cuotaExt       += monto;
+        else            cashPorMes[mes].cuotaAR         += monto;
       }
     });
   }
