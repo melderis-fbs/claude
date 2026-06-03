@@ -223,7 +223,8 @@ function VistaDeudores({ deudores: initialDeudores }) {
       if (!lista.length) continue;
       texto += `${emojiMap[estado]} *${tituloMap[estado]}* (${lista.length})\n`;
       for (const d of lista) {
-        texto += `• ${d.nombre} — Cuota ${d.cuota} — ${fmt(d.monto)} — ${d.diasMora} días — ${d.closer || '—'}\n`;
+        const mora = d.diasMora !== null ? `${d.diasMora} días` : 'sin fecha';
+        texto += `• ${d.nombre} — Cuota ${d.cuota} — ${fmt(d.monto)} — ${mora} — ${d.closer || '—'}\n`;
         if (d.comentario) texto += `  _${d.comentario}_\n`;
       }
       texto += '\n';

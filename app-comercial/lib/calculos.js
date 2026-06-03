@@ -500,7 +500,12 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
       const monto = parseMonto(c[q.monto]);
       if (!monto) return;
       const fecha = parseFechaToDate(c[q.fecha]);
-      if (!fecha || fecha >= hoy) return;
+      // solo mostrar si fecha existe y es anterior al lunes de esta semana
+      if (!fecha) return;
+      const lunesEstaSemana = new Date(hoy);
+      lunesEstaSemana.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+      lunesEstaSemana.setHours(0,0,0,0);
+      if (fecha >= lunesEstaSemana) return;
 
       const key = `${c._rowIndex}-${i+1}`;
       const rec = recMap[key] || {};
