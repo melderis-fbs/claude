@@ -16,6 +16,11 @@ export default function Clientes({ clientes, headers }) {
   const [clienteSel, setClienteSel] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
 
+  const fuenteOpts = useMemo(() => {
+    const s = new Set(clientes.map(c => c['Fuente']).filter(Boolean));
+    return Array.from(s).sort();
+  }, [clientes]);
+
   const closerOpts = useMemo(() => {
     const s = new Set(clientes.map(c => c['CLOSER']).filter(Boolean));
     return ['Todos', ...Array.from(s).sort()];
@@ -112,7 +117,7 @@ export default function Clientes({ clientes, headers }) {
           onPagadoUpdated={() => { setClienteSel(null); router.refresh(); }} />
       )}
       {showAdd && (
-        <AddClienteModal headers={headers} onClose={() => setShowAdd(false)}
+        <AddClienteModal headers={headers} fuenteOpts={fuenteOpts} onClose={() => setShowAdd(false)}
           onSaved={() => { setShowAdd(false); router.refresh(); }} />
       )}
     </div>
@@ -147,7 +152,7 @@ function Sel({ label, value, onChange, options }) {
 const CUOTA_LABELS = ['Primer pago','Segundo pago','Tercer pago','Cuarto pago'];
 const CUOTA_FIELDS = CUOTA_COLS.map(q => ({ monto: q.monto, fecha: q.fecha, met: q.met, estado: q.estado }));
 
-function AddClienteModal({ headers, onClose, onSaved }) {
+function AddClienteModal({ headers, fuenteOpts = [], onClose, onSaved }) {
   const [form, setForm] = useState({ 'Estado pago 1': 'NO' });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
@@ -204,7 +209,7 @@ function AddClienteModal({ headers, onClose, onSaved }) {
             <Field label="Nombre" required value={g('Nombre')} onChange={v => set('Nombre', v)} />
             <Field label="Email" type="email" value={g('Email')} onChange={v => set('Email', v)} />
             <Field label="Teléfono" value={g('Teléfono')} onChange={v => set('Teléfono', v)} />
-            <Field label="Fuente" value={g('Fuente')} onChange={v => set('Fuente', v)} placeholder="ADS, BIO, REPESCA…" />
+            <Sel   label="Fuente" value={g('Fuente')} onChange={v => set('Fuente', v)} options={fuenteOpts} />
             <Sel   label="Programa"  value={g('Programa')} onChange={v => set('Programa', v)} options={PROGRAMAS} />
             <Sel   label="Closer" value={g('CLOSER')} onChange={v => set('CLOSER', v)} options={CLOSERS} />
             <Field label="Setter" value={g('SETTER')} onChange={v => set('SETTER', v)} />
