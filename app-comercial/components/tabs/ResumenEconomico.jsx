@@ -144,7 +144,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
 
       {/* Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card label="Ventas nuevas"         value={m.ventasNuevas} sub="ventas del mes" color="blue" />
+        <Card label="Ventas nuevas"         value={(m.ventasNuevas || 0) + (m.ventasBack || 0)} sub="ventas del mes" color="blue" />
         <Card label="Monto total ventas"    value={fmt((m.montoFront || 0) + (m.montoBack || 0))} sub={`${(m.ventasNuevas || 0) + (m.ventasBack || 0)} clientes`} color="blue" />
         <Card label="Recolección"           value={fmt(m.cashTotal)} sub={`${pct(m.pctCC)} de cobro`} color="green" />
         <Card label="Ganancia"              value={fmt(m.ganancia)} sub={hayCostos ? `Rent. ${pct(m.rentabilidad)}` : 'Sin datos de costos'} color={m.ganancia >= 0 ? 'purple' : 'red'} />
