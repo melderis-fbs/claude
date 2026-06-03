@@ -14,7 +14,7 @@ export async function GET(request) {
 
     // Sin parámetro: devuelve la lista de tabs disponibles
     const tabs = await getEgresosTabs();
-    return Response.json({ ok: true, tabs });
+    return Response.json({ ok: true, tabs, urlConfigured: !!process.env.APPS_SCRIPT_EGRESOS_URL });
   } catch (err) {
     return Response.json({ ok: false, error: err.message }, { status: 500 });
   }

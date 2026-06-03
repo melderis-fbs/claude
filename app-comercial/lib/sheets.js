@@ -89,16 +89,13 @@ export async function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function getEgresosTabs() {
-  if (MOCK_MODE) return ['Egresos', 'Sueldos'];
+  if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
   const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'getTabs' });
   return data.tabs ?? [];
 }
 
 export async function getEgresosTab(tabName) {
-  if (MOCK_MODE) {
-    const { mockEgresos } = await import('./mockData.js');
-    return mockEgresos[tabName] ?? [];
-  }
+  if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
   const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'getTab', tab: tabName });
   return data.rows ?? [];
 }

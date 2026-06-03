@@ -12,10 +12,19 @@ function EgresosDiag() {
 
   const check = useCallback(async () => {
     setLoading(true);
+    setResult(null);
     try {
-      const res = await fetch('/api/egresos');
-      const data = await res.json();
-      setResult(data);
+      // 1) verificar tabs disponibles
+      const tabsRes  = await fetch('/api/egresos').then(r => r.json());
+      const dataRes  = await fetch('/api/egresos?tab=Consolidado').then(r => r.json());
+      const primerRow = dataRes.data?.[0] ?? null;
+      const columnas  = primerRow ? Object.keys(primerRow).filter(k => k !== '_rowIndex') : [];
+      setResult({
+        urlConfigured: tabsRes.urlConfigured,
+        tabsDisponibles: tabsRes.tabs,
+        columnas,
+        rawError: dataRes.error,
+      });
     } catch (e) {
       setResult({ error: e.message });
     } finally {
@@ -28,16 +37,47 @@ function EgresosDiag() {
       <p className="text-gray-500 text-sm">Sin datos de egresos. Verificá que:</p>
       <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
         <li>La variable <code className="bg-gray-100 px-1 rounded">APPS_SCRIPT_EGRESOS_URL</code> esté configurada en Vercel</li>
-        <li>La pestaña en la planilla se llame exactamente <strong>Consolidado</strong></li>
-        <li>La primera columna sea <strong>Categoria</strong> y las demás sean los meses (<strong>Enero</strong>, <strong>Febrero</strong>…)</li>
+        <li>La pestaña se llame exactamente <strong>Consolidado</strong></li>
+        <li>La primera columna sea <strong>Categoria</strong> y las demás <strong>Enero</strong>, <strong>Febrero</strong>…</li>
       </ul>
       <button onClick={check} disabled={loading}
         className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium transition-colors disabled:opacity-50">
         {loading ? 'Consultando…' : '🔍 Verificar conexión'}
       </button>
       {result && (
-        <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-600 break-all max-h-40 overflow-y-auto">
-          {JSON.stringify(result, null, 2)}
+        <div className="space-y-2 text-xs">
+          {result.error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-600 font-medium">
+              ❌ {result.error}
+            </div>
+          )}
+          <div className={`rounded-lg px-3 py-2 ${result.urlConfigured ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+            {result.urlConfigured
+              ? '✓ APPS_SCRIPT_EGRESOS_URL configurada'
+              : '❌ APPS_SCRIPT_EGRESOS_URL no está configurada en Vercel'}
+          </div>
+          {result.rawError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-600">
+              ❌ GAS error: {result.rawError}
+            </div>
+          )}
+          {Array.isArray(result.tabsDisponibles) && result.tabsDisponibles.length > 0 && (
+            <div className="bg-gray-50 rounded-lg px-3 py-2">
+              <span className="font-semibold text-gray-600">Pestañas: </span>
+              <span className="text-gray-500">{result.tabsDisponibles.join(', ')}</span>
+            </div>
+          )}
+          {result.columnas?.length > 0 && (
+            <div className="bg-gray-50 rounded-lg px-3 py-2">
+              <p className="font-semibold text-gray-600 mb-1">Columnas en "Consolidado":</p>
+              <p className="text-gray-500 break-all">{result.columnas.join(' · ')}</p>
+            </div>
+          )}
+          {result.urlConfigured && result.columnas?.length === 0 && !result.rawError && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
+              ⚠️ "Consolidado" existe pero no tiene datos, o la pestaña no existe.
+            </div>
+          )}
         </div>
       )}
     </div>
