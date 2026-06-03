@@ -3,6 +3,29 @@ import { useState, useMemo } from 'react';
 
 const PROGRAMAS = ['Todos','M1','M1+','M1.1','M2','Back','Starter'];
 
+// Convierte cualquier formato de fecha (ISO, DD/MM/YYYY) a "DD/MM/YYYY" legible
+function formatFecha(val) {
+  if (!val) return '—';
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return s || '—';
+}
+
+const CUOTA_COLS = [
+  { monto: 'Primer pago',  fecha: 'Fecha de ingreso(1er pago)', met: 'Met pago 1',  estado: 'Estado pago 1'  },
+  { monto: 'Segundo pago', fecha: 'Fecha 2do pago',             met: 'Met pago 2',  estado: 'Estado pago 2'  },
+  { monto: 'Tercer pago',  fecha: 'Fecha 3er pago',             met: 'Met pago 3',  estado: 'Estado pago 3'  },
+  { monto: 'Cuarto Pago',  fecha: 'Fecha 4to pago',             met: 'Met pago 4',  estado: 'Estado 4to pago' },
+];
+
+function getCuotasInfo(c) {
+  const all   = CUOTA_COLS.filter(q => parseFloat(String(c[q.monto]||'').replace(/[$,\s]/g,'')) > 0);
+  const pagas = all.filter(q => String(c[q.estado]||'').toUpperCase().trim() === 'SI');
+  if (!all.length) return '—';
+  return `${pagas.length}/${all.length}`;
+}
+
 export default function Clientes({ clientes }) {
   const [busqueda, setBusqueda] = useState('');
   const [programa, setPrograma] = useState('Todos');
@@ -52,14 +75,15 @@ export default function Clientes({ clientes }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas pagas','Monto pagado','Estatus','Ingreso'].map(h => (
+                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus','Ingreso'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtrados.map(c => {
-                const completo = String(c['Completado']||'').toUpperCase() === 'SI';
+                const cuotasInfo = getCuotasInfo(c);
+                const completo = cuotasInfo !== '—' && cuotasInfo.split('/')[0] === cuotasInfo.split('/')[1];
                 return (
                   <tr key={c._rowIndex}
                     onClick={() => setClienteSel(clienteSel?._rowIndex === c._rowIndex ? null : c)}
@@ -75,7 +99,7 @@ export default function Clientes({ clientes }) {
                     <td className="px-4 py-3 text-gray-700">${Number(c['Monto total']||0).toLocaleString('es-AR')}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {c['Cuotas pagas'] || '0'}/{c['Cuotas'] || '?'}
+                        {cuotasInfo}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
@@ -102,12 +126,13 @@ export default function Clientes({ clientes }) {
 }
 
 function FichaCliente({ cliente: c, onClose }) {
-  const cuotas = [
-    { n:1, monto: c['Primer pago'],  fecha: c['Fecha de ingreso(1er pago)'], met: c['Met pago 1'],  estado: c['Estado pago 1']  },
-    { n:2, monto: c['Segundo pago'], fecha: c['Fecha 2do pago'],             met: c['Met pago 2'],  estado: c['Estado pago 2']  },
-    { n:3, monto: c['Tercer pago'],  fecha: c['Fecha 3er pago'],             met: c['Met pago 3'],  estado: c['Estado pago 3']  },
-    { n:4, monto: c['Cuarto Pago'],  fecha: c['Fecha 4to pago'],             met: c['Met pago 4'],  estado: c['Estado 4to pago'] },
-  ].filter(q => q.monto && String(q.monto).trim());
+  const cuotas = CUOTA_COLS.map((q, i) => ({
+    n:      i + 1,
+    monto:  c[q.monto],
+    fecha:  c[q.fecha],
+    met:    c[q.met],
+    estado: c[q.estado],
+  })).filter(q => q.monto && parseFloat(String(q.monto).replace(/[$,\s]/g,'')) > 0);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -138,14 +163,14 @@ function FichaCliente({ cliente: c, onClose }) {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cuotas</p>
             <div className="space-y-2">
               {cuotas.map(q => {
-                const pagado = String(q.estado||'').toUpperCase() === 'SI';
+                const pagado = String(q.estado||'').toUpperCase().trim() === 'SI';
                 return (
                   <div key={q.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
                     <div className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${pagado ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>{q.n}</span>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">${Number(q.monto).toLocaleString('es-AR')}</p>
-                        <p className="text-xs text-gray-400">{q.fecha || '—'} · {q.met || '—'}</p>
+                        <p className="text-sm font-semibold text-gray-900">${Number(String(q.monto).replace(/[$,\s]/g,'')).toLocaleString('es-AR')}</p>
+                        <p className="text-xs text-gray-400">{formatFecha(q.fecha)} · {q.met || '—'}</p>
                       </div>
                     </div>
                     <span className={`text-xs font-semibold ${pagado ? 'text-emerald-600' : 'text-gray-400'}`}>
@@ -166,6 +191,10 @@ function FichaCliente({ cliente: c, onClose }) {
             <div>
               <p className="text-xs text-gray-400">Pagado</p>
               <p className="text-xl font-bold text-emerald-600">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Cuotas</p>
+              <p className="text-xl font-bold text-gray-700">{getCuotasInfo(c)}</p>
             </div>
           </div>
 
