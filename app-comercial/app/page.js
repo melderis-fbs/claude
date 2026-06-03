@@ -1,9 +1,9 @@
-import { getClientes, getClientesHeaders, getEgresosTab, getAbonos } from '../lib/sheets.js';
+import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
-  calcularProyeccion,
+  calcularProyeccion, calcularDeudores,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -11,11 +11,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   try {
-    const [clientes, headers, egresosRows, abonos] = await Promise.all([
+    const [clientes, headers, egresosRows, abonos, deudoresRecords] = await Promise.all([
       getClientes(),
       getClientesHeaders(),
-      getEgresosTab('Egresos').catch(() => []),
+      getEgresosTab('Consolidado').catch(() => []),
       getAbonos().catch(() => []),
+      getDeudores().catch(() => []),
     ]);
 
     const resumen          = calcularResumenMensual(clientes, egresosRows);
@@ -25,6 +26,7 @@ export default async function Home() {
     const cobrosSemanales  = calcularCobrosSemanales(clientes);
     const pendientesPorMes = calcularPendientesPorMes(clientes);
     const proyeccion       = calcularProyeccion(clientes);
+    const deudores         = calcularDeudores(clientes, deudoresRecords);
 
     return (
       <Dashboard
@@ -38,6 +40,7 @@ export default async function Home() {
         pendientesPorMes={pendientesPorMes}
         proyeccion={proyeccion}
         abonos={abonos}
+        deudores={deudores}
       />
     );
   } catch (err) {

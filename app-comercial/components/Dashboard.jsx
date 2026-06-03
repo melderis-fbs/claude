@@ -21,7 +21,7 @@ const TABS = [
 export default function Dashboard({
   clientes, headers, resumen, ventasPorMes, comisiones,
   cobranzas, cobrosSemanales, pendientesPorMes,
-  proyeccion, abonos,
+  proyeccion, abonos, deudores,
 }) {
   const [tab, setTab] = useState('resumen');
 
@@ -54,7 +54,7 @@ export default function Dashboard({
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} />}
         {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
-        {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} />}
+        {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} deudores={deudores} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}

@@ -188,57 +188,43 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
             </div>
           </div>
 
-          {/* Nuevas ventas del mes */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ventas del mes (primer pagos)</p>
-            <div className="space-y-1.5">
-              {[
-                ['Pago full',   fmt(m.cashNuevoFull || 0),       'text-gray-700'],
-                ['Financiado',  fmt(m.cashNuevoFinanciado || 0), 'text-gray-700'],
-                ['Argentina',   fmt(m.cashNuevoAR || 0),         'text-blue-600'],
-                ['Exterior',    fmt(m.cashNuevoExt || 0),        'text-indigo-600'],
-              ].map(([label, val, cls]) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{label}</span>
-                  <span className={`font-medium ${cls}`}>{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Matriz AR / Exterior */}
+          <table className="w-full text-sm mb-4">
+            <thead>
+              <tr>
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-2 w-1/4"></th>
+                <th className="text-right text-xs font-semibold text-blue-500 uppercase tracking-wider pb-2">Argentina</th>
+                <th className="text-right text-xs font-semibold text-indigo-500 uppercase tracking-wider pb-2">Exterior</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              <tr>
+                <td className="py-2 text-gray-500">Primer pagos</td>
+                <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashNuevoAR || 0)}</td>
+                <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashNuevoExt || 0)}</td>
+                <td className="py-2 text-right font-semibold text-gray-800">{fmt((m.cashNuevoAR || 0) + (m.cashNuevoExt || 0))}</td>
+              </tr>
+              <tr>
+                <td className="py-2 text-gray-500">Cuotas</td>
+                <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashCuotaAR || 0)}</td>
+                <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashCuotaExt || 0)}</td>
+                <td className="py-2 text-right font-semibold text-gray-800">{fmt(m.cashCuotaTotal || 0)}</td>
+              </tr>
+              <tr className="border-t-2 border-gray-200">
+                <td className="py-2 font-semibold text-gray-700">Total</td>
+                <td className="py-2 text-right font-bold text-blue-800">{fmt(m.cashTotalAR || 0)}</td>
+                <td className="py-2 text-right font-bold text-indigo-800">{fmt(m.cashTotalExt || 0)}</td>
+                <td className="py-2 text-right font-bold text-gray-900 text-base">{fmt(m.cashTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Cuotas de meses anteriores */}
-          {(m.cashCuotaTotal || 0) > 0 && (
-            <div className="mb-4 pt-3 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cuotas (meses anteriores)</p>
-              <div className="space-y-1.5">
-                {[
-                  ['Argentina',  fmt(m.cashCuotaAR || 0),    'text-blue-600'],
-                  ['Exterior',   fmt(m.cashCuotaExt || 0),   'text-indigo-600'],
-                  ['Total cuotas', fmt(m.cashCuotaTotal || 0), 'text-gray-800 font-semibold'],
-                ].map(([label, val, cls]) => (
-                  <div key={label} className="flex justify-between text-sm">
-                    <span className="text-gray-500">{label}</span>
-                    <span className={`font-medium ${cls}`}>{val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Totales */}
-          <div className="pt-3 border-t border-gray-200 space-y-1.5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Totales</p>
-            {[
-              ['Total ARS',    fmt(m.cashTotalAR || 0),  'text-blue-700 font-semibold'],
-              ['Total USD/Ext',fmt(m.cashTotalExt || 0), 'text-indigo-700 font-semibold'],
-              ['Total ingreso',fmt(m.cashTotal),          'text-gray-900 font-bold text-base'],
-            ].map(([label, val, cls]) => (
-              <div key={label} className="flex justify-between text-sm py-0.5">
-                <span className="text-gray-600">{label}</span>
-                <span className={cls}>{val}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-gray-400">
+            Pago full: <span className="font-medium text-gray-600">{fmt(m.cashNuevoFull || 0)}</span>
+            <span className="mx-2">·</span>
+            Financiado: <span className="font-medium text-gray-600">{fmt(m.cashNuevoFinanciado || 0)}</span>
+          </p>
         </div>
 
         {/* Costos */}
@@ -284,23 +270,6 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
               <p className="text-3xl font-bold text-blue-700">{hayCostos ? pct(m.rentabilidad) : '—'}</p>
             </div>
           </div>
-          {cobrosSemanales.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cobros esta semana</p>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {cobrosSemanales.map((c,i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${c.pagado ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                      <span className="text-gray-700 truncate max-w-32">{c.nombre}</span>
-                      <span className="text-gray-400 text-xs">C{c.cuota}</span>
-                    </div>
-                    <span className="font-medium text-gray-800">{fmt(c.monto)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

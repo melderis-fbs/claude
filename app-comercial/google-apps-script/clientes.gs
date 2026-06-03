@@ -6,13 +6,15 @@
 
 const TAB_CLIENTES = 'Seguimiento clientes';
 const TAB_ABONOS   = 'Abono';
+const TAB_DEUDORES = 'Deudores';
 
 function doGet(e) {
   const action = e.parameter.action;
   try {
-    if (action === 'getClientes') return ok(getClientes());
-    if (action === 'getHeaders')  return ok(getHeaders());
-    if (action === 'getAbonos')   return ok(getAbonos());
+    if (action === 'getClientes')  return ok(getClientes());
+    if (action === 'getHeaders')   return ok(getHeaders());
+    if (action === 'getAbonos')    return ok(getAbonos());
+    if (action === 'getDeudores')  return ok(getDeudores());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -23,10 +25,11 @@ function doPost(e) {
   const body = JSON.parse(e.postData.contents);
   const action = body.action;
   try {
-    if (action === 'append')      return ok(appendRow(body.rowValues));
-    if (action === 'update')      return ok(updateRow(body.rowIndex, body.rowValues));
-    if (action === 'updateField') return ok(updateField(body.rowIndex, body.headerName, body.value));
-    if (action === 'appendAbono') return ok(appendAbono(body.rowValues));
+    if (action === 'append')       return ok(appendRow(body.rowValues));
+    if (action === 'update')       return ok(updateRow(body.rowIndex, body.rowValues));
+    if (action === 'updateField')  return ok(updateField(body.rowIndex, body.headerName, body.value));
+    if (action === 'appendAbono')  return ok(appendAbono(body.rowValues));
+    if (action === 'upsertDeudor') return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -106,6 +109,24 @@ function getAbonos() {
   return { abonos };
 }
 
+function getDeudores() {
+  const sheet = getOrCreateDeudoresSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { deudores: [] };
+
+  const allValues = sheet.getRange(1, 1, lastRow, 5).getValues();
+  const headers = allValues[0];
+  const deudores = allValues.slice(1)
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj;
+    })
+    .filter(d => d.rowIndex || d['rowIndex']);
+
+  return { deudores };
+}
+
 // ── Escritura ─────────────────────────────────────────────────────────────────
 
 function appendRow(rowValues) {
@@ -136,7 +157,40 @@ function appendAbono(rowValues) {
   return { ok: true };
 }
 
+function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
+  const sheet = getOrCreateDeudoresSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const riCol  = headers.indexOf('rowIndex');
+  const cnCol  = headers.indexOf('cuotaNum');
+  const esCol  = headers.indexOf('estado');
+  const coCol  = headers.indexOf('comentario');
+  const fuCol  = headers.indexOf('fechaUpdate');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][riCol]) === String(rowIndex) && String(data[i][cnCol]) === String(cuotaNum)) {
+      sheet.getRange(i + 1, esCol + 1).setValue(estado);
+      sheet.getRange(i + 1, coCol + 1).setValue(comentario);
+      sheet.getRange(i + 1, fuCol + 1).setValue(new Date().toISOString());
+      return { ok: true };
+    }
+  }
+
+  sheet.appendRow([rowIndex, cuotaNum, estado, comentario, new Date().toISOString()]);
+  return { ok: true };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getOrCreateDeudoresSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TAB_DEUDORES);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB_DEUDORES);
+    sheet.appendRow(['rowIndex','cuotaNum','estado','comentario','fechaUpdate']);
+  }
+  return sheet;
+}
 
 function ok(data) {
   return ContentService

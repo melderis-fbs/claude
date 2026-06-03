@@ -167,13 +167,25 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     });
   }
 
+  const MESES_EGRESOS_COLS = {
+    'enero':'01','febrero':'02','marzo':'03','abril':'04','mayo':'05','junio':'06',
+    'julio':'07','agosto':'08','septiembre':'09','octubre':'10','noviembre':'11','diciembre':'12',
+  };
+  const anioEgresos = new Date().getFullYear();
   const egresosPorMes = {};
   for (const e of egresosRows) {
-    const mes = normalizarMes(e['Mes'] || e['mes']);
-    if (!mes || mes.startsWith('__')) continue;
-    if (!egresosPorMes[mes]) egresosPorMes[mes] = {};
-    const cat = String(e['Categoría'] || e['Categoria'] || e['categoria'] || 'Otros').trim();
-    egresosPorMes[mes][cat] = (egresosPorMes[mes][cat] || 0) + parseMonto(e['Monto'] || e['monto']);
+    const cat = String(e['Categoria'] || e['Categoría'] || e['CATEGORIA'] || '').trim();
+    if (!cat || /^total/i.test(cat)) continue;
+    for (const [key, val] of Object.entries(e)) {
+      if (key === '_rowIndex') continue;
+      const mesNum = MESES_EGRESOS_COLS[key.toLowerCase().trim()];
+      if (!mesNum) continue;
+      const monto = parseMonto(val);
+      if (!monto) continue;
+      const mesKey = `${anioEgresos}-${mesNum}`;
+      if (!egresosPorMes[mesKey]) egresosPorMes[mesKey] = {};
+      egresosPorMes[mesKey][cat] = (egresosPorMes[mesKey][cat] || 0) + monto;
+    }
   }
 
   const meses = [...new Set([...Object.keys(ventasPorMes), ...Object.keys(cashPorMes)])].sort();
@@ -470,4 +482,46 @@ export function calcularCobrosSemanales(clientes) {
     });
   }
   return cobros.sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
+}
+
+// ── Deudores ──────────────────────────────────────────────────────────────────
+
+export function calcularDeudores(clientes, deudoresRecords = []) {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const recMap = {};
+  for (const d of deudoresRecords) {
+    recMap[`${d.rowIndex}-${d.cuotaNum}`] = d;
+  }
+
+  const deudores = [];
+  for (const c of clientes) {
+    CUOTAS_DEF.forEach((q, i) => {
+      if (esPagado(c[q.estado])) return;
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const fecha = parseFechaToDate(c[q.fecha]);
+      if (!fecha || fecha >= hoy) return;
+
+      const key = `${c._rowIndex}-${i+1}`;
+      const rec = recMap[key] || {};
+      const diasMora = Math.floor((hoy - fecha) / (1000*60*60*24));
+
+      deudores.push({
+        nombre:      (c['Nombre']   || '').trim(),
+        programa:    (c['Programa'] || '').trim(),
+        closer:      (c['CLOSER']   || '').trim(),
+        cuota:       i + 1,
+        monto,
+        fecha:       c[q.fecha] || '',
+        diasMora,
+        rowIndex:    c._rowIndex,
+        campoEstado: q.estado,
+        estado:      rec.estado      || '',
+        comentario:  rec.comentario  || '',
+        fechaUpdate: rec.fechaUpdate || '',
+      });
+    });
+  }
+
+  return deudores.sort((a, b) => b.diasMora - a.diasMora);
 }

@@ -73,6 +73,19 @@ export async function appendAbono(rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendAbono', rowValues });
 }
 
+// ── DEUDORES ──────────────────────────────────────────────────────────────────
+
+export async function getDeudores() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getDeudores' });
+  return data.deudores ?? [];
+}
+
+export async function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
+  if (MOCK_MODE) throw new Error('No disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertDeudor', rowIndex, cuotaNum, estado, comentario });
+}
+
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function getEgresosTabs() {
