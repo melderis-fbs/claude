@@ -5,6 +5,21 @@ import { useRouter } from 'next/navigation';
 const fmt = n => n ? `$${Math.round(Number(n)).toLocaleString('es-AR')}` : '—';
 
 const CLOSERS = ['Kevin','Vicky','Braian','Fabricio'];
+const FORMAS_PAGO = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS'];
+
+const ESTADOS = [
+  { value: '',             label: '—',           color: 'bg-gray-100 text-gray-400'       },
+  { value: 'Ingresó',      label: 'Ingresó',      color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'En espera',    label: 'En espera',    color: 'bg-amber-100 text-amber-700'     },
+  { value: 'Seguimiento',  label: 'Seguimiento',  color: 'bg-blue-100 text-blue-700'       },
+];
+
+const estadoStyle = val => ESTADOS.find(e => e.value === val) || ESTADOS[0];
+
+function get(a, ...keys) {
+  for (const k of keys) if (a[k] !== undefined && a[k] !== '') return a[k];
+  return '';
+}
 
 export default function Abonos({ abonos }) {
   const router = useRouter();
@@ -14,16 +29,22 @@ export default function Abonos({ abonos }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const filtrados = abonos.filter(a => {
+  const [abonosLocal, setAbonosLocal] = useState(abonos);
+  const [editandoIdx, setEditandoIdx] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const filtrados = abonosLocal.filter(a => {
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
-    return String(a['Nombre']||a['nombre']||'').toLowerCase().includes(q) ||
-           String(a['Seguimiento']||a['seguimiento']||'').toLowerCase().includes(q);
+    return String(get(a,'Nombre','nombre')).toLowerCase().includes(q) ||
+           String(get(a,'Seguimiento','seguimiento')).toLowerCase().includes(q);
   });
 
-  const montoTotal  = abonos.reduce((s,a) => s + Number(a['Monto']||a['monto']||0), 0);
+  const montoTotal = abonosLocal.reduce((s,a) => s + Number(get(a,'Monto','monto') || 0), 0);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setE = (k, v) => setEditForm(f => ({ ...f, [k]: v }));
 
   const guardar = async () => {
     if (!form.nombre.trim()) { setError('Nombre requerido'); return; }
@@ -32,7 +53,7 @@ export default function Abonos({ abonos }) {
       const res = await fetch('/api/abonos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.closer, form.seguimiento, form.fecha] }),
+        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.closer, form.seguimiento, form.fecha, ''] }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
@@ -46,13 +67,62 @@ export default function Abonos({ abonos }) {
     }
   };
 
+  const abrirEditar = (a) => {
+    setEditandoIdx(a._rowIndex);
+    setEditForm({
+      nombre:      get(a,'Nombre','nombre'),
+      fecha:       get(a,'Fecha','fecha'),
+      monto:       get(a,'Monto','monto'),
+      formaPago:   get(a,'Forma de pago'),
+      closer:      get(a,'CLOSER','Closer','closer'),
+      seguimiento: get(a,'Seguimiento','seguimiento'),
+      estado:      get(a,'Estado','estado'),
+    });
+  };
+
+  const guardarEdicion = async (a) => {
+    setSavingEdit(true); setError('');
+    const campos = [
+      { header: 'Nombre',        val: editForm.nombre      },
+      { header: 'Fecha',         val: editForm.fecha        },
+      { header: 'Monto',         val: editForm.monto        },
+      { header: 'Forma de pago', val: editForm.formaPago    },
+      { header: 'CLOSER',        val: editForm.closer       },
+      { header: 'Seguimiento',   val: editForm.seguimiento  },
+      { header: 'Estado',        val: editForm.estado       },
+    ];
+    try {
+      for (const c of campos) {
+        const res = await fetch('/api/abonos', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rowIndex: a._rowIndex, headerName: c.header, value: c.val }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Error al guardar');
+      }
+      setAbonosLocal(prev => prev.map(ab =>
+        ab._rowIndex === a._rowIndex
+          ? { ...ab, 'Nombre': editForm.nombre, 'Fecha': editForm.fecha, 'Monto': editForm.monto,
+              'Forma de pago': editForm.formaPago, 'CLOSER': editForm.closer,
+              'Seguimiento': editForm.seguimiento, 'Estado': editForm.estado }
+          : ab
+      ));
+      setEditandoIdx(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   return (
-    <div className="space-y-5 max-w-4xl">
-      {/* Header + stats */}
+    <div className="space-y-5 max-w-5xl">
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total abonos / señas</p>
-          <p className="text-3xl font-bold text-gray-900">{abonos.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{abonosLocal.length}</p>
           <p className="text-xs text-gray-400 mt-1">reservas registradas</p>
         </div>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
@@ -99,9 +169,7 @@ export default function Abonos({ abonos }) {
               <select value={form.formaPago} onChange={e => set('formaPago', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white">
                 <option value="">— Elegir —</option>
-                {['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS'].map(o => (
-                  <option key={o}>{o}</option>
-                ))}
+                {FORMAS_PAGO.map(o => <option key={o}>{o}</option>)}
               </select>
             </div>
             <div>
@@ -132,38 +200,112 @@ export default function Abonos({ abonos }) {
         </div>
       )}
 
+      {error && !showForm && (
+        <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+      )}
+
       {/* Tabla */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">Abonos / Señas registradas</h3>
-          <span className="text-xs text-gray-400">{filtrados.length} de {abonos.length}</span>
+          <span className="text-xs text-gray-400">{filtrados.length} de {abonosLocal.length}</span>
         </div>
         {filtrados.length === 0 ? (
           <div className="px-5 py-10 text-center text-gray-400 text-sm">
-            {abonos.length === 0 ? 'No hay abonos registrados todavía.' : 'Sin resultados para esa búsqueda.'}
+            {abonosLocal.length === 0 ? 'No hay abonos registrados todavía.' : 'Sin resultados para esa búsqueda.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Nombre','Fecha','Monto','Forma de pago','Closer','Seguimiento'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtrados.map((a, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-900">{a['Nombre']||a['nombre']||'—'}</td>
-                  <td className="px-5 py-3 text-gray-500 text-xs">{a['Fecha']||a['fecha']||'—'}</td>
-                  <td className="px-5 py-3 font-semibold text-amber-700">{fmt(a['Monto']||a['monto'])}</td>
-                  <td className="px-5 py-3 text-gray-600">{a['Forma de pago']||a['forma de pago']||'—'}</td>
-                  <td className="px-5 py-3 text-gray-700">{a['CLOSER']||a['Closer']||a['closer']||'—'}</td>
-                  <td className="px-5 py-3 text-gray-500">{a['Seguimiento']||a['seguimiento']||'—'}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Nombre','Fecha','Monto','Forma de pago','Closer','Seguimiento','Estado',''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtrados.map((a, i) => {
+                  const isEditing = editandoIdx === a._rowIndex;
+                  if (isEditing) {
+                    return (
+                      <tr key={i} className="bg-blue-50/40">
+                        <td className="px-3 py-2">
+                          <input value={editForm.nombre} onChange={e => setE('nombre', e.target.value)}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input value={editForm.fecha} onChange={e => setE('fecha', e.target.value)} placeholder="DD/MM/YYYY"
+                            className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input type="number" value={editForm.monto} onChange={e => setE('monto', e.target.value)}
+                            className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select value={editForm.formaPago} onChange={e => setE('formaPago', e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            <option value="">—</option>
+                            {FORMAS_PAGO.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select value={editForm.closer} onChange={e => setE('closer', e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            <option value="">—</option>
+                            {CLOSERS.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <input value={editForm.seguimiento} onChange={e => setE('seguimiento', e.target.value)}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select value={editForm.estado} onChange={e => setE('estado', e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1">
+                            <button onClick={() => guardarEdicion(a)} disabled={savingEdit}
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded transition-colors">
+                              {savingEdit ? '…' : '✓'}
+                            </button>
+                            <button onClick={() => setEditandoIdx(null)}
+                              className="px-2.5 py-1 border border-gray-200 text-gray-500 text-xs rounded hover:bg-gray-50">
+                              ✕
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  const est = estadoStyle(get(a,'Estado','estado'));
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{get(a,'Nombre','nombre') || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{get(a,'Fecha','fecha') || '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-amber-700">{fmt(get(a,'Monto','monto'))}</td>
+                      <td className="px-4 py-3 text-gray-600">{get(a,'Forma de pago') || '—'}</td>
+                      <td className="px-4 py-3 text-gray-700">{get(a,'CLOSER','Closer','closer') || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{get(a,'Seguimiento','seguimiento') || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${est.color}`}>{est.label}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => abrirEditar(a)}
+                          className="text-gray-300 hover:text-blue-500 transition-colors text-base" title="Editar">
+                          ✏
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

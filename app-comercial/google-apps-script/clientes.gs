@@ -30,7 +30,8 @@ function doPost(e) {
     if (action === 'append')       return ok(appendRow(body.rowValues));
     if (action === 'update')       return ok(updateRow(body.rowIndex, body.rowValues));
     if (action === 'updateField')  return ok(updateField(body.rowIndex, body.headerName, body.value));
-    if (action === 'appendAbono')  return ok(appendAbono(body.rowValues));
+    if (action === 'appendAbono')       return ok(appendAbono(body.rowValues));
+    if (action === 'updateAbonoField')  return ok(updateAbonoField(body.rowIndex, body.headerName, body.value));
     if (action === 'upsertDeudor') return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario));
     if (action === 'appendFactura') return ok(appendFactura(body.rowValues));
     return ok({ error: 'Acción no reconocida', action });
@@ -157,9 +158,19 @@ function appendAbono(rowValues) {
   let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ABONOS);
   if (!sheet) {
     sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(TAB_ABONOS);
-    sheet.appendRow(['Nombre','Monto','Forma de pago','CLOSER','Seguimiento','Fecha']);
+    sheet.appendRow(['Nombre','Monto','Forma de pago','CLOSER','Seguimiento','Fecha','Estado']);
   }
   sheet.appendRow(rowValues);
+  return { ok: true };
+}
+
+function updateAbonoField(rowIndex, headerName, value) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ABONOS);
+  if (!sheet) throw new Error('Pestaña Abonos no encontrada');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = headers.findIndex(h => h.toString().trim() === headerName);
+  if (colIndex === -1) throw new Error('Columna no encontrada: ' + headerName);
+  sheet.getRange(rowIndex, colIndex + 1).setValue(value);
   return { ok: true };
 }
 

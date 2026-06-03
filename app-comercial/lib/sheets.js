@@ -75,6 +75,11 @@ export async function appendAbono(rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendAbono', rowValues });
 }
 
+export async function updateAbonoField(rowIndex, headerName, value) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'updateAbonoField', rowIndex, headerName, value });
+}
+
 // ── FACTURAS ──────────────────────────────────────────────────────────────────
 
 export async function getFacturas() {
