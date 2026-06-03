@@ -28,8 +28,8 @@ function EgresosDiag() {
       <p className="text-gray-500 text-sm">Sin datos de egresos. Verificá que:</p>
       <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
         <li>La variable <code className="bg-gray-100 px-1 rounded">APPS_SCRIPT_EGRESOS_URL</code> esté configurada en Vercel</li>
-        <li>La pestaña en la planilla se llame exactamente <strong>Egresos</strong></li>
-        <li>Las columnas sean: <strong>Mes</strong>, <strong>Categoría</strong>, <strong>Monto</strong></li>
+        <li>La pestaña en la planilla se llame exactamente <strong>Consolidado</strong></li>
+        <li>La primera columna sea <strong>Categoria</strong> y las demás sean los meses (<strong>Enero</strong>, <strong>Febrero</strong>…)</li>
       </ul>
       <button onClick={check} disabled={loading}
         className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium transition-colors disabled:opacity-50">
