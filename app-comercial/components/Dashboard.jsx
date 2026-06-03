@@ -54,7 +54,7 @@ export default function Dashboard({
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} />}
         {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
-        {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} deudores={deudores} />}
+        {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}

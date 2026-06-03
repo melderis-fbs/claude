@@ -488,26 +488,28 @@ export function calcularCobrosSemanales(clientes) {
 
 export function calcularDeudores(clientes, deudoresRecords = []) {
   const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const lunesEstaSemana = new Date(hoy);
+  lunesEstaSemana.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+  lunesEstaSemana.setHours(0,0,0,0);
+
   const recMap = {};
   for (const d of deudoresRecords) {
     recMap[`${d.rowIndex}-${d.cuotaNum}`] = d;
   }
 
   const deudores = [];
+  const includedKeys = new Set();
+
   for (const c of clientes) {
     CUOTAS_DEF.forEach((q, i) => {
       if (esPagado(c[q.estado])) return;
       const monto = parseMonto(c[q.monto]);
       if (!monto) return;
       const fecha = parseFechaToDate(c[q.fecha]);
-      // solo mostrar si fecha existe y es anterior al lunes de esta semana
-      if (!fecha) return;
-      const lunesEstaSemana = new Date(hoy);
-      lunesEstaSemana.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
-      lunesEstaSemana.setHours(0,0,0,0);
-      if (fecha >= lunesEstaSemana) return;
+      if (!fecha || fecha >= lunesEstaSemana) return;
 
       const key = `${c._rowIndex}-${i+1}`;
+      includedKeys.add(key);
       const rec = recMap[key] || {};
       const diasMora = Math.floor((hoy - fecha) / (1000*60*60*24));
 
@@ -528,5 +530,46 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
     });
   }
 
-  return deudores.sort((a, b) => b.diasMora - a.diasMora);
+  // Entradas manuales: registros en la hoja Deudores que no pasaron el filtro automático
+  for (const rec of deudoresRecords) {
+    const key = `${rec.rowIndex}-${rec.cuotaNum}`;
+    if (includedKeys.has(key)) continue;
+    if (rec.estado === 'Saldado') continue;
+
+    const c = clientes.find(cl => String(cl._rowIndex) === String(rec.rowIndex));
+    if (!c) continue;
+
+    const cuotaIdx = Number(rec.cuotaNum) - 1;
+    const q = CUOTAS_DEF[cuotaIdx];
+    if (!q) continue;
+
+    const monto = parseMonto(c[q.monto]);
+    if (!monto) continue;
+    if (esPagado(c[q.estado])) continue;
+
+    const fecha = parseFechaToDate(c[q.fecha]);
+    const diasMora = fecha ? Math.floor((hoy - fecha) / (1000*60*60*24)) : null;
+
+    deudores.push({
+      nombre:      (c['Nombre']   || '').trim(),
+      programa:    (c['Programa'] || '').trim(),
+      closer:      (c['CLOSER']   || '').trim(),
+      cuota:       Number(rec.cuotaNum),
+      monto,
+      fecha:       c[q.fecha] || '',
+      diasMora,
+      rowIndex:    c._rowIndex,
+      campoEstado: q.estado,
+      estado:      rec.estado      || '',
+      comentario:  rec.comentario  || '',
+      fechaUpdate: rec.fechaUpdate || '',
+    });
+  }
+
+  return deudores.sort((a, b) => {
+    if (a.diasMora === null && b.diasMora === null) return 0;
+    if (a.diasMora === null) return 1;
+    if (b.diasMora === null) return -1;
+    return b.diasMora - a.diasMora;
+  });
 }

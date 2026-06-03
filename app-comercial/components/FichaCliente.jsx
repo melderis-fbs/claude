@@ -38,9 +38,16 @@ export function getCuotasInfo(c) {
   return `${pagas.length}/${all.length}`;
 }
 
+const COMMENT_COLS = ['Notas', 'Comentario', 'Comentarios', 'Observaciones'];
+
 export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   const [marcando, setMarcando] = useState(new Set());
   const [error, setError] = useState('');
+
+  const commentField = COMMENT_COLS.find(col => col in c) || 'Notas';
+  const [comentario, setComentario] = useState(c[commentField] || '');
+  const [guardandoNota, setGuardandoNota] = useState(false);
+  const [notaGuardada, setNotaGuardada] = useState(false);
 
   const cuotas = CUOTA_COLS.map((q, i) => ({
     n: i+1, q,
@@ -49,6 +56,25 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
     met:    c[q.met],
     estado: c[q.estado],
   })).filter(x => x.monto && parseFloat(String(x.monto).replace(/[$,\s]/g,'')) > 0);
+
+  const guardarNota = async () => {
+    setGuardandoNota(true);
+    setError('');
+    try {
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: commentField, value: comentario }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      setNotaGuardada(true);
+      setTimeout(() => setNotaGuardada(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoNota(false);
+    }
+  };
 
   const marcarPagado = async (cuota) => {
     const key = String(cuota.n);
@@ -127,12 +153,24 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             <div><p className="text-xs text-gray-400">Cuotas</p><p className="text-xl font-bold text-gray-700">{getCuotasInfo(c)}</p></div>
           </div>
 
-          {c['Notas'] && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-              <p className="text-xs text-amber-600 font-semibold mb-1">Notas</p>
-              <p className="text-sm text-gray-700">{c['Notas']}</p>
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Notas / Comentarios</p>
+            <textarea
+              value={comentario}
+              onChange={e => setComentario(e.target.value)}
+              placeholder="Agregar nota sobre este cliente…"
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none"
+            />
+            <div className="flex justify-end mt-1.5">
+              <button onClick={guardarNota} disabled={guardandoNota}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+                  notaGuardada ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}>
+                {notaGuardada ? '✓ Guardado' : guardandoNota ? 'Guardando…' : 'Guardar nota'}
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

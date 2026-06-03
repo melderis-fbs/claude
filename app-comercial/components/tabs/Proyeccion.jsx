@@ -156,7 +156,26 @@ function VistaSemanal({ proyeccion }) {
 
 // ── Vista deudores ────────────────────────────────────────────────────────────
 
-function VistaDeudores({ deudores: initialDeudores }) {
+const CUOTAS_KEYS = [
+  { monto: 'Primer pago',  estado: 'Estado pago 1',   campoEstado: 'Estado pago 1'  },
+  { monto: 'Segundo pago', estado: 'Estado pago 2',   campoEstado: 'Estado pago 2'  },
+  { monto: 'Tercer pago',  estado: 'Estado pago 3',   campoEstado: 'Estado pago 3'  },
+  { monto: 'Cuarto Pago',  estado: 'Estado 4to pago', campoEstado: 'Estado 4to pago' },
+];
+
+function isPaid(val) {
+  if (val === true) return true;
+  const s = String(val || '').toUpperCase().trim();
+  return s === 'SI' || s === 'SÍ' || s === 'YES' || s === '1' || s === 'TRUE';
+}
+
+function parseMonto(val) {
+  if (!val && val !== 0) return 0;
+  const n = parseFloat(String(val).replace(/[$,\s]/g, '').replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const router = useRouter();
   const [items, setItems] = useState(initialDeudores);
   const [editando, setEditando] = useState(null);
@@ -164,6 +183,67 @@ function VistaDeudores({ deudores: initialDeudores }) {
   const [reporteModal, setReporteModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [mostrarSaldados, setMostrarSaldados] = useState(false);
+
+  // Agregar deudor manual
+  const [agregarModal, setAgregarModal] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [clienteSel, setClienteSel] = useState(null);
+  const [cuotaSel, setCuotaSel] = useState(null);
+  const [nuevoEstado, setNuevoEstado] = useState('');
+  const [nuevoComentario, setNuevoComentario] = useState('');
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false);
+
+  const clientesFiltrados = busqueda.length > 1
+    ? clientes.filter(cl => String(cl['Nombre'] || '').toLowerCase().includes(busqueda.toLowerCase())).slice(0, 8)
+    : [];
+
+  const cuotasDisponibles = clienteSel
+    ? CUOTAS_KEYS.map((q, i) => {
+        const monto = parseMonto(clienteSel[q.monto]);
+        return { cuota: i + 1, monto, q };
+      }).filter(x => x.monto > 0 && !isPaid(clienteSel[x.q.estado]))
+    : [];
+
+  const abrirAgregar = () => {
+    setBusqueda(''); setClienteSel(null); setCuotaSel(null);
+    setNuevoEstado(''); setNuevoComentario('');
+    setAgregarModal(true);
+  };
+
+  const agregarDeudor = async () => {
+    if (!clienteSel || !cuotaSel) return;
+    setGuardandoNuevo(true);
+    try {
+      const res = await fetch('/api/deudores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: nuevoComentario }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      const yaExiste = items.some(d => d.rowIndex === clienteSel._rowIndex && d.cuota === cuotaSel.cuota);
+      if (!yaExiste) {
+        setItems(prev => [...prev, {
+          nombre:      (clienteSel['Nombre']   || '').trim(),
+          programa:    (clienteSel['Programa'] || '').trim(),
+          closer:      (clienteSel['CLOSER']   || '').trim(),
+          cuota:       cuotaSel.cuota,
+          monto:       cuotaSel.monto,
+          fecha:       '',
+          diasMora:    null,
+          rowIndex:    clienteSel._rowIndex,
+          campoEstado: cuotaSel.q.campoEstado,
+          estado:      nuevoEstado,
+          comentario:  nuevoComentario,
+          fechaUpdate: '',
+        }]);
+      }
+      setAgregarModal(false);
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setGuardandoNuevo(false);
+    }
+  };
 
   const visibles = items.filter(d => mostrarSaldados || d.estado !== 'Saldado');
   const totalMora = visibles.filter(d => d.estado !== 'Saldado').reduce((a,d) => a + d.monto, 0);
@@ -266,10 +346,14 @@ function VistaDeudores({ deudores: initialDeudores }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button onClick={() => setReporteModal(true)}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
           📤 Generar reporte Slack
+        </button>
+        <button onClick={abrirAgregar}
+          className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
+          + Agregar deudor
         </button>
         <button onClick={() => setMostrarSaldados(v => !v)}
           className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors">
@@ -301,9 +385,10 @@ function VistaDeudores({ deudores: initialDeudores }) {
                     <td className="px-4 py-3 text-gray-500 font-medium">C{d.cuota}</td>
                     <td className="px-4 py-3 font-semibold text-red-600">{fmt(d.monto)}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-amber-600' : 'text-gray-500'}`}>
-                        {d.diasMora}d
-                      </span>
+                      {d.diasMora === null
+                        ? <span className="text-xs text-gray-400 italic">Sin fecha</span>
+                        : <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-amber-600' : 'text-gray-500'}`}>{d.diasMora}d</span>
+                      }
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-sm">{d.closer || '—'}</td>
                     <td className="px-4 py-3">
@@ -367,6 +452,111 @@ function VistaDeudores({ deudores: initialDeudores }) {
         </div>
       )}
 
+      {/* Modal agregar deudor */}
+      {agregarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAgregarModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Agregar deudor</h3>
+              <button onClick={() => setAgregarModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Buscar cliente */}
+              <div className="relative">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Buscar cliente</label>
+                {clienteSel ? (
+                  <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">{clienteSel['Nombre']}</p>
+                      <p className="text-xs text-blue-600">{clienteSel['Programa'] || '—'} · {clienteSel['CLOSER'] || '—'}</p>
+                    </div>
+                    <button onClick={() => { setClienteSel(null); setCuotaSel(null); setBusqueda(''); }}
+                      className="text-blue-400 hover:text-blue-700 text-lg ml-2">×</button>
+                  </div>
+                ) : (
+                  <>
+                    <input value={busqueda} onChange={e => setBusqueda(e.target.value)} autoFocus
+                      placeholder="Escribí el nombre del cliente…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    {clientesFiltrados.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {clientesFiltrados.map(cl => (
+                          <button key={cl._rowIndex} onClick={() => { setClienteSel(cl); setBusqueda(''); setCuotaSel(null); }}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b border-gray-100 last:border-0">
+                            <p className="font-medium text-gray-900">{cl['Nombre']}</p>
+                            <p className="text-xs text-gray-400">{cl['Programa'] || '—'} · {cl['CLOSER'] || '—'}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {busqueda.length > 1 && clientesFiltrados.length === 0 && (
+                      <p className="text-xs text-gray-400 mt-1">Sin resultados</p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Cuota */}
+              {clienteSel && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2">Cuota pendiente</label>
+                  {cuotasDisponibles.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">Este cliente no tiene cuotas pendientes con monto.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {cuotasDisponibles.map(x => (
+                        <button key={x.cuota} onClick={() => setCuotaSel(x)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+                            cuotaSel?.cuota === x.cuota
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                          }`}>
+                          C{x.cuota} — ${Math.round(x.monto).toLocaleString('es-AR')}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Estado */}
+              {cuotaSel && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Estado inicial</label>
+                    <div className="flex flex-wrap gap-2">
+                      {ESTADOS.map(e => (
+                        <button key={e.value} onClick={() => setNuevoEstado(e.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+                            nuevoEstado === e.value ? `${e.color} border-current` : 'bg-white border-transparent text-gray-500 hover:border-gray-200'
+                          }`}>
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Comentario</label>
+                    <textarea value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)}
+                      placeholder="Situación actual, última comunicación…"
+                      rows={2}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setAgregarModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+                <button onClick={agregarDeudor} disabled={!clienteSel || !cuotaSel || guardandoNuevo}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40">
+                  {guardandoNuevo ? 'Guardando…' : 'Agregar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal reporte */}
       {reporteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReporteModal(false)}>
@@ -392,7 +582,7 @@ function VistaDeudores({ deudores: initialDeudores }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function Proyeccion({ proyeccion, deudores = [] }) {
+export default function Proyeccion({ proyeccion, deudores = [], clientes = [] }) {
   const [vista, setVista] = useState('semana');
   const deudoresActivos = deudores.filter(d => d.estado !== 'Saldado');
 
@@ -413,7 +603,7 @@ export default function Proyeccion({ proyeccion, deudores = [] }) {
       </div>
 
       {vista === 'semana'   && <VistaSemanal proyeccion={proyeccion} />}
-      {vista === 'deudores' && <VistaDeudores deudores={deudores} />}
+      {vista === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
     </div>
   );
 }
