@@ -118,9 +118,15 @@ function esEfectivo(metodo) {
   return s.includes('EFECTIVO');
 }
 
-function esMetodoAR(metodo) {
+function esExterior(metodo) {
   const s = String(metodo || '').toUpperCase();
-  return (s.includes('ARS') || s.includes('PESOS')) && !s.includes('EFECTIVO');
+  return s.includes('STRIPE') || s.includes('WISE') || s.includes('PAYPAL')
+      || s.includes('PAYONEER') || s.includes('CRIPTO') || s.includes('CRYPTO');
+}
+
+// Argentina = todo lo que no sea Efectivo ni plataforma internacional explícita
+function esMetodoAR(metodo) {
+  return !esEfectivo(metodo) && !esExterior(metodo);
 }
 
 export function calcularResumenMensual(clientes, egresosRows = []) {
@@ -136,9 +142,9 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       else {
         ventasPorMes[mesIngreso].nuevas++; ventasPorMes[mesIngreso].front += monto;
         const met = c['Met pago 1'] || '';
-        if (esEfectivo(met))      { ventasPorMes[mesIngreso].efectivo++; ventasPorMes[mesIngreso].efectivoMonto += monto; }
-        else if (esMetodoAR(met)) { ventasPorMes[mesIngreso].ar++;       ventasPorMes[mesIngreso].arMonto       += monto; }
-        else if (met)             { ventasPorMes[mesIngreso].ext++;      ventasPorMes[mesIngreso].extMonto      += monto; }
+        if (esEfectivo(met))       { ventasPorMes[mesIngreso].efectivo++; ventasPorMes[mesIngreso].efectivoMonto += monto; }
+        else if (esExterior(met))  { ventasPorMes[mesIngreso].ext++;      ventasPorMes[mesIngreso].extMonto      += monto; }
+        else                       { ventasPorMes[mesIngreso].ar++;       ventasPorMes[mesIngreso].arMonto       += monto; }
       }
     }
     CUOTAS_DEF.forEach((q, qi) => {
@@ -159,19 +165,19 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       else        cashPorMes[mes].front += monto;
       cashPorMes[mes].porMetodo[met] = (cashPorMes[mes].porMetodo[met] || 0) + monto;
       if (!isBack) {
-        const isAR = esMetodoAR(met);
-        const isEf = esEfectivo(met);
+        const isEf  = esEfectivo(met);
+        const isExt = esExterior(met);
         if (qi === 0) {
           if (Number(c['Cuotas'] || 1) <= 1) cashPorMes[mes].nuevoFull += monto;
           else cashPorMes[mes].nuevoFinanciado += monto;
-          if (isAR)      cashPorMes[mes].nuevoAR       += monto;
-          else if (isEf) cashPorMes[mes].nuevoEfectivo += monto;
-          else           cashPorMes[mes].nuevoExt       += monto;
+          if (isEf)       cashPorMes[mes].nuevoEfectivo += monto;
+          else if (isExt) cashPorMes[mes].nuevoExt       += monto;
+          else            cashPorMes[mes].nuevoAR         += monto;
         } else {
           cashPorMes[mes].cuotaTotal += monto;
-          if (isAR)      cashPorMes[mes].cuotaAR       += monto;
-          else if (isEf) cashPorMes[mes].cuotaEfectivo += monto;
-          else           cashPorMes[mes].cuotaExt       += monto;
+          if (isEf)       cashPorMes[mes].cuotaEfectivo += monto;
+          else if (isExt) cashPorMes[mes].cuotaExt       += monto;
+          else            cashPorMes[mes].cuotaAR         += monto;
         }
       }
     });
