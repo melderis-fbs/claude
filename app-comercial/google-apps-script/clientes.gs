@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TAB_CLIENTES = 'Seguimiento clientes';
-const TAB_ABONOS   = 'Abono';
+const TAB_ABONOS   = 'Abonos';
 const TAB_DEUDORES = 'Deudores';
 const TAB_FACTURAS = 'Facturas';
 
