@@ -205,7 +205,9 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     const c = cashPorMes[mes]   || { total:0, front:0, back:0, porMetodo:{}, nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0, cuotaTotal:0, cuotaAR:0, cuotaExt:0 };
     const costos = egresosPorMes[mes] || {};
     const totalCostos = Object.values(costos).reduce((a,b) => a+b, 0);
-    const ganancia = c.front - totalCostos;
+    // Ganancia = venta nueva (monto contratado front) - costos
+    // Rentabilidad = % costos sobre venta nueva
+    const ganancia = v.front - totalCostos;
     const pctCC = v.front > 0 ? (c.front / v.front) * 100 : 0;
     return {
       mes, label: mesLabel(mes),
@@ -220,7 +222,7 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       cashCuotaTotal: c.cuotaTotal, cashCuotaAR: c.cuotaAR, cashCuotaExt: c.cuotaExt,
       cashTotalAR: c.nuevoAR + c.cuotaAR, cashTotalExt: c.nuevoExt + c.cuotaExt,
       costos, totalCostos, ganancia,
-      rentabilidad: c.front > 0 ? (ganancia / c.front) * 100 : 0,
+      rentabilidad: v.front > 0 ? (ganancia / v.front) * 100 : 0,
     };
   });
 }
