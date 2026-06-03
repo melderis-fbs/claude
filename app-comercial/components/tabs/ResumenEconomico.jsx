@@ -16,6 +16,7 @@ function EgresosDiag() {
     try {
       const tabsRes = await fetch('/api/egresos').then(r => r.json());
       const dataRes = await fetch('/api/egresos?tab=Consolidado').then(r => r.json());
+      const rawRes  = await fetch('/api/egresos?tab=Consolidado&raw=1').then(r => r.json());
       const primerRow = dataRes.data?.[0] ?? null;
       const columnas  = primerRow ? Object.keys(primerRow).filter(k => k !== '_rowIndex') : [];
       setResult({
@@ -24,7 +25,7 @@ function EgresosDiag() {
         rowCount: Array.isArray(dataRes.data) ? dataRes.data.length : '?',
         columnas,
         rawError: dataRes.error,
-        rawSnippet: JSON.stringify(dataRes).slice(0, 600),
+        rawGas: rawRes.rawGas ?? JSON.stringify(rawRes).slice(0, 600),
       });
     } catch (e) {
       setResult({ error: e.message });
@@ -77,9 +78,9 @@ function EgresosDiag() {
           {result.urlConfigured && result.columnas?.length === 0 && !result.rawError && (
             <div className="space-y-2">
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
-                ⚠️ GAS devuelve {result.rowCount} filas. Respuesta cruda:
+                ⚠️ GAS devuelve {result.rowCount} filas. Respuesta RAW del GAS:
               </div>
-              <pre className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all whitespace-pre-wrap overflow-x-auto max-h-40">{result.rawSnippet}</pre>
+              <pre className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all whitespace-pre-wrap overflow-x-auto max-h-48">{result.rawGas}</pre>
             </div>
           )}
         </div>
