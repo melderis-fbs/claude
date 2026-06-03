@@ -21,9 +21,24 @@ const CUOTA_COLS = [
   { monto: 'Cuarto Pago',  fecha: 'Fecha 4to pago',             met: 'Met pago 4',  estado: 'Estado 4to pago' },
 ];
 
+function esPagadoLocal(val) {
+  if (val === true) return true;
+  const s = String(val || '').toUpperCase().trim();
+  return s === 'SI' || s === 'SÍ' || s === 'YES' || s === '1' || s === 'TRUE';
+}
+
+function traducirBoolean(val) {
+  if (val === true)  return 'Si';
+  if (val === false) return 'No';
+  const s = String(val || '').trim().toUpperCase();
+  if (s === 'SI' || s === 'SÍ' || s === 'TRUE' || s === 'YES' || s === '1') return 'Si';
+  if (s === 'NO'  || s === 'FALSE' || s === '0') return 'No';
+  return val || '—';
+}
+
 function getCuotasInfo(c) {
   const all   = CUOTA_COLS.filter(q => parseFloat(String(c[q.monto]||'').replace(/[$,\s]/g,'')) > 0);
-  const pagas = all.filter(q => String(c[q.estado]||'').toUpperCase().trim() === 'SI');
+  const pagas = all.filter(q => esPagadoLocal(c[q.estado]));
   if (!all.length) return '—';
   return `${pagas.length}/${all.length}`;
 }
@@ -179,13 +194,13 @@ function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
           {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[['Programa',c['Programa']],['Fuente',c['Fuente']],['Ingreso',c['Ingreso']],
-              ['Closer',c['CLOSER']],['Setter',c['SETTER']],['Estatus',c['Estatus']],
-              ['CRM',c['CRM']],['Contrato',c['Contrato']],['Completado',c['Completado']]
-            ].map(([label, val]) => (
+            {[['Programa',c['Programa'],false],['Fuente',c['Fuente'],false],['Ingreso',c['Ingreso'],false],
+              ['Closer',c['CLOSER'],false],['Setter',c['SETTER'],false],['Estatus',c['Estatus'],false],
+              ['CRM',c['CRM'],true],['Contrato',c['Contrato'],true],['Completado',c['Completado'],true]
+            ].map(([label, val, isBoolean]) => (
               <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
                 <p className="text-xs text-gray-400 font-medium">{label}</p>
-                <p className="text-sm font-semibold text-gray-800 mt-0.5">{val || '—'}</p>
+                <p className="text-sm font-semibold text-gray-800 mt-0.5">{isBoolean ? traducirBoolean(val) : (val || '—')}</p>
               </div>
             ))}
           </div>
@@ -194,7 +209,7 @@ function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cuotas</p>
             <div className="space-y-2">
               {cuotas.map(x => {
-                const pagado = String(x.estado||'').toUpperCase().trim() === 'SI';
+                const pagado = esPagadoLocal(x.estado);
                 const enProceso = marcando.has(String(x.n));
                 return (
                   <div key={x.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado || enProceso ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>

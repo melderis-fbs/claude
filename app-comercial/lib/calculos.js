@@ -112,6 +112,11 @@ export function getPagosCliente(cliente) {
 
 // ── Resumen económico ─────────────────────────────────────────────────────────
 
+function esMetodoAR(metodo) {
+  const s = String(metodo || '').toUpperCase();
+  return s.includes('ARS') || s.includes('EFECTIVO') || s.includes('PESOS');
+}
+
 export function calcularResumenMensual(clientes, egresosRows = []) {
   const ventasPorMes = {};
   const cashPorMes   = {};
@@ -119,10 +124,15 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
   for (const c of clientes) {
     const mesIngreso = normalizarIngreso(c['Ingreso'], c);
     if (mesIngreso) {
-      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0 };
+      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0 };
       const monto = parseMonto(c['Monto total']);
       if (esBack(c)) { ventasPorMes[mesIngreso].back++;   ventasPorMes[mesIngreso].montoBack += monto; }
-      else           { ventasPorMes[mesIngreso].nuevas++; ventasPorMes[mesIngreso].front    += monto; }
+      else {
+        ventasPorMes[mesIngreso].nuevas++; ventasPorMes[mesIngreso].front += monto;
+        const met = c['Met pago 1'] || '';
+        if (esMetodoAR(met)) { ventasPorMes[mesIngreso].ar++; ventasPorMes[mesIngreso].arMonto += monto; }
+        else if (met)        { ventasPorMes[mesIngreso].ext++; ventasPorMes[mesIngreso].extMonto += monto; }
+      }
     }
     for (const p of getPagosCliente(c)) {
       if (!p.pagado || !p.mes) continue;
@@ -147,7 +157,7 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
   const meses = [...new Set([...Object.keys(ventasPorMes), ...Object.keys(cashPorMes)])].sort();
 
   return meses.map(mes => {
-    const v = ventasPorMes[mes] || { nuevas:0, back:0, front:0, montoBack:0 };
+    const v = ventasPorMes[mes] || { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0 };
     const c = cashPorMes[mes]   || { total:0, front:0, back:0, porMetodo:{} };
     const costos = egresosPorMes[mes] || {};
     const totalCostos = Object.values(costos).reduce((a,b) => a+b, 0);
@@ -157,6 +167,8 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       mes, label: mesLabel(mes),
       ventasNuevas: v.nuevas, ventasBack: v.back, ventasTotal: v.nuevas + v.back,
       montoFront: v.front, montoBack: v.montoBack, montoTotal: v.front + v.montoBack,
+      ventasAR: v.ar, montoAR: v.arMonto,
+      ventasExt: v.ext, montoExt: v.extMonto,
       cashTotal: c.total, cashFront: c.front, cashBack: c.back,
       cashPorMetodo: c.porMetodo, pctCC,
       costos, totalCostos, ganancia,
@@ -248,13 +260,16 @@ export function calcularComisiones(clientes) {
 export function calcularCobranzas(clientes) {
   const porMes = {};
   for (const c of clientes) {
-    for (const p of getPagosCliente(c)) {
-      if (!p.mes) continue;
-      if (!porMes[p.mes]) porMes[p.mes] = { aCobrar:0, cobrado:0, pendiente:0 };
-      porMes[p.mes].aCobrar += p.monto;
-      if (p.pagado) porMes[p.mes].cobrado   += p.monto;
-      else          porMes[p.mes].pendiente += p.monto;
-    }
+    CUOTAS_DEF.slice(1).forEach(q => {
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const mes = normalizarMes(c[q.fecha]);
+      if (!mes || mes.startsWith('__')) return;
+      if (!porMes[mes]) porMes[mes] = { aCobrar:0, cobrado:0, pendiente:0 };
+      porMes[mes].aCobrar += monto;
+      if (esPagado(c[q.estado])) porMes[mes].cobrado   += monto;
+      else                        porMes[mes].pendiente += monto;
+    });
   }
   return Object.entries(porMes).sort(([a],[b])=>a.localeCompare(b))
     .map(([mes, d]) => ({ mes, label: mesLabel(mes), ...d,
@@ -266,6 +281,7 @@ export function calcularPendientesPorMes(clientes) {
   const porMes = {};
   for (const c of clientes) {
     CUOTAS_DEF.forEach((q, i) => {
+      if (i === 0) return; // primer pago va en Ventas, no en Cobranzas
       if (esPagado(c[q.estado])) return;
       const monto = parseMonto(c[q.monto]);
       if (!monto) return;
