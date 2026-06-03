@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation';
 
 const fmt = n => n ? `$${Math.round(Number(n)).toLocaleString('es-AR')}` : '—';
 
+const CLOSERS = ['Kevin','Vicky','Braian','Fabricio'];
+
 export default function Abonos({ abonos }) {
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nombre:'', monto:'', formaPago:'', seguimiento:'' });
+  const [form, setForm] = useState({ nombre:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,11 +32,11 @@ export default function Abonos({ abonos }) {
       const res = await fetch('/api/abonos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.seguimiento] }),
+        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.closer, form.seguimiento] }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      setForm({ nombre:'', monto:'', formaPago:'', seguimiento:'' });
+      setForm({ nombre:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
       setShowForm(false);
       router.refresh();
     } catch (err) {
@@ -98,6 +100,14 @@ export default function Abonos({ abonos }) {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Closer</label>
+              <select value={form.closer} onChange={e => set('closer', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                <option value="">— Elegir —</option>
+                {CLOSERS.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">Seguimiento</label>
               <input value={form.seguimiento} onChange={e => set('seguimiento', e.target.value)}
                 placeholder="Estado, notas…"
@@ -131,7 +141,7 @@ export default function Abonos({ abonos }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['Nombre','Monto','Forma de pago','Seguimiento'].map(h => (
+                {['Nombre','Monto','Forma de pago','Closer','Seguimiento'].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -142,6 +152,7 @@ export default function Abonos({ abonos }) {
                   <td className="px-5 py-3 font-medium text-gray-900">{a['Nombre']||a['nombre']||'—'}</td>
                   <td className="px-5 py-3 font-semibold text-amber-700">{fmt(a['Monto']||a['monto'])}</td>
                   <td className="px-5 py-3 text-gray-600">{a['Forma de pago']||a['forma de pago']||'—'}</td>
+                  <td className="px-5 py-3 text-gray-700">{a['CLOSER']||a['Closer']||a['closer']||'—'}</td>
                   <td className="px-5 py-3 text-gray-500">{a['Seguimiento']||a['seguimiento']||'—'}</td>
                 </tr>
               ))}
