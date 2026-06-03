@@ -52,7 +52,7 @@ export default function Dashboard({
 
       <main className="flex-1 overflow-auto p-6">
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} />}
-        {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} />}
+        {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
         {tab === 'proyeccion' && <Proyeccion proyeccion={proyeccion} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}

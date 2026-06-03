@@ -1,10 +1,48 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => n == null ? '—' : `${n.toFixed(1)}%`;
 
 const COST_CATS = ['Sueldos','Publicidad','Apps','Impuestos','Formación','Gastos Admin','Extras','Retiros'];
+
+function EgresosDiag() {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const check = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/egresos');
+      const data = await res.json();
+      setResult(data);
+    } catch (e) {
+      setResult({ error: e.message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-gray-500 text-sm">Sin datos de egresos. Verificá que:</p>
+      <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
+        <li>La variable <code className="bg-gray-100 px-1 rounded">APPS_SCRIPT_EGRESOS_URL</code> esté configurada en Vercel</li>
+        <li>La pestaña en la planilla se llame exactamente <strong>Egresos</strong></li>
+        <li>Las columnas sean: <strong>Mes</strong>, <strong>Categoría</strong>, <strong>Monto</strong></li>
+      </ul>
+      <button onClick={check} disabled={loading}
+        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium transition-colors disabled:opacity-50">
+        {loading ? 'Consultando…' : '🔍 Verificar conexión'}
+      </button>
+      {result && (
+        <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-600 break-all max-h-40 overflow-y-auto">
+          {JSON.stringify(result, null, 2)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Card({ label, value, sub, color = 'blue' }) {
   const styles = {
@@ -135,59 +173,72 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
           </div>
         </div>
 
-        {/* Recolección */}
+        {/* Recolección detallada */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Recolección — {m.label}</h3>
 
-          {/* Progreso de cobro */}
+          {/* Progreso */}
           <div className="mb-5">
             <div className="flex justify-between text-sm mb-1.5">
               <span className="text-gray-500">Cobrado de ventas front</span>
               <span className="font-bold text-emerald-600">{pct(m.pctCC)}</span>
             </div>
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-3 bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(m.pctCC || 0, 100)}%` }} />
-            </div>
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>{fmt(m.cashFront)} cobrado</span>
-              <span>de {fmt(m.montoFront)}</span>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(m.pctCC || 0, 100)}%` }} />
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          {/* Nuevas ventas del mes */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ventas del mes (primer pagos)</p>
+            <div className="space-y-1.5">
+              {[
+                ['Pago full',   fmt(m.cashNuevoFull || 0),       'text-gray-700'],
+                ['Financiado',  fmt(m.cashNuevoFinanciado || 0), 'text-gray-700'],
+                ['Argentina',   fmt(m.cashNuevoAR || 0),         'text-blue-600'],
+                ['Exterior',    fmt(m.cashNuevoExt || 0),        'text-indigo-600'],
+              ].map(([label, val, cls]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{label}</span>
+                  <span className={`font-medium ${cls}`}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cuotas de meses anteriores */}
+          {(m.cashCuotaTotal || 0) > 0 && (
+            <div className="mb-4 pt-3 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cuotas (meses anteriores)</p>
+              <div className="space-y-1.5">
+                {[
+                  ['Argentina',  fmt(m.cashCuotaAR || 0),    'text-blue-600'],
+                  ['Exterior',   fmt(m.cashCuotaExt || 0),   'text-indigo-600'],
+                  ['Total cuotas', fmt(m.cashCuotaTotal || 0), 'text-gray-800 font-semibold'],
+                ].map(([label, val, cls]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-gray-500">{label}</span>
+                    <span className={`font-medium ${cls}`}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Totales */}
+          <div className="pt-3 border-t border-gray-200 space-y-1.5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Totales</p>
             {[
-              ['Recolección front', fmt(m.cashFront), 'text-emerald-600'],
-              ['Recolección back',  fmt(m.cashBack),  'text-gray-700'],
-              ['Total recolectado', fmt(m.cashTotal),  'text-gray-900 font-bold'],
+              ['Total ARS',    fmt(m.cashTotalAR || 0),  'text-blue-700 font-semibold'],
+              ['Total USD/Ext',fmt(m.cashTotalExt || 0), 'text-indigo-700 font-semibold'],
+              ['Total ingreso',fmt(m.cashTotal),          'text-gray-900 font-bold text-base'],
             ].map(([label, val, cls]) => (
-              <div key={label} className="flex justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                <span className="text-gray-500">{label}</span>
+              <div key={label} className="flex justify-between text-sm py-0.5">
+                <span className="text-gray-600">{label}</span>
                 <span className={cls}>{val}</span>
               </div>
             ))}
           </div>
-
-          {Object.keys(m.cashPorMetodo).length > 0 && (
-            <div className="mt-5 pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Por método de pago</p>
-              <div className="space-y-2">
-                {Object.entries(m.cashPorMetodo).sort(([,a],[,b])=>b-a).map(([met, val]) => {
-                  const pctMet = m.cashTotal > 0 ? (val / m.cashTotal) * 100 : 0;
-                  return (
-                    <div key={met}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{met}</span>
-                        <span className="font-medium text-gray-800">{fmt(val)}</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-1.5 bg-blue-400 rounded-full" style={{ width: `${pctMet}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Costos */}
@@ -216,7 +267,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-gray-400 text-sm">Sin datos de egresos.<br/><span className="text-xs">Verificá la conexión con la planilla de egresos.</span></p>
+            <EgresosDiag />
           )}
         </div>
 

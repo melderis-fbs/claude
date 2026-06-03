@@ -1,11 +1,15 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import FichaCliente from '../FichaCliente.jsx';
 
 const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
 
-export default function Ventas({ ventasPorMes }) {
+export default function Ventas({ ventasPorMes, clientes = [] }) {
+  const router = useRouter();
   const [mesSel, setMesSel] = useState(ventasPorMes[ventasPorMes.length - 1]?.mes ?? '');
-  const [filtro, setFiltro] = useState('todos'); // 'todos' | 'nuevas' | 'back'
+  const [filtro, setFiltro] = useState('todos');
+  const [clienteSel, setClienteSel] = useState(null);
 
   const mes = ventasPorMes.find(m => m.mes === mesSel);
 
@@ -158,8 +162,12 @@ export default function Ventas({ ventasPorMes }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {ventasFiltradas.map((v, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
+                  {ventasFiltradas.map((v, i) => {
+                    const clienteFull = clientes.find(c => c._rowIndex === v.rowIndex);
+                    return (
+                    <tr key={i}
+                      onClick={() => clienteFull && setClienteSel(clienteSel?._rowIndex === clienteFull._rowIndex ? null : clienteFull)}
+                      className={`transition-colors ${clienteFull ? 'cursor-pointer' : ''} ${clienteSel?._rowIndex === v.rowIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3 font-medium text-gray-900">{v.nombre || '—'}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{v.programa || '—'}</span>
@@ -174,18 +182,27 @@ export default function Ventas({ ventasPorMes }) {
                       <td className="px-4 py-3 font-semibold text-gray-900">{fmt(v.monto)}</td>
                       <td className="px-4 py-3 text-gray-500 text-center">{v.cuotas}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          String(v.estatus).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
-                          String(v.estatus).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600' :
-                          'bg-gray-100 text-gray-500'
-                        }`}>{v.estatus || '—'}</span>
+                        {v.estatus ? (
+                          <span className={`px-2 py-0.5 rounded text-xs ${
+                            String(v.estatus).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+                            String(v.estatus).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>{v.estatus}</span>
+                        ) : <span className="text-gray-300">—</span>}
                       </td>
+                      <td className="px-4 py-3 text-gray-300 text-sm">{clienteFull ? '›' : ''}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
+
+          {clienteSel && (
+            <FichaCliente cliente={clienteSel} onClose={() => setClienteSel(null)}
+              onPagadoUpdated={() => { setClienteSel(null); router.refresh(); }} />
+          )}
 
           {/* Histórico */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
