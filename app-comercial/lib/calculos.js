@@ -112,9 +112,14 @@ export function getPagosCliente(cliente) {
 
 // ── Resumen económico ─────────────────────────────────────────────────────────
 
+function esEfectivo(metodo) {
+  const s = String(metodo || '').toUpperCase();
+  return s.includes('EFECTIVO');
+}
+
 function esMetodoAR(metodo) {
   const s = String(metodo || '').toUpperCase();
-  return s.includes('ARS') || s.includes('EFECTIVO') || s.includes('PESOS');
+  return (s.includes('ARS') || s.includes('PESOS')) && !s.includes('EFECTIVO');
 }
 
 export function calcularResumenMensual(clientes, egresosRows = []) {
@@ -124,14 +129,15 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
   for (const c of clientes) {
     const mesIngreso = normalizarIngreso(c['Ingreso'], c);
     if (mesIngreso) {
-      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0 };
+      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0, efectivo:0, efectivoMonto:0 };
       const monto = parseMonto(c['Monto total']);
       if (esBack(c)) { ventasPorMes[mesIngreso].back++;   ventasPorMes[mesIngreso].montoBack += monto; }
       else {
         ventasPorMes[mesIngreso].nuevas++; ventasPorMes[mesIngreso].front += monto;
         const met = c['Met pago 1'] || '';
-        if (esMetodoAR(met)) { ventasPorMes[mesIngreso].ar++; ventasPorMes[mesIngreso].arMonto += monto; }
-        else if (met)        { ventasPorMes[mesIngreso].ext++; ventasPorMes[mesIngreso].extMonto += monto; }
+        if (esEfectivo(met))      { ventasPorMes[mesIngreso].efectivo++; ventasPorMes[mesIngreso].efectivoMonto += monto; }
+        else if (esMetodoAR(met)) { ventasPorMes[mesIngreso].ar++;       ventasPorMes[mesIngreso].arMonto       += monto; }
+        else if (met)             { ventasPorMes[mesIngreso].ext++;      ventasPorMes[mesIngreso].extMonto      += monto; }
       }
     }
     CUOTAS_DEF.forEach((q, qi) => {
@@ -142,8 +148,8 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       if (!mes || mes.startsWith('__')) return;
       if (!cashPorMes[mes]) cashPorMes[mes] = {
         total:0, front:0, back:0, porMetodo:{},
-        nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0,
-        cuotaTotal:0, cuotaAR:0, cuotaExt:0,
+        nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0, nuevoEfectivo:0,
+        cuotaTotal:0, cuotaAR:0, cuotaExt:0, cuotaEfectivo:0,
       };
       cashPorMes[mes].total += monto;
       const isBack = esBack(c);
@@ -153,15 +159,18 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       cashPorMes[mes].porMetodo[met] = (cashPorMes[mes].porMetodo[met] || 0) + monto;
       if (!isBack) {
         const isAR = esMetodoAR(met);
+        const isEf = esEfectivo(met);
         if (qi === 0) {
           if (Number(c['Cuotas'] || 1) <= 1) cashPorMes[mes].nuevoFull += monto;
           else cashPorMes[mes].nuevoFinanciado += monto;
-          if (isAR) cashPorMes[mes].nuevoAR += monto;
-          else      cashPorMes[mes].nuevoExt += monto;
+          if (isAR)      cashPorMes[mes].nuevoAR       += monto;
+          else if (isEf) cashPorMes[mes].nuevoEfectivo += monto;
+          else           cashPorMes[mes].nuevoExt       += monto;
         } else {
           cashPorMes[mes].cuotaTotal += monto;
-          if (isAR) cashPorMes[mes].cuotaAR += monto;
-          else      cashPorMes[mes].cuotaExt += monto;
+          if (isAR)      cashPorMes[mes].cuotaAR       += monto;
+          else if (isEf) cashPorMes[mes].cuotaEfectivo += monto;
+          else           cashPorMes[mes].cuotaExt       += monto;
         }
       }
     });
@@ -201,8 +210,8 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
   const meses = [...new Set([...Object.keys(ventasPorMes), ...Object.keys(cashPorMes)])].sort();
 
   return meses.map(mes => {
-    const v = ventasPorMes[mes] || { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0 };
-    const c = cashPorMes[mes]   || { total:0, front:0, back:0, porMetodo:{}, nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0, cuotaTotal:0, cuotaAR:0, cuotaExt:0 };
+    const v = ventasPorMes[mes] || { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0, efectivo:0, efectivoMonto:0 };
+    const c = cashPorMes[mes]   || { total:0, front:0, back:0, porMetodo:{}, nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0, nuevoEfectivo:0, cuotaTotal:0, cuotaAR:0, cuotaExt:0, cuotaEfectivo:0 };
     const costos = egresosPorMes[mes] || {};
     const totalCostos = Object.values(costos).reduce((a,b) => a+b, 0);
     // Ganancia = venta nueva (monto contratado front) - costos
@@ -215,12 +224,13 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       montoFront: v.front, montoBack: v.montoBack, montoTotal: v.front + v.montoBack,
       ventasAR: v.ar, montoAR: v.arMonto,
       ventasExt: v.ext, montoExt: v.extMonto,
+      ventasEfectivo: v.efectivo, montoEfectivo: v.efectivoMonto,
       cashTotal: c.total, cashFront: c.front, cashBack: c.back,
       cashPorMetodo: c.porMetodo, pctCC,
       cashNuevoFull: c.nuevoFull, cashNuevoFinanciado: c.nuevoFinanciado,
-      cashNuevoAR: c.nuevoAR, cashNuevoExt: c.nuevoExt,
-      cashCuotaTotal: c.cuotaTotal, cashCuotaAR: c.cuotaAR, cashCuotaExt: c.cuotaExt,
-      cashTotalAR: c.nuevoAR + c.cuotaAR, cashTotalExt: c.nuevoExt + c.cuotaExt,
+      cashNuevoAR: c.nuevoAR, cashNuevoExt: c.nuevoExt, cashNuevoEfectivo: c.nuevoEfectivo,
+      cashCuotaTotal: c.cuotaTotal, cashCuotaAR: c.cuotaAR, cashCuotaExt: c.cuotaExt, cashCuotaEfectivo: c.cuotaEfectivo,
+      cashTotalAR: c.nuevoAR + c.cuotaAR, cashTotalExt: c.nuevoExt + c.cuotaExt, cashTotalEfectivo: c.nuevoEfectivo + c.cuotaEfectivo,
       costos, totalCostos, ganancia,
       rentabilidad: v.front > 0 ? (ganancia / v.front) * 100 : 0,
     };

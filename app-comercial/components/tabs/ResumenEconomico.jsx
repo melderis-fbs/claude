@@ -112,23 +112,6 @@ function Card({ label, value, sub, color = 'blue' }) {
   );
 }
 
-function BarSplit({ a, b, labelA, labelB, colorA = 'bg-blue-500', colorB = 'bg-gray-200' }) {
-  const total = a + b;
-  if (!total) return null;
-  const pctA = Math.round((a / total) * 100);
-  return (
-    <div className="space-y-1">
-      <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
-        <div className={`${colorA} transition-all`} style={{ width: `${pctA}%` }} />
-        <div className={`${colorB} flex-1`} />
-      </div>
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>{labelA} {pctA}%</span>
-        <span>{labelB} {100 - pctA}%</span>
-      </div>
-    </div>
-  );
-}
 
 export default function ResumenEconomico({ resumen, cobrosSemanales }) {
   const [mesSel, setMesSel] = useState(resumen[resumen.length - 1]?.mes ?? '');
@@ -140,7 +123,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
   if (!m) return <p className="text-gray-400 text-sm">Sin datos disponibles.</p>;
 
   const hayCostos = Object.keys(m.costos).length > 0;
-  const totalVentasConMet = (m.ventasAR || 0) + (m.ventasExt || 0);
+  const totalVentasConMet = (m.ventasAR || 0) + (m.ventasExt || 0) + (m.ventasEfectivo || 0);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -192,16 +175,11 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
               <span className="font-semibold text-gray-900">{fmt(m.montoBack)}</span>
             </div>
 
-            {/* Argentina vs Exterior */}
+            {/* Argentina / Exterior / Efectivo */}
             {totalVentasConMet > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Origen de ventas nuevas</p>
-                <BarSplit
-                  a={m.ventasAR || 0} b={m.ventasExt || 0}
-                  labelA="Argentina" labelB="Exterior"
-                  colorA="bg-blue-500" colorB="bg-indigo-300"
-                />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div className="bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-xs text-blue-600 font-medium">Argentina</p>
                     <p className="text-sm font-bold text-blue-800">{m.ventasAR || 0} ventas</p>
@@ -211,6 +189,11 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
                     <p className="text-xs text-indigo-600 font-medium">Exterior</p>
                     <p className="text-sm font-bold text-indigo-800">{m.ventasExt || 0} ventas</p>
                     <p className="text-xs text-indigo-600">{fmt(m.montoExt || 0)}</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg px-3 py-2 border border-green-100">
+                    <p className="text-xs text-green-600 font-medium">Efectivo</p>
+                    <p className="text-sm font-bold text-green-800">{m.ventasEfectivo || 0} ventas</p>
+                    <p className="text-xs text-green-600">{fmt(m.montoEfectivo || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -233,13 +216,14 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
             </div>
           </div>
 
-          {/* Matriz AR / Exterior */}
+          {/* Matriz AR / Exterior / Efectivo */}
           <table className="w-full text-sm mb-4">
             <thead>
               <tr>
-                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-2 w-1/4"></th>
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-2"></th>
                 <th className="text-right text-xs font-semibold text-blue-500 uppercase tracking-wider pb-2">Argentina</th>
                 <th className="text-right text-xs font-semibold text-indigo-500 uppercase tracking-wider pb-2">Exterior</th>
+                <th className="text-right text-xs font-semibold text-green-600 uppercase tracking-wider pb-2">Efectivo</th>
                 <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Total</th>
               </tr>
             </thead>
@@ -248,18 +232,21 @@ export default function ResumenEconomico({ resumen, cobrosSemanales }) {
                 <td className="py-2 text-gray-500">Primer pagos</td>
                 <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashNuevoAR || 0)}</td>
                 <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashNuevoExt || 0)}</td>
-                <td className="py-2 text-right font-semibold text-gray-800">{fmt((m.cashNuevoAR || 0) + (m.cashNuevoExt || 0))}</td>
+                <td className="py-2 text-right font-medium text-green-700">{fmt(m.cashNuevoEfectivo || 0)}</td>
+                <td className="py-2 text-right font-semibold text-gray-800">{fmt((m.cashNuevoAR || 0) + (m.cashNuevoExt || 0) + (m.cashNuevoEfectivo || 0))}</td>
               </tr>
               <tr>
                 <td className="py-2 text-gray-500">Cuotas</td>
                 <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashCuotaAR || 0)}</td>
                 <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashCuotaExt || 0)}</td>
+                <td className="py-2 text-right font-medium text-green-700">{fmt(m.cashCuotaEfectivo || 0)}</td>
                 <td className="py-2 text-right font-semibold text-gray-800">{fmt(m.cashCuotaTotal || 0)}</td>
               </tr>
               <tr className="border-t-2 border-gray-200">
                 <td className="py-2 font-semibold text-gray-700">Total</td>
                 <td className="py-2 text-right font-bold text-blue-800">{fmt(m.cashTotalAR || 0)}</td>
                 <td className="py-2 text-right font-bold text-indigo-800">{fmt(m.cashTotalExt || 0)}</td>
+                <td className="py-2 text-right font-bold text-green-800">{fmt(m.cashTotalEfectivo || 0)}</td>
                 <td className="py-2 text-right font-bold text-gray-900 text-base">{fmt(m.cashTotal)}</td>
               </tr>
             </tbody>
