@@ -171,13 +171,23 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     'enero':'01','febrero':'02','marzo':'03','abril':'04','mayo':'05','junio':'06',
     'julio':'07','agosto':'08','septiembre':'09','octubre':'10','noviembre':'11','diciembre':'12',
   };
+  const MESES_SET = new Set(Object.keys(MESES_EGRESOS_COLS));
   const anioEgresos = new Date().getFullYear();
   const egresosPorMes = {};
   for (const e of egresosRows) {
-    const cat = String(e['Categoria'] || e['Categoría'] || e['CATEGORIA'] || '').trim();
+    // Detectar categoría: primer campo que no sea mes, porcentaje ni _rowIndex
+    let cat = '';
+    for (const [key, val] of Object.entries(e)) {
+      if (key === '_rowIndex') continue;
+      if (key.startsWith('%')) continue;
+      if (MESES_SET.has(key.toLowerCase().trim())) continue;
+      cat = String(val || '').trim();
+      break;
+    }
     if (!cat || /^total/i.test(cat)) continue;
     for (const [key, val] of Object.entries(e)) {
       if (key === '_rowIndex') continue;
+      if (key.startsWith('%')) continue;
       const mesNum = MESES_EGRESOS_COLS[key.toLowerCase().trim()];
       if (!mesNum) continue;
       const monto = parseMonto(val);
