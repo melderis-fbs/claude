@@ -211,15 +211,50 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
 
 // ── Pagos semanales ───────────────────────────────────────────────────────────
 
-function VistaSemanal({ proyeccion }) {
+function VistaSemanal({ proyeccion, deudores = [] }) {
   const [offset, setOffset] = useState(0);
   const [marcando, setMarcando] = useState(new Set());
   const [errorMsg, setErrorMsg] = useState('');
+  const [editandoKey, setEditandoKey] = useState(null);
+  const [textoEdit, setTextoEdit] = useState('');
+  const [notasLocal, setNotasLocal] = useState(() => {
+    const m = {};
+    for (const d of deudores) {
+      const k = `${d.rowIndex}-${d.cuota}`;
+      m[k] = { text: parseCom(d.comentario).sa || '', estado: d.estado || '' };
+    }
+    return m;
+  });
   const router = useRouter();
 
   const idx = Math.max(0, Math.min(proyeccion.length - 1,
     proyeccion.findIndex(s => s.offset === 0) + offset));
   const semana = proyeccion[idx];
+
+  const abrirNota = (cobro) => {
+    const k = `${cobro.rowIndex}-${cobro.cuota}`;
+    setTextoEdit(notasLocal[k]?.text || '');
+    setEditandoKey(k);
+  };
+
+  const guardarNota = async (cobro) => {
+    const k = `${cobro.rowIndex}-${cobro.cuota}`;
+    const estadoExistente = notasLocal[k]?.estado || '';
+    const comentario = serializeCom({ uc: '', sa: textoEdit, dc: '' });
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/deudores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
+      setNotasLocal(prev => ({ ...prev, [k]: { text: textoEdit, estado: estadoExistente } }));
+      setEditandoKey(null);
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
 
   const marcarPagado = useCallback(async (cobro) => {
     const key = `${cobro.rowIndex}-${cobro.cuota}`;
@@ -302,30 +337,62 @@ function VistaSemanal({ proyeccion }) {
                   </div>
                 </div>
                 <div className="divide-y divide-gray-100">
-                  {visibles.map((co, j) => (
-                    <div key={j} className="px-5 py-3 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
-                          <p className="text-xs text-gray-400">
-                            {co.programa} · {co.esSeña ? 'Seña' : `Cuota ${co.cuota}`} · {co.closer || '—'}
-                            {co.metodo ? ` · ${co.metodo}` : ''}
-                          </p>
+                  {visibles.map((co, j) => {
+                    const k = `${co.rowIndex}-${co.cuota}`;
+                    const nota = notasLocal[k];
+                    const isEditing = editandoKey === k;
+                    return (
+                    <div key={j} className="px-5 py-3 space-y-1.5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
+                            <p className="text-xs text-gray-400">
+                              {co.programa} · {co.esSeña ? 'Seña' : `Cuota ${co.cuota}`} · {co.closer || '—'}
+                              {co.metodo ? ` · ${co.metodo}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className={`text-sm font-bold ${co.pagado ? 'text-emerald-600' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
+                          {co.pagado
+                            ? <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
+                            : <button onClick={() => marcarPagado(co)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                                ✓ Cobrado
+                              </button>
+                          }
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`text-sm font-bold ${co.pagado ? 'text-emerald-600' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
-                        {co.pagado
-                          ? <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
-                          : <button onClick={() => marcarPagado(co)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
-                              ✓ Cobrado
-                            </button>
-                        }
+                      <div className="ml-5">
+                        {isEditing ? (
+                          <div className="space-y-1.5">
+                            <textarea value={textoEdit} onChange={e => setTextoEdit(e.target.value)} autoFocus rows={2}
+                              placeholder="Ej: Llamó, prometió pagar el viernes…"
+                              className="w-full border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                            <div className="flex gap-2">
+                              <button onClick={() => guardarNota(co)}
+                                className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                                Guardar
+                              </button>
+                              <button onClick={() => setEditandoKey(null)}
+                                className="px-3 py-1 border border-gray-200 text-gray-500 text-xs rounded-lg hover:bg-gray-50">
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => abrirNota(co)} className="text-xs italic text-left w-full hover:text-blue-500 transition-colors">
+                            {nota?.text
+                              ? <span className="text-gray-500">{nota.text}</span>
+                              : <span className="text-gray-300">+ Agregar nota de gestión…</span>
+                            }
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             );
@@ -770,7 +837,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
 
       <div>
         {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
-        {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} />}
+        {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} />}
         {subTab === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
       </div>
     </div>
