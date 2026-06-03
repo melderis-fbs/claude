@@ -14,16 +14,17 @@ function EgresosDiag() {
     setLoading(true);
     setResult(null);
     try {
-      // 1) verificar tabs disponibles
-      const tabsRes  = await fetch('/api/egresos').then(r => r.json());
-      const dataRes  = await fetch('/api/egresos?tab=Consolidado').then(r => r.json());
+      const tabsRes = await fetch('/api/egresos').then(r => r.json());
+      const dataRes = await fetch('/api/egresos?tab=Consolidado').then(r => r.json());
       const primerRow = dataRes.data?.[0] ?? null;
       const columnas  = primerRow ? Object.keys(primerRow).filter(k => k !== '_rowIndex') : [];
       setResult({
         urlConfigured: tabsRes.urlConfigured,
         tabsDisponibles: tabsRes.tabs,
+        rowCount: Array.isArray(dataRes.data) ? dataRes.data.length : '?',
         columnas,
         rawError: dataRes.error,
+        rawSnippet: JSON.stringify(dataRes).slice(0, 600),
       });
     } catch (e) {
       setResult({ error: e.message });
@@ -74,8 +75,11 @@ function EgresosDiag() {
             </div>
           )}
           {result.urlConfigured && result.columnas?.length === 0 && !result.rawError && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
-              ⚠️ "Consolidado" existe pero no tiene datos, o la pestaña no existe.
+            <div className="space-y-2">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
+                ⚠️ GAS devuelve {result.rowCount} filas. Respuesta cruda:
+              </div>
+              <pre className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all whitespace-pre-wrap overflow-x-auto max-h-40">{result.rawSnippet}</pre>
             </div>
           )}
         </div>
