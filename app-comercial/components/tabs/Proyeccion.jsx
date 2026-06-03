@@ -175,6 +175,25 @@ function parseMonto(val) {
   return isNaN(n) ? 0 : n;
 }
 
+function parseCom(raw) {
+  if (!raw) return { uc: '', sa: '', dc: '' };
+  try {
+    const p = JSON.parse(raw);
+    if (p && typeof p === 'object') return { uc: p.uc || '', sa: p.sa || '', dc: p.dc || '' };
+  } catch {}
+  return { uc: '', sa: String(raw), dc: '' };
+}
+
+function serializeCom({ uc, sa, dc }) {
+  if (!uc && !sa && !dc) return '';
+  return JSON.stringify({ uc, sa, dc });
+}
+
+function displayCom(raw) {
+  const p = parseCom(raw);
+  return [p.uc && `Contacto: ${p.uc}`, p.sa, p.dc].filter(Boolean).join(' · ');
+}
+
 function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const router = useRouter();
   const [items, setItems] = useState(initialDeudores);
@@ -190,7 +209,9 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const [clienteSel, setClienteSel] = useState(null);
   const [cuotaSel, setCuotaSel] = useState(null);
   const [nuevoEstado, setNuevoEstado] = useState('');
-  const [nuevoComentario, setNuevoComentario] = useState('');
+  const [nuevoUc, setNuevoUc] = useState('');
+  const [nuevoSa, setNuevoSa] = useState('');
+  const [nuevoDc, setNuevoDc] = useState('');
   const [guardandoNuevo, setGuardandoNuevo] = useState(false);
 
   const clientesFiltrados = busqueda.length > 1
@@ -206,7 +227,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
 
   const abrirAgregar = () => {
     setBusqueda(''); setClienteSel(null); setCuotaSel(null);
-    setNuevoEstado(''); setNuevoComentario('');
+    setNuevoEstado(''); setNuevoUc(''); setNuevoSa(''); setNuevoDc('');
     setAgregarModal(true);
   };
 
@@ -217,7 +238,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: nuevoComentario }),
+        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const yaExiste = items.some(d => d.rowIndex === clienteSel._rowIndex && d.cuota === cuotaSel.cuota);
@@ -233,7 +254,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
           rowIndex:    clienteSel._rowIndex,
           campoEstado: cuotaSel.q.campoEstado,
           estado:      nuevoEstado,
-          comentario:  nuevoComentario,
+          comentario:  serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }),
           fechaUpdate: '',
         }]);
       }
@@ -255,12 +276,13 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: editando.comentario }),
+        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc }) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      const comentarioGuardado = serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc });
       setItems(prev => prev.map(d =>
         d.rowIndex === editando.rowIndex && d.cuota === editando.cuota
-          ? { ...d, estado: editando.estado, comentario: editando.comentario }
+          ? { ...d, estado: editando.estado, comentario: comentarioGuardado }
           : d
       ));
       setEditando(null);
@@ -304,8 +326,11 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       texto += `${emojiMap[estado]} *${tituloMap[estado]}* (${lista.length})\n`;
       for (const d of lista) {
         const mora = d.diasMora !== null ? `${d.diasMora} días` : 'sin fecha';
-        texto += `• ${d.nombre} — Cuota ${d.cuota} — ${fmt(d.monto)} — ${mora} — ${d.closer || '—'}\n`;
-        if (d.comentario) texto += `  _${d.comentario}_\n`;
+        texto += `• ${d.nombre} — Cuota ${d.cuota} — ${fmt(d.monto)} — ${mora}\n`;
+        const com = parseCom(d.comentario);
+        if (com.uc) texto += `  📅 Último contacto: ${com.uc}\n`;
+        if (com.sa) texto += `  📍 Situación: ${com.sa}\n`;
+        if (com.dc) texto += `  📝 Descripción: ${com.dc}\n`;
       }
       texto += '\n';
     }
@@ -376,7 +401,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                   <tr key={i} className={`hover:bg-gray-50 ${d.estado === 'Saldado' ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{d.nombre}</p>
-                      {d.comentario && <p className="text-xs text-gray-400 italic truncate max-w-48">{d.comentario}</p>}
+                      {d.comentario && <p className="text-xs text-gray-400 italic truncate max-w-48">{displayCom(d.comentario)}</p>}
                     </td>
                     <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{d.programa}</span></td>
                     <td className="px-4 py-3 text-gray-500 font-medium">C{d.cuota}</td>
@@ -389,7 +414,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-sm">{d.closer || '—'}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => setEditando({ rowIndex: d.rowIndex, cuota: d.cuota, estado: d.estado, comentario: d.comentario })}
+                      <button onClick={() => { const com = parseCom(d.comentario); setEditando({ rowIndex: d.rowIndex, cuota: d.cuota, estado: d.estado, uc: com.uc, sa: com.sa, dc: com.dc }); }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${es.color} hover:opacity-80 transition-opacity`}>
                         {es.label}
                       </button>
@@ -434,11 +459,26 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Comentario / situación</label>
-                <textarea value={editando.comentario}
-                  onChange={e => setEditando(prev => ({ ...prev, comentario: e.target.value }))}
-                  placeholder="Ej: Prometió pagar el viernes. No responde llamados..."
-                  rows={3}
+                <label className="block text-xs font-medium text-gray-500 mb-1">Último contacto</label>
+                <input value={editando.uc}
+                  onChange={e => setEditando(prev => ({ ...prev, uc: e.target.value }))}
+                  placeholder="Ej: 01/06 · WhatsApp"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
+                <textarea value={editando.sa}
+                  onChange={e => setEditando(prev => ({ ...prev, sa: e.target.value }))}
+                  placeholder="Ej: Prometió pagar el viernes..."
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
+                <textarea value={editando.dc}
+                  onChange={e => setEditando(prev => ({ ...prev, dc: e.target.value }))}
+                  placeholder="Ej: Está esperando que se concrete una venta..."
+                  rows={2}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
               </div>
               <div className="flex gap-3">
@@ -534,9 +574,22 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Comentario</label>
-                    <textarea value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)}
-                      placeholder="Situación actual, última comunicación…"
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Último contacto</label>
+                    <input value={nuevoUc} onChange={e => setNuevoUc(e.target.value)}
+                      placeholder="Ej: 01/06 · WhatsApp"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
+                    <textarea value={nuevoSa} onChange={e => setNuevoSa(e.target.value)}
+                      placeholder="Ej: Prometió pagar el viernes..."
+                      rows={2}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
+                    <textarea value={nuevoDc} onChange={e => setNuevoDc(e.target.value)}
+                      placeholder="Ej: Esperando que venda para pagarnos..."
                       rows={2}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
                   </div>

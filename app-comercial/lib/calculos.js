@@ -88,7 +88,8 @@ export function parseMonto(val) {
 }
 
 export function esBack(cliente) {
-  return (cliente['Fuente'] || '').toString().toLowerCase().includes('back');
+  return (cliente['Fuente']   || '').toString().toLowerCase().includes('back')
+      || (cliente['Programa'] || '').toString().toLowerCase().includes('back');
 }
 
 function esPagado(val) {
