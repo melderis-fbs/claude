@@ -10,7 +10,7 @@ export default function Abonos({ abonos }) {
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nombre:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
+  const [form, setForm] = useState({ nombre:'', fecha:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,11 +32,11 @@ export default function Abonos({ abonos }) {
       const res = await fetch('/api/abonos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.closer, form.seguimiento] }),
+        body: JSON.stringify({ rowValues: [form.nombre, form.monto, form.formaPago, form.closer, form.seguimiento, form.fecha] }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      setForm({ nombre:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
+      setForm({ nombre:'', fecha:'', monto:'', formaPago:'', closer:'', seguimiento:'' });
       setShowForm(false);
       router.refresh();
     } catch (err) {
@@ -82,6 +82,11 @@ export default function Abonos({ abonos }) {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
               <input value={form.nombre} onChange={e => set('nombre', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de seña</label>
+              <input type="text" placeholder="DD/MM/YYYY" value={form.fecha} onChange={e => set('fecha', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
             <div>
@@ -141,7 +146,7 @@ export default function Abonos({ abonos }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['Nombre','Monto','Forma de pago','Closer','Seguimiento'].map(h => (
+                {['Nombre','Fecha','Monto','Forma de pago','Closer','Seguimiento'].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -150,6 +155,7 @@ export default function Abonos({ abonos }) {
               {filtrados.map((a, i) => (
                 <tr key={i} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-900">{a['Nombre']||a['nombre']||'—'}</td>
+                  <td className="px-5 py-3 text-gray-500 text-xs">{a['Fecha']||a['fecha']||'—'}</td>
                   <td className="px-5 py-3 font-semibold text-amber-700">{fmt(a['Monto']||a['monto'])}</td>
                   <td className="px-5 py-3 text-gray-600">{a['Forma de pago']||a['forma de pago']||'—'}</td>
                   <td className="px-5 py-3 text-gray-700">{a['CLOSER']||a['Closer']||a['closer']||'—'}</td>

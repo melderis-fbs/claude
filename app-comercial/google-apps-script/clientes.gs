@@ -157,7 +157,7 @@ function appendAbono(rowValues) {
   let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ABONOS);
   if (!sheet) {
     sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(TAB_ABONOS);
-    sheet.appendRow(['Nombre','Monto','Forma de pago','CLOSER','Seguimiento']);
+    sheet.appendRow(['Nombre','Monto','Forma de pago','CLOSER','Seguimiento','Fecha']);
   }
   sheet.appendRow(rowValues);
   return { ok: true };
