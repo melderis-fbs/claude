@@ -1,7 +1,8 @@
 import { getClientes, getClientesHeaders, getEgresosTab } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
-  calcularCobranzas, calcularCobrosSemanales, calcularPendientesPorMes,
+  calcularCobranzas, calcularCobrosSemanales,
+  calcularPendientesPorMes, calcularVentasPorMes,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -16,6 +17,7 @@ export default async function Home() {
     ]);
 
     const resumen          = calcularResumenMensual(clientes, egresosRows);
+    const ventasPorMes     = calcularVentasPorMes(clientes);
     const comisiones       = calcularComisiones(clientes);
     const cobranzas        = calcularCobranzas(clientes);
     const cobrosSemanales  = calcularCobrosSemanales(clientes);
@@ -26,6 +28,7 @@ export default async function Home() {
         clientes={clientes}
         headers={headers}
         resumen={resumen}
+        ventasPorMes={ventasPorMes}
         comisiones={comisiones}
         cobranzas={cobranzas}
         cobrosSemanales={cobrosSemanales}

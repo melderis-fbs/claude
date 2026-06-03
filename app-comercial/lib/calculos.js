@@ -18,40 +18,52 @@ function getMesNum(s) {
   return null;
 }
 
-// Extrae YYYY-MM de un string de fecha en cualquier formato conocido
+// Parsea cualquier formato de fecha/mes conocido → "YYYY-MM" o null
 export function normalizarMes(val) {
   if (!val) return null;
   const s = String(val).trim();
+
+  // Ya está en YYYY-MM
   if (/^\d{4}-\d{2}$/.test(s)) return s;
-  // DD/MM/YYYY
-  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}`;
+
+  // ISO 8601: "2025-06-01T03:00:00.000Z" o "2025-06-01"
+  // GAS serializa objetos Date como ISO strings
+  const iso = s.match(/^(\d{4})-(\d{2})-\d{2}/);
+  if (iso) return `${iso[1]}-${iso[2]}`;
+
+  // DD/MM/YYYY o D/M/YYYY
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}`;
+
   // MM/YYYY
-  const m2 = s.match(/^(\d{1,2})\/(\d{4})$/);
-  if (m2) return `${m2[2]}-${m2[1].padStart(2,'0')}`;
-  // "Enero 2025", "enero-2025", etc.
-  const anioMatch = s.match(/(\d{4})/);
+  const my = s.match(/^(\d{1,2})\/(\d{4})$/);
+  if (my) return `${my[2]}-${my[1].padStart(2,'0')}`;
+
+  // "Enero 2025", "enero-2025", "Enero/2025", etc.
+  const yearMatch = s.match(/(\d{4})/);
   const mesNum = getMesNum(s);
-  if (mesNum && anioMatch) return `${anioMatch[1]}-${mesNum}`;
-  // Solo mes sin año → inferir más abajo o devolver null para que calcularResumenMensual infiera
+  if (mesNum && yearMatch) return `${yearMatch[1]}-${mesNum}`;
+
+  // Solo nombre de mes sin año → marcar para inferir
   if (mesNum) return `__SIN_ANIO__-${mesNum}`;
+
   return null;
 }
 
-// Normaliza el campo Ingreso usando las fechas de pago del mismo cliente para inferir el año
+// Normaliza el campo Ingreso: si solo tiene mes sin año, infiere el año
+// mirando las fechas de pago del mismo cliente
 function normalizarIngreso(ingreso, cliente) {
   const raw = normalizarMes(ingreso);
   if (!raw) return null;
   if (!raw.startsWith('__SIN_ANIO__')) return raw;
+
   const mesNum = raw.split('-')[1];
-  // Buscar año en cualquier fecha de pago del cliente
   for (const q of CUOTAS_DEF) {
     const fecha = cliente[q.fecha];
     if (!fecha) continue;
     const m = String(fecha).match(/(\d{4})/);
     if (m) return `${m[1]}-${mesNum}`;
   }
-  // Sin fechas de pago: usar año actual - 1 como fallback
   return `${new Date().getFullYear() - 1}-${mesNum}`;
 }
 
@@ -120,7 +132,7 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     const mes = normalizarMes(e['Mes'] || e['mes']);
     if (!mes || mes.startsWith('__')) continue;
     if (!egresosPorMes[mes]) egresosPorMes[mes] = {};
-    const cat   = String(e['Categoría'] || e['Categoria'] || e['categoria'] || 'Otros').trim();
+    const cat = String(e['Categoría'] || e['Categoria'] || e['categoria'] || 'Otros').trim();
     egresosPorMes[mes][cat] = (egresosPorMes[mes][cat] || 0) + parseMonto(e['Monto'] || e['monto']);
   }
 
@@ -141,6 +153,59 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       cashPorMetodo: c.porMetodo, pctCC,
       costos, totalCostos, ganancia,
       rentabilidad: c.front > 0 ? (ganancia / c.front) * 100 : 0,
+    };
+  });
+}
+
+// ── Ventas por mes ────────────────────────────────────────────────────────────
+
+export function calcularVentasPorMes(clientes) {
+  const porMes = {};
+
+  for (const c of clientes) {
+    const mes = normalizarIngreso(c['Ingreso'], c);
+    if (!mes || mes.startsWith('__')) continue;
+    if (!porMes[mes]) porMes[mes] = [];
+    porMes[mes].push({
+      nombre:   (c['Nombre']   || '').trim(),
+      programa: (c['Programa'] || '').trim(),
+      fuente:   (c['Fuente']   || '').trim(),
+      closer:   (c['CLOSER']   || '').trim(),
+      setter:   (c['SETTER']   || '').trim(),
+      monto:    parseMonto(c['Monto total']),
+      esBack:   esBack(c),
+      cuotas:   Number(c['Cuotas'] || 1),
+      estatus:  (c['Estatus']  || '').trim(),
+      rowIndex: c._rowIndex,
+    });
+  }
+
+  return Object.keys(porMes).sort().map(mes => {
+    const ventas  = porMes[mes];
+    const nuevas  = ventas.filter(v => !v.esBack);
+    const backs   = ventas.filter(v =>  v.esBack);
+
+    const porFuente = {};
+    const porCloser = {};
+    for (const v of nuevas) {
+      const f  = v.fuente  || 'Sin fuente';
+      const cl = v.closer  || 'Sin closer';
+      porFuente[f]  = porFuente[f]  || { count:0, monto:0 };
+      porCloser[cl] = porCloser[cl] || { count:0, monto:0 };
+      porFuente[f].count++;  porFuente[f].monto  += v.monto;
+      porCloser[cl].count++; porCloser[cl].monto += v.monto;
+    }
+
+    return {
+      mes, label: mesLabel(mes),
+      ventas,
+      totalNuevas:  nuevas.length,
+      totalBack:    backs.length,
+      montoFront:   nuevas.reduce((a,v) => a+v.monto, 0),
+      montoBack:    backs.reduce((a,v)  => a+v.monto, 0),
+      montoTotal:   ventas.reduce((a,v) => a+v.monto, 0),
+      porFuente,
+      porCloser,
     };
   });
 }
@@ -188,26 +253,26 @@ export function calcularCobranzas(clientes) {
       pctCobrado: d.aCobrar > 0 ? (d.cobrado/d.aCobrar)*100 : 0 }));
 }
 
-// Pendientes agrupados por mes (para pasar como prop, evita imports en cliente)
+// Pendientes agrupados por mes (se pre-computan server-side para pasar como prop)
 export function calcularPendientesPorMes(clientes) {
   const porMes = {};
   for (const c of clientes) {
     CUOTAS_DEF.forEach((q, i) => {
-      if ((c[q.estado]||'').toString().toUpperCase().trim() === 'SI') return;
+      if (esPagado(c[q.estado])) return;
       const monto = parseMonto(c[q.monto]);
       if (!monto) return;
       const mes = normalizarMes(c[q.fecha]);
       if (!mes || mes.startsWith('__')) return;
       if (!porMes[mes]) porMes[mes] = [];
       porMes[mes].push({
-        nombre:   c['Nombre']   || '',
-        programa: c['Programa'] || '',
-        closer:   c['CLOSER']   || '',
-        cuota: i + 1,
+        nombre:      (c['Nombre']   || '').trim(),
+        programa:    (c['Programa'] || '').trim(),
+        closer:      (c['CLOSER']   || '').trim(),
+        cuota:       i + 1,
         monto,
-        fecha:  c[q.fecha]  || '',
-        metodo: c[q.metodo] || '',
-        rowIndex: c._rowIndex,
+        fecha:       c[q.fecha]  || '',
+        metodo:      c[q.metodo] || '',
+        rowIndex:    c._rowIndex,
         campoEstado: q.estado,
       });
     });
@@ -218,8 +283,8 @@ export function calcularPendientesPorMes(clientes) {
 // ── Cobros esta semana ────────────────────────────────────────────────────────
 
 export function calcularCobrosSemanales(clientes) {
-  const hoy = new Date();
-  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+  const hoy    = new Date();
+  const lunes  = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
   const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
   lunes.setHours(0,0,0,0); domingo.setHours(23,59,59,999);
 
@@ -230,18 +295,31 @@ export function calcularCobrosSemanales(clientes) {
       if (!monto) return;
       const fechaStr = c[q.fecha];
       if (!fechaStr) return;
-      const m = String(fechaStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      if (!m) return;
-      const fecha = new Date(+m[3], +m[2]-1, +m[1]);
+
+      let fecha = null;
+      const dmy = String(fechaStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dmy) {
+        fecha = new Date(+dmy[3], +dmy[2]-1, +dmy[1]);
+      } else {
+        const iso = String(fechaStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) fecha = new Date(+iso[1], +iso[2]-1, +iso[3]);
+      }
+
+      if (!fecha) return;
       if (fecha >= lunes && fecha <= domingo) {
         cobros.push({
-          nombre: c['Nombre']||'', programa: c['Programa']||'', closer: c['CLOSER']||'',
-          cuota: i+1, monto, fecha: fechaStr,
-          pagado: (c[q.estado]||'').toUpperCase().trim() === 'SI',
-          metodo: c[q.metodo]||'',
+          nombre:  c['Nombre']   || '',
+          programa:c['Programa'] || '',
+          closer:  c['CLOSER']   || '',
+          cuota:   i+1, monto,
+          fecha:   fechaStr,
+          pagado:  esPagado(c[q.estado]),
+          metodo:  c[q.metodo]   || '',
+          rowIndex:    c._rowIndex,
+          campoEstado: q.estado,
         });
       }
     });
   }
-  return cobros.sort((a,b) => a.fecha.localeCompare(b.fecha));
+  return cobros.sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
 }

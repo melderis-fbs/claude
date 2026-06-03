@@ -1,18 +1,20 @@
 'use client';
 import { useState } from 'react';
 import ResumenEconomico from './tabs/ResumenEconomico.jsx';
+import Ventas from './tabs/Ventas.jsx';
 import Clientes from './tabs/Clientes.jsx';
 import Comisiones from './tabs/Comisiones.jsx';
 import Cobranzas from './tabs/Cobranzas.jsx';
 
 const TABS = [
-  { id: 'resumen',    label: 'Resumen Económico' },
-  { id: 'clientes',   label: 'Clientes' },
+  { id: 'resumen',    label: 'Resumen' },
+  { id: 'ventas',     label: 'Ventas' },
   { id: 'cobranzas',  label: 'Cobranzas' },
   { id: 'comisiones', label: 'Comisiones' },
+  { id: 'clientes',   label: 'Clientes' },
 ];
 
-export default function Dashboard({ clientes, headers, resumen, comisiones, cobranzas, cobrosSemanales, pendientesPorMes }) {
+export default function Dashboard({ clientes, headers, resumen, ventasPorMes, comisiones, cobranzas, cobrosSemanales, pendientesPorMes }) {
   const [tab, setTab] = useState('resumen');
 
   return (
@@ -45,9 +47,10 @@ export default function Dashboard({ clientes, headers, resumen, comisiones, cobr
       {/* Content */}
       <main className="flex-1 overflow-auto p-6">
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} />}
-        {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
+        {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} />}
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
+        {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
       </main>
     </div>
   );

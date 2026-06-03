@@ -21,8 +21,9 @@ function doPost(e) {
   const body = JSON.parse(e.postData.contents);
   const action = body.action;
   try {
-    if (action === 'append') return ok(appendRow(body.rowValues));
-    if (action === 'update') return ok(updateRow(body.rowIndex, body.rowValues));
+    if (action === 'append')      return ok(appendRow(body.rowValues));
+    if (action === 'update')      return ok(updateRow(body.rowIndex, body.rowValues));
+    if (action === 'updateField') return ok(updateField(body.rowIndex, body.headerName, body.value));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -38,18 +39,28 @@ function getHeaders() {
 }
 
 function getClientes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_CLIENTES);
+  const sheet   = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_CLIENTES);
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
   if (lastRow < 2) return { clientes: [] };
 
   const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  const headers = allValues[0].map(h => h.toString().trim());
+  const headers   = allValues[0].map(h => h.toString().trim());
+  const tz        = Session.getScriptTimeZone();
 
   const clientes = allValues.slice(1)
     .map((row, i) => {
       const obj = { _rowIndex: i + 2 };
-      headers.forEach((h, j) => { if (h) obj[h] = row[j] ?? ''; });
+      headers.forEach((h, j) => {
+        if (!h) return;
+        const val = row[j];
+        // Serializar fechas como DD/MM/YYYY para que el frontend las parsee siempre igual
+        if (val instanceof Date && val.getTime() > 0) {
+          obj[h] = Utilities.formatDate(val, tz, 'dd/MM/yyyy');
+        } else {
+          obj[h] = val !== null && val !== undefined ? val : '';
+        }
+      });
       return obj;
     })
     .filter(obj => {
@@ -73,6 +84,16 @@ function updateRow(rowIndex, rowValues) {
   const range = sheet.getRange(rowIndex, 1, 1, rowValues.length);
   range.setValues([rowValues]);
   return { ok: true };
+}
+
+// Actualiza una sola celda identificada por nombre de columna
+function updateField(rowIndex, headerName, value) {
+  const sheet   = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_CLIENTES);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = headers.findIndex(h => h.toString().trim() === headerName);
+  if (colIndex === -1) throw new Error('Columna no encontrada: ' + headerName);
+  sheet.getRange(rowIndex, colIndex + 1).setValue(value);
+  return { ok: true, rowIndex, headerName, value };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

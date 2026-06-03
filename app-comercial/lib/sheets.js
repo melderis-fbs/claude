@@ -58,6 +58,12 @@ export async function updateClienteRow(rowIndex, rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'update', rowIndex, rowValues });
 }
 
+// Actualiza un único campo de un cliente por nombre de columna
+export async function updateClienteField(rowIndex, headerName, value) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'updateField', rowIndex, headerName, value });
+}
+
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function getEgresosTabs() {

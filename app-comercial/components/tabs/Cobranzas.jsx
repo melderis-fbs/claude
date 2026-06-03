@@ -1,19 +1,50 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => `${n.toFixed(1)}%`;
 
 export default function Cobranzas({ cobranzas, pendientesPorMes }) {
+  const router = useRouter();
   const [vista, setVista] = useState('mensual');
   const meses = cobranzas.map(m => m.mes);
   const [mesSel, setMesSel] = useState(meses[meses.length - 1] ?? '');
+  const [marcando, setMarcando] = useState(new Set()); // keys de pagos en proceso
+  const [errorMsg, setErrorMsg] = useState('');
 
   const mesActual = cobranzas.find(x => x.mes === mesSel);
-  const pendientes = pendientesPorMes[mesSel] ?? [];
+  const pendientes = (pendientesPorMes[mesSel] ?? [])
+    .filter(p => !marcando.has(`${p.rowIndex}-${p.cuota}`)); // optimistic hide
+
+  const marcarPagado = useCallback(async (p) => {
+    const key = `${p.rowIndex}-${p.cuota}`;
+    setMarcando(prev => new Set([...prev, key]));
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: p.rowIndex, headerName: p.campoEstado, value: 'SI' }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Error al actualizar');
+      }
+      // El pago queda oculto vía optimistic update; refresh para actualizar totales
+      router.refresh();
+    } catch (err) {
+      setMarcando(prev => { const s = new Set(prev); s.delete(key); return s; });
+      setErrorMsg(err.message);
+    }
+  }, [router]);
 
   return (
     <div className="space-y-5 max-w-5xl">
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{errorMsg}</div>
+      )}
+
       {/* Toggle */}
       <div className="flex gap-2">
         {[['mensual','Resumen mensual'],['pendientes','Pagos pendientes']].map(([v,l]) => (
@@ -96,28 +127,38 @@ export default function Cobranzas({ cobranzas, pendientesPorMes }) {
           {pendientes.length === 0 ? (
             <div className="px-5 py-10 text-center text-gray-400 text-sm">No hay pagos pendientes para este mes.</div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Cliente','Programa','Closer','Cuota','Monto','Fecha','Método'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {pendientes.map((p, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{p.nombre}</td>
-                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
-                    <td className="px-4 py-3 text-gray-700">{p.closer || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">Cuota {p.cuota}</td>
-                    <td className="px-4 py-3 font-semibold text-red-600">{fmt(p.monto)}</td>
-                    <td className="px-4 py-3 text-gray-500">{p.fecha || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Cliente','Programa','Closer','Cuota','Monto','Fecha','Método',''].map((h,i) => (
+                      <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pendientes.map((p, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{p.nombre}</td>
+                      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
+                      <td className="px-4 py-3 text-gray-700">{p.closer || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">Cuota {p.cuota}</td>
+                      <td className="px-4 py-3 font-semibold text-red-600">{fmt(p.monto)}</td>
+                      <td className="px-4 py-3 text-gray-500">{p.fecha || '—'}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => marcarPagado(p)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          ✓ Marcar pagado
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
