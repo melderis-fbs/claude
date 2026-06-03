@@ -22,7 +22,9 @@ async function postScript(url, body) {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
-  return res.json();
+  const data = await res.json();
+  if (data && data.error) throw new Error(data.error);
+  return data;
 }
 
 // ── CLIENTES ──────────────────────────────────────────────────────────────────
