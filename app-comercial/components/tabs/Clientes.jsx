@@ -16,13 +16,10 @@ function mesKey(ingreso) {
   if (!ingreso) return '~sin-ingreso';
   const s = String(ingreso).toLowerCase().trim();
   const parts = s.split(/\s+/);
-  if (parts.length >= 2) {
-    const mesIdx = MES_ORDER.findIndex(m => parts[0].startsWith(m));
-    const year   = parts[1] || '0000';
-    const idx    = mesIdx >= 0 ? String(mesIdx).padStart(2, '0') : '99';
-    return `${year}-${idx}`;
-  }
-  return s;
+  const mesIdx = MES_ORDER.findIndex(m => parts[0].startsWith(m));
+  const year   = parts.length >= 2 ? parts[parts.length - 1] : '0000';
+  const idx    = mesIdx >= 0 ? String(mesIdx).padStart(2, '0') : '99';
+  return `${year}-${idx}`;
 }
 
 function ClienteRow({ c, clienteSel, setClienteSel }) {
