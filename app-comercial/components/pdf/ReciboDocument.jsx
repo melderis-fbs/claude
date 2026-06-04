@@ -1,7 +1,8 @@
 import React from 'react';
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 
-const DARK = '#282727';
+const DARK = '#1a1a1a';
+const BORDER = '#e2e2e2';
 
 function fmt(amount, moneda) {
   const num = Number(amount) || 0;
@@ -14,195 +15,217 @@ function fmt(amount, moneda) {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 50,
-    paddingBottom: 60,
-    paddingHorizontal: 50,
+    paddingTop: 48,
+    paddingBottom: 56,
+    paddingHorizontal: 52,
     fontFamily: 'Helvetica',
     backgroundColor: '#ffffff',
-    color: '#111111',
+    color: DARK,
     fontSize: 9,
   },
 
-  // Header
+  // ── Header ──────────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    borderBottomWidth: 3,
+    alignItems: 'center',
+    paddingBottom: 18,
+    borderBottomWidth: 2.5,
     borderBottomColor: DARK,
-    paddingBottom: 16,
-    marginBottom: 28,
+    marginBottom: 24,
   },
-  headerLeft: {},
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleBlock: {
+    marginRight: 28,
+  },
   headerTitle: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 30,
+    fontSize: 32,
     color: DARK,
-    marginBottom: 10,
+    letterSpacing: 1,
+    lineHeight: 1,
   },
-  headerMeta: {
+  metaDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: BORDER,
+    marginRight: 20,
+  },
+  metaBlock: {
+    justifyContent: 'center',
+  },
+  metaRow: {
     flexDirection: 'row',
-    marginBottom: 3,
+    alignItems: 'baseline',
+    marginBottom: 4,
   },
-  headerMetaLabel: {
+  metaLabel: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 8,
-    color: DARK,
-    marginRight: 6,
+    fontSize: 7,
+    letterSpacing: 0.5,
+    color: '#888888',
+    marginRight: 5,
+    textTransform: 'uppercase',
   },
-  headerMetaValue: {
+  metaValue: {
+    fontFamily: 'Helvetica-Bold',
     fontSize: 8.5,
     color: DARK,
   },
-  headerRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-  },
   logoImage: {
-    width: 130,
-    height: 60,
+    width: 120,
+    height: 50,
     objectFit: 'contain',
   },
-  logoPlaceholder: {
-    width: 130,
-    height: 60,
-    borderWidth: 1,
-    borderColor: '#cccccc',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoPlaceholderText: {
-    fontSize: 8,
-    color: '#999999',
-  },
 
-  // A nombre de
-  nombreBlock: {
-    marginBottom: 28,
+  // ── A nombre de ─────────────────────────────────────────────────────────────
+  nombreSection: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: BORDER,
   },
-  nombreLabel: {
+  nombreSectionLabel: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 7.5,
-    letterSpacing: 0.8,
-    color: '#888888',
-    marginBottom: 8,
+    fontSize: 6.5,
+    letterSpacing: 1.5,
+    color: '#aaaaaa',
+    marginBottom: 6,
   },
   nombreName: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 11,
+    fontSize: 13,
     color: DARK,
     marginBottom: 3,
   },
   nombreLine: {
     fontSize: 8.5,
-    color: '#555555',
-    marginBottom: 2.5,
+    color: '#666666',
+    marginBottom: 2,
   },
 
-  // Table
-  tableWrapper: {
-    borderWidth: 1,
-    borderColor: DARK,
-    marginBottom: 22,
+  // ── Table ────────────────────────────────────────────────────────────────────
+  table: {
+    marginBottom: 18,
   },
-  tableHeader: {
+  tableHead: {
     flexDirection: 'row',
     backgroundColor: DARK,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 2,
   },
-  tableHeaderTextLeft: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 7.5,
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  tableHeaderTextCenter: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 7.5,
-    color: '#ffffff',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  tableHeaderTextRight: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 7.5,
-    color: '#ffffff',
-    letterSpacing: 0.5,
-    textAlign: 'right',
+  tableBody: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: BORDER,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderTopWidth: 0.5,
-    borderTopColor: '#dddddd',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: BORDER,
   },
-  tableRowFirst: {
+  tableRowLast: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  colDesc: { flex: 3 },
-  colQty: { width: 64, alignItems: 'center' },
-  colAmount: { width: 84, alignItems: 'flex-end' },
+  colDesc: { flex: 1 },
+  colQty: { width: 60 },
+  colAmt: { width: 80 },
+  thLeft: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    color: '#ffffff',
+    letterSpacing: 0.8,
+  },
+  thCenter: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    color: '#ffffff',
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  thRight: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    color: '#ffffff',
+    letterSpacing: 0.8,
+    textAlign: 'right',
+  },
+  tdLeft: { fontSize: 9, color: DARK },
+  tdCenter: { fontSize: 9, color: DARK, textAlign: 'center' },
+  tdRight: { fontSize: 9, color: DARK, textAlign: 'right' },
 
-  tdText: { fontSize: 9, color: '#222222' },
-  tdCenter: { fontSize: 9, color: '#222222', textAlign: 'center' },
-  tdRight: { fontSize: 9, color: '#222222', textAlign: 'right' },
-
-  // Totals
-  totalsBlock: {
+  // ── Totals ───────────────────────────────────────────────────────────────────
+  totalsOuter: {
     alignItems: 'flex-end',
-    marginBottom: 36,
+    marginBottom: 32,
   },
-  totalsInner: {
-    minWidth: 200,
+  totalsBox: {
+    width: 220,
   },
   totRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 5,
+    paddingVertical: 3.5,
   },
   totLabel: {
     fontSize: 8.5,
-    color: '#555555',
-    marginRight: 20,
+    color: '#666666',
   },
-  totValue: {
-    fontSize: 9,
-    color: '#222222',
+  totVal: {
+    fontSize: 8.5,
+    color: DARK,
     textAlign: 'right',
-    minWidth: 90,
   },
-  totLabelBold: {
+  totDivider: {
+    borderTopWidth: 0.75,
+    borderTopColor: BORDER,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  totRowFinal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  totLabelFinal: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 10,
     color: DARK,
-    marginRight: 20,
   },
-  totValueBold: {
+  totValFinal: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 10,
     color: DARK,
     textAlign: 'right',
-    minWidth: 90,
   },
 
-  // Signature
+  // ── Signature ────────────────────────────────────────────────────────────────
   signatureBlock: {
-    marginTop: 36,
+    marginTop: 'auto',
+    paddingTop: 24,
   },
   signatureLine: {
-    width: 140,
+    width: 150,
     borderBottomWidth: 0.75,
-    borderBottomColor: '#888888',
+    borderBottomColor: '#bbbbbb',
     marginBottom: 5,
-    paddingBottom: 28,
+    paddingBottom: 24,
   },
   signatureLabel: {
-    fontSize: 8,
-    color: '#aaaaaa',
+    fontSize: 7.5,
+    color: '#bbbbbb',
+    letterSpacing: 0.5,
   },
 });
 
@@ -224,78 +247,70 @@ export default function ReciboDocument({ data, logoSrc }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>RECIBO</Text>
-            <View style={styles.headerMeta}>
-              <Text style={styles.headerMetaLabel}>Recibo Nro:</Text>
-              <Text style={styles.headerMetaValue}>{numero}</Text>
+            <View style={styles.titleBlock}>
+              <Text style={styles.headerTitle}>RECIBO</Text>
             </View>
-            <View style={styles.headerMeta}>
-              <Text style={styles.headerMetaLabel}>Fecha:</Text>
-              <Text style={styles.headerMetaValue}>{fecha}</Text>
-            </View>
-          </View>
-          <View style={styles.headerRight}>
-            {logoSrc ? (
-              <Image src={logoSrc} style={styles.logoImage} />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoPlaceholderText}>FOUNDERS LOGO</Text>
+            <View style={styles.metaDivider} />
+            <View style={styles.metaBlock}>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Nro</Text>
+                <Text style={styles.metaValue}>{numero}</Text>
               </View>
-            )}
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Fecha</Text>
+                <Text style={styles.metaValue}>{fecha}</Text>
+              </View>
+            </View>
           </View>
+          {logoSrc && (
+            <Image src={logoSrc} style={styles.logoImage} />
+          )}
         </View>
 
         {/* A nombre de */}
-        <View style={styles.nombreBlock}>
-          <Text style={styles.nombreLabel}>A NOMBRE DE:</Text>
+        <View style={styles.nombreSection}>
+          <Text style={styles.nombreSectionLabel}>A NOMBRE DE</Text>
           <Text style={styles.nombreName}>{nombre}</Text>
           {!!telefono && <Text style={styles.nombreLine}>{telefono}</Text>}
           {!!email && <Text style={styles.nombreLine}>{email}</Text>}
         </View>
 
         {/* Table */}
-        <View style={styles.tableWrapper}>
-          <View style={styles.tableHeader}>
-            <View style={styles.colDesc}>
-              <Text style={styles.tableHeaderTextLeft}>DESCRIPTION</Text>
-            </View>
-            <View style={styles.colQty}>
-              <Text style={styles.tableHeaderTextCenter}>QUANTITY</Text>
-            </View>
-            <View style={styles.colAmount}>
-              <Text style={styles.tableHeaderTextRight}>AMOUNT</Text>
-            </View>
+        <View style={styles.table}>
+          <View style={styles.tableHead}>
+            <View style={styles.colDesc}><Text style={styles.thLeft}>DESCRIPCIÓN</Text></View>
+            <View style={styles.colQty}><Text style={styles.thCenter}>CANT.</Text></View>
+            <View style={styles.colAmt}><Text style={styles.thRight}>MONTO</Text></View>
           </View>
-
-          {items.map((item, i) => (
-            <View key={i} style={i === 0 ? styles.tableRowFirst : styles.tableRow}>
-              <View style={styles.colDesc}>
-                <Text style={styles.tdText}>{item.description}</Text>
-              </View>
-              <View style={styles.colQty}>
-                <Text style={styles.tdCenter}>{item.quantity}</Text>
-              </View>
-              <View style={styles.colAmount}>
-                <Text style={styles.tdRight}>{fmt(item.amount, moneda)}</Text>
-              </View>
-            </View>
-          ))}
+          <View style={styles.tableBody}>
+            {items.map((item, i) => {
+              const isLast = i === items.length - 1;
+              return (
+                <View key={i} style={isLast ? styles.tableRowLast : styles.tableRow}>
+                  <View style={styles.colDesc}><Text style={styles.tdLeft}>{item.description}</Text></View>
+                  <View style={styles.colQty}><Text style={styles.tdCenter}>{item.quantity}</Text></View>
+                  <View style={styles.colAmt}><Text style={styles.tdRight}>{fmt(item.amount, moneda)}</Text></View>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         {/* Totals */}
-        <View style={styles.totalsBlock}>
-          <View style={styles.totalsInner}>
+        <View style={styles.totalsOuter}>
+          <View style={styles.totalsBox}>
             <View style={styles.totRow}>
               <Text style={styles.totLabel}>Subtotal</Text>
-              <Text style={styles.totValue}>{fmt(subtotal, moneda)}</Text>
+              <Text style={styles.totVal}>{fmt(subtotal, moneda)}</Text>
             </View>
             <View style={styles.totRow}>
               <Text style={styles.totLabel}>VAT ({vat || 0}%)</Text>
-              <Text style={styles.totValue}>{fmt(vatAmount, moneda)}</Text>
+              <Text style={styles.totVal}>{fmt(vatAmount, moneda)}</Text>
             </View>
-            <View style={styles.totRow}>
-              <Text style={styles.totLabelBold}>Total {monedaLabel}</Text>
-              <Text style={styles.totValueBold}>{fmt(total, moneda)}</Text>
+            <View style={styles.totDivider} />
+            <View style={styles.totRowFinal}>
+              <Text style={styles.totLabelFinal}>Total {monedaLabel}</Text>
+              <Text style={styles.totValFinal}>{fmt(total, moneda)}</Text>
             </View>
           </View>
         </View>
@@ -303,7 +318,7 @@ export default function ReciboDocument({ data, logoSrc }) {
         {/* Signature */}
         <View style={styles.signatureBlock}>
           <View style={styles.signatureLine} />
-          <Text style={styles.signatureLabel}>Firma</Text>
+          <Text style={styles.signatureLabel}>FIRMA</Text>
         </View>
 
       </Page>
