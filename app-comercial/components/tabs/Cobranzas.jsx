@@ -246,7 +246,7 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario, nombre: cobro.nombre || '' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
       setNotasLocal(prev => ({ ...prev, [k]: { text: textoEdit, estado: estadoExistente } }));
@@ -448,7 +448,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }) }),
+        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }), nombre: (clienteSel['Nombre'] || '').trim() }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const yaExiste = items.some(d => d.rowIndex === clienteSel._rowIndex && d.cuota === cuotaSel.cuota);
@@ -476,10 +476,12 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const guardarEstado = useCallback(async () => {
     if (!editando) return;
     try {
+      const item = items.find(d => d.rowIndex === editando.rowIndex && d.cuota === editando.cuota);
+      const nombre = item?.nombre || '';
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc }) }),
+        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc }), nombre }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const comentarioGuardado = serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc });

@@ -32,7 +32,7 @@ function doPost(e) {
     if (action === 'updateField')  return ok(updateField(body.rowIndex, body.headerName, body.value));
     if (action === 'appendAbono')       return ok(appendAbono(body.rowValues));
     if (action === 'updateAbonoField')  return ok(updateAbonoField(body.rowIndex, body.headerName, body.value));
-    if (action === 'upsertDeudor') return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario));
+    if (action === 'upsertDeudor') return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario, body.nombre));
     if (action === 'appendFactura') return ok(appendFactura(body.rowValues));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
@@ -118,15 +118,16 @@ function getDeudores() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return { deudores: [] };
 
-  const allValues = sheet.getRange(1, 1, lastRow, 5).getValues();
-  const headers = allValues[0];
+  const lastCol = sheet.getLastColumn();
+  const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers = allValues[0].map(h => String(h).trim());
   const deudores = allValues.slice(1)
     .map(row => {
       const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      headers.forEach((h, i) => { if (h) obj[h] = row[i] ?? ''; });
       return obj;
     })
-    .filter(d => d.rowIndex || d['rowIndex']);
+    .filter(d => d.rowIndex);
 
   return { deudores };
 }
@@ -174,26 +175,28 @@ function updateAbonoField(rowIndex, headerName, value) {
   return { ok: true };
 }
 
-function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
+function upsertDeudor(rowIndex, cuotaNum, estado, comentario, nombre) {
   const sheet = getOrCreateDeudoresSheet();
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
+  const headers = data[0].map(h => String(h).trim());
   const riCol  = headers.indexOf('rowIndex');
   const cnCol  = headers.indexOf('cuotaNum');
   const esCol  = headers.indexOf('estado');
   const coCol  = headers.indexOf('comentario');
   const fuCol  = headers.indexOf('fechaUpdate');
+  const noCol  = headers.indexOf('nombre');
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][riCol]) === String(rowIndex) && String(data[i][cnCol]) === String(cuotaNum)) {
       sheet.getRange(i + 1, esCol + 1).setValue(estado);
       sheet.getRange(i + 1, coCol + 1).setValue(comentario);
       sheet.getRange(i + 1, fuCol + 1).setValue(new Date().toISOString());
+      if (noCol !== -1 && nombre) sheet.getRange(i + 1, noCol + 1).setValue(nombre);
       return { ok: true };
     }
   }
 
-  sheet.appendRow([rowIndex, cuotaNum, estado, comentario, new Date().toISOString()]);
+  sheet.appendRow([rowIndex, cuotaNum, estado, comentario, new Date().toISOString(), nombre || '']);
   return { ok: true };
 }
 
@@ -242,7 +245,13 @@ function getOrCreateDeudoresSheet() {
   let sheet = ss.getSheetByName(TAB_DEUDORES);
   if (!sheet) {
     sheet = ss.insertSheet(TAB_DEUDORES);
-    sheet.appendRow(['rowIndex','cuotaNum','estado','comentario','fechaUpdate']);
+    sheet.appendRow(['rowIndex','cuotaNum','estado','comentario','fechaUpdate','nombre']);
+  } else {
+    // Add 'nombre' column if it doesn't exist yet
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+    if (!headers.includes('nombre')) {
+      sheet.getRange(1, headers.length + 1).setValue('nombre');
+    }
   }
   return sheet;
 }
