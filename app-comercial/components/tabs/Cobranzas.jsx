@@ -461,6 +461,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
         }]);
       }
       setAgregarModal(false);
+      router.refresh();
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
@@ -487,10 +488,11 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
           ? { ...d, estado: editando.estado, comentario: comentarioGuardado } : d
       ));
       setEditando(null);
+      router.refresh();
     } catch (err) {
       setErrorMsg(err.message);
     }
-  }, [editando]);
+  }, [editando, router]);
 
   const marcarPagado = useCallback(async (d) => {
     const key = `${d.rowIndex}-${d.cuota}`;
