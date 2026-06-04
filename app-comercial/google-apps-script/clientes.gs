@@ -151,8 +151,12 @@ function updateField(rowIndex, headerName, value) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const colIndex = headers.findIndex(h => h.toString().trim() === headerName);
   if (colIndex === -1) throw new Error('Columna no encontrada: ' + headerName);
-  sheet.getRange(rowIndex, colIndex + 1).setValue(value);
-  return { ok: true, rowIndex, headerName, value };
+  // Normalizar SI/NO a booleano para columnas de estado (checkboxes)
+  var val = value;
+  if (val === 'SI' || val === 'SÍ' || val === 'YES' || val === '1' || val === 'TRUE' || val === true) val = true;
+  else if (val === 'NO' || val === 'FALSE' || val === '0' || val === false) val = false;
+  sheet.getRange(rowIndex, colIndex + 1).setValue(val);
+  return { ok: true, rowIndex, headerName, value: val };
 }
 
 function appendAbono(rowValues) {
