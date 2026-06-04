@@ -150,8 +150,28 @@ function updateField(rowIndex, headerName, value) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const colIndex = headers.findIndex(h => h.toString().trim() === headerName);
   if (colIndex === -1) throw new Error('Columna no encontrada: ' + headerName);
-  sheet.getRange(rowIndex, colIndex + 1).setValue(value);
-  return { ok: true, rowIndex, headerName, value };
+
+  const cell = sheet.getRange(rowIndex, colIndex + 1);
+  var finalValue = value;
+
+  // For checkbox cells, use the cell's own checked/unchecked values so formulas
+  // that multiply by the checkbox (e.g. =E2*C2) keep working regardless of
+  // whether the checkbox uses boolean TRUE/FALSE or custom values like "SI"/"NO".
+  const validation = cell.getDataValidation();
+  if (validation && validation.getCriteriaType() === SpreadsheetApp.DataValidationCriteria.CHECKBOX) {
+    const cv = validation.getCriteriaValues();
+    const checkedVal   = (cv && cv.length >= 1) ? cv[0] : true;
+    const uncheckedVal = (cv && cv.length >= 2) ? cv[1] : false;
+    const isChecking = (value === true || String(value).toUpperCase().trim() === 'SI'
+                        || String(value).toUpperCase().trim() === 'SÍ'
+                        || String(value).toUpperCase().trim() === 'YES'
+                        || String(value).toUpperCase().trim() === 'TRUE'
+                        || value === 1 || value === '1');
+    finalValue = isChecking ? checkedVal : uncheckedVal;
+  }
+
+  cell.setValue(finalValue);
+  return { ok: true, rowIndex, headerName, value: finalValue };
 }
 
 function appendAbono(rowValues) {
