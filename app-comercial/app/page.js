@@ -30,18 +30,21 @@ export default async function Home() {
     const deudores         = calcularDeudores(clientes, deudoresRecords);
 
     const anoActual = new Date().getFullYear().toString();
-    const cobranzasFiltradas      = cobranzas.filter(m => m.mes.startsWith(anoActual));
+    const cobranzasFiltradas        = cobranzas.filter(m => m.mes.startsWith(anoActual));
     const pendientesPorMesFiltrados = Object.fromEntries(
       Object.entries(pendientesPorMes).filter(([k]) => k.startsWith(anoActual))
     );
+    const resumenFiltrado    = resumen.filter(m => m.mes.startsWith(anoActual));
+    const ventasPorMesFiltradas = ventasPorMes.filter(m => m.mes.startsWith(anoActual));
+    const comisionesFiltradas   = comisiones.filter(m => m.mes.startsWith(anoActual));
 
     return (
       <Dashboard
         clientes={clientes}
         headers={headers}
-        resumen={resumen}
-        ventasPorMes={ventasPorMes}
-        comisiones={comisiones}
+        resumen={resumenFiltrado}
+        ventasPorMes={ventasPorMesFiltradas}
+        comisiones={comisionesFiltradas}
         cobranzas={cobranzasFiltradas}
         cobrosSemanales={cobrosSemanales}
         pendientesPorMes={pendientesPorMesFiltrados}
