@@ -38,15 +38,6 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
         <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cuotasInfo}</span>
       </td>
       <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
-      <td className="px-4 py-3">
-        {c['Estatus'] ? (
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-            String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
-            String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
-            'bg-gray-100 text-gray-500'
-          }`}>{c['Estatus']}</span>
-        ) : <span className="text-gray-300">—</span>}
-      </td>
       <td className="px-4 py-3 text-gray-400 text-xs text-right">
         <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300'}`}>›</span>
       </td>
@@ -71,7 +62,7 @@ function GrupoMes({ label, clientes, defaultOpen, clienteSel, setClienteSel }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-t border-gray-100">
               <tr>
-                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus',''].map(h => (
+                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado',''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
