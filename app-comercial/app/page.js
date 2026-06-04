@@ -7,7 +7,7 @@ import {
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   try {
