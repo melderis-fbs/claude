@@ -86,7 +86,7 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: p.rowIndex, headerName: p.campoEstado, value: true }),
+        body: JSON.stringify({ rowIndex: p.rowIndex, headerName: p.campoEstado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error al actualizar');
       router.refresh();
@@ -246,7 +246,7 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario, nombre: cobro.nombre || '' }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
       setNotasLocal(prev => ({ ...prev, [k]: { text: textoEdit, estado: estadoExistente } }));
@@ -264,7 +264,7 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: cobro.campoEstado, value: true }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: cobro.campoEstado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       router.refresh();
@@ -448,7 +448,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }), nombre: (clienteSel['Nombre'] || '').trim() }),
+        body: JSON.stringify({ rowIndex: clienteSel._rowIndex, cuotaNum: cuotaSel.cuota, estado: nuevoEstado, comentario: serializeCom({ uc: nuevoUc, sa: nuevoSa, dc: nuevoDc }) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const yaExiste = items.some(d => d.rowIndex === clienteSel._rowIndex && d.cuota === cuotaSel.cuota);
@@ -476,12 +476,10 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const guardarEstado = useCallback(async () => {
     if (!editando) return;
     try {
-      const item = items.find(d => d.rowIndex === editando.rowIndex && d.cuota === editando.cuota);
-      const nombre = item?.nombre || '';
       const res = await fetch('/api/deudores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc }), nombre }),
+        body: JSON.stringify({ rowIndex: editando.rowIndex, cuotaNum: editando.cuota, estado: editando.estado, comentario: serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc }) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const comentarioGuardado = serializeCom({ uc: editando.uc, sa: editando.sa, dc: editando.dc });
@@ -504,7 +502,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: d.rowIndex, headerName: d.campoEstado, value: true }),
+        body: JSON.stringify({ rowIndex: d.rowIndex, headerName: d.campoEstado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       setItems(prev => prev.filter(x => !(x.rowIndex === d.rowIndex && x.cuota === d.cuota)));

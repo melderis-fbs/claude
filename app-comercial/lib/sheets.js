@@ -101,9 +101,9 @@ export async function getDeudores() {
   return data.deudores ?? [];
 }
 
-export async function upsertDeudor(rowIndex, cuotaNum, estado, comentario, nombre = '') {
+export async function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
   if (MOCK_MODE) throw new Error('No disponible en modo mock');
-  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertDeudor', rowIndex, cuotaNum, estado, comentario, nombre });
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertDeudor', rowIndex, cuotaNum, estado, comentario });
 }
 
 // ── EGRESOS ───────────────────────────────────────────────────────────────────

@@ -46,7 +46,7 @@ function VistaSemanal({ proyeccion }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: cobro.campoEstado, value: true }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: cobro.campoEstado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       router.refresh();
@@ -299,7 +299,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: d.rowIndex, headerName: d.campoEstado, value: true }),
+        body: JSON.stringify({ rowIndex: d.rowIndex, headerName: d.campoEstado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       setItems(prev => prev.filter(x => !(x.rowIndex === d.rowIndex && x.cuota === d.cuota)));

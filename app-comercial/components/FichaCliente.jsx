@@ -157,7 +157,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: cuota.q.estado, value: true }),
+        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: cuota.q.estado, value: 'SI' }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       onPagadoUpdated();

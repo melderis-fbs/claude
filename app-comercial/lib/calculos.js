@@ -523,13 +523,8 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
   lunesEstaSemana.setHours(0,0,0,0);
 
   const recMap = {};
-  const recMapNombre = {};
   for (const d of deudoresRecords) {
     recMap[`${d.rowIndex}-${d.cuotaNum}`] = d;
-    if (d.nombre) {
-      const k = `${String(d.nombre).toLowerCase().trim()}-${d.cuotaNum}`;
-      if (!recMapNombre[k]) recMapNombre[k] = d;
-    }
   }
 
   const deudores = [];
@@ -545,12 +540,7 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
 
       const key = `${c._rowIndex}-${i+1}`;
       includedKeys.add(key);
-      let rec = recMap[key];
-      if (!rec) {
-        const nombreK = `${(c['Nombre'] || '').toLowerCase().trim()}-${i+1}`;
-        rec = recMapNombre[nombreK];
-      }
-      rec = rec || {};
+      const rec = recMap[key] || {};
       const diasMora = Math.floor((hoy - fecha) / (1000*60*60*24));
 
       deudores.push({
