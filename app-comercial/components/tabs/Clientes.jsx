@@ -13,11 +13,11 @@ const MES_ORDER = [
 ];
 
 function mesKey(ingreso) {
-  if (!ingreso) return '0000-99';
+  if (!ingreso) return null;
   const s = String(ingreso).toLowerCase().trim();
   const parts = s.split(/\s+/);
   const mesIdx = MES_ORDER.findIndex(m => parts[0].startsWith(m));
-  if (mesIdx === -1) return '0000-99';
+  if (mesIdx === -1) return null;
   const year = parts.length >= 2 ? parts[parts.length - 1].padStart(4, '0') : '0000';
   return `${year}-${String(mesIdx).padStart(2, '0')}`;
 }
@@ -121,16 +121,17 @@ export default function Clientes({ clientes, headers }) {
   }), [clientes, busqueda, programa, closer, estatus]);
 
   const grupos = useMemo(() => {
-    const map = new Map();
+    const map = new Map(); // groupKey → { label, sortKey, clientes[] }
     for (const c of filtrados) {
-      const key   = mesKey(c['Ingreso']);
-      const label = c['Ingreso'] || 'Sin ingreso';
-      if (!map.has(key)) map.set(key, { label, clientes: [] });
-      map.get(key).clientes.push(c);
+      const sortKey  = mesKey(c['Ingreso']);
+      const label    = c['Ingreso'] || 'Sin ingreso';
+      const groupKey = sortKey ?? `__${label}`;
+      if (!map.has(groupKey)) map.set(groupKey, { label, sortKey: sortKey ?? '', clientes: [] });
+      map.get(groupKey).clientes.push(c);
     }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([key, val]) => ({ key, ...val }));
+    return Array.from(map.values())
+      .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+      .map(g => ({ key: g.label, label: g.label, clientes: g.clientes }));
   }, [filtrados]);
 
   const primerKey = grupos[0]?.key;
