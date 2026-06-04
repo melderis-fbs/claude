@@ -7,6 +7,7 @@ import Abonos          from './tabs/Abonos.jsx';
 import Comisiones      from './tabs/Comisiones.jsx';
 import Facturas        from './tabs/Facturas.jsx';
 import Clientes        from './tabs/Clientes.jsx';
+import Documentos      from './tabs/Documentos.jsx';
 
 const TABS = [
   { id: 'resumen',    label: 'Resumen' },
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'comisiones', label: 'Comisiones' },
   { id: 'facturas',   label: 'Facturas' },
   { id: 'clientes',   label: 'Clientes' },
+  { id: 'documentos', label: 'Documentos' },
 ];
 
 export default function Dashboard({
@@ -58,6 +60,7 @@ export default function Dashboard({
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
         {tab === 'facturas'   && <Facturas facturas={facturas} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
+        {tab === 'documentos' && <Documentos clientes={clientes} />}
       </main>
     </div>
   );

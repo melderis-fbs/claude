@@ -106,6 +106,33 @@ export async function upsertDeudor(rowIndex, cuotaNum, estado, comentario) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertDeudor', rowIndex, cuotaNum, estado, comentario });
 }
 
+// ── DOCUMENTOS_EMITIDOS ───────────────────────────────────────────────────────
+
+export async function getUltimoNumero(tipo) {
+  if (MOCK_MODE) return null;
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, {
+    action: 'getUltimoNumero',
+    tipo,
+  });
+  return data.ultimoNumero ?? null;
+}
+
+export async function appendDocumento(rowValues) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, {
+    action: 'appendDocumento',
+    rowValues,
+  });
+}
+
+export async function getDocumentos() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, {
+    action: 'getDocumentos',
+  });
+  return data.documentos ?? [];
+}
+
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function getEgresosTabs() {
