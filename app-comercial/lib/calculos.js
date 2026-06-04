@@ -461,7 +461,7 @@ export function calcularSeñasPorMes(clientes) {
       closer:      (c['CLOSER']   || '').trim(),
       monto, fecha: c[q.fecha]||'',
       metodo:      c[q.metodo] || '',
-      pagado:      String(c[q.estado]||'').toUpperCase().trim() === 'SI',
+      pagado:      esPagado(c[q.estado]),
       rowIndex:    c._rowIndex,
       campoEstado: q.estado,
     });

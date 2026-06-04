@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import FichaCliente, { getCuotasInfo, esPagadoLocal, CUOTA_COLS } from '../FichaCliente.jsx';
+import FichaCliente, { getCuotasInfo, esPagadoLocal, CUOTA_COLS, calcularMontos } from '../FichaCliente.jsx';
 
 const PROGRAMAS = ['M1','M1+','M1.1','M2','Back','Starter'];
 const CLOSERS   = ['Kevin','Vicky','Braian','Fabricio'];
@@ -26,6 +26,7 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
   const cuotasInfo = getCuotasInfo(c);
   const completo   = cuotasInfo !== '—' && cuotasInfo.split('/')[0] === cuotasInfo.split('/')[1];
   const isSelected = clienteSel?._rowIndex === c._rowIndex;
+  const { total, pagado } = calcularMontos(c);
   return (
     <tr onClick={() => setClienteSel(isSelected ? null : c)}
       className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
@@ -33,11 +34,11 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span></td>
       <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
       <td className="px-4 py-3 text-gray-700">{c['CLOSER'] || '—'}</td>
-      <td className="px-4 py-3 text-gray-700">${Number(c['Monto total']||0).toLocaleString('es-AR')}</td>
+      <td className="px-4 py-3 text-gray-700">${total.toLocaleString('es-AR')}</td>
       <td className="px-4 py-3 text-center">
         <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cuotasInfo}</span>
       </td>
-      <td className="px-4 py-3 text-gray-700">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</td>
+      <td className="px-4 py-3 text-gray-700">${pagado.toLocaleString('es-AR')}</td>
       <td className="px-4 py-3">
         {c['Estatus'] ? (
           <span className={`px-2 py-0.5 rounded text-xs font-medium ${

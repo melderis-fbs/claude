@@ -38,6 +38,17 @@ export function getCuotasInfo(c) {
   return `${pagas.length}/${all.length}`;
 }
 
+export function calcularMontos(c) {
+  let total = 0, pagado = 0;
+  for (const q of CUOTA_COLS) {
+    const m = parseFloat(String(c[q.monto]||'').replace(/[$,\s]/g,''));
+    if (isNaN(m) || m <= 0) continue;
+    total += m;
+    if (esPagadoLocal(c[q.estado])) pagado += m;
+  }
+  return { total, pagado };
+}
+
 const COMMENT_COLS = ['Notas', 'Comentario', 'Comentarios', 'Observaciones'];
 
 const PROGRAMA_OPTIONS = ['M1','M1+','M1.1','M2','Back','Starter'];
@@ -277,11 +288,16 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             </div>
           </div>
 
-          <div className="flex gap-6 pt-3 border-t border-gray-100">
-            <div><p className="text-xs text-gray-400">Monto total</p><p className="text-xl font-bold text-gray-900">${Number(c['Monto total']||0).toLocaleString('es-AR')}</p></div>
-            <div><p className="text-xs text-gray-400">Pagado</p><p className="text-xl font-bold text-emerald-600">${Number(c['Monto pagado']||0).toLocaleString('es-AR')}</p></div>
-            <div><p className="text-xs text-gray-400">Cuotas</p><p className="text-xl font-bold text-gray-700">{getCuotasInfo(c)}</p></div>
-          </div>
+          {(() => {
+            const { total, pagado } = calcularMontos(c);
+            return (
+              <div className="flex gap-6 pt-3 border-t border-gray-100">
+                <div><p className="text-xs text-gray-400">Monto total</p><p className="text-xl font-bold text-gray-900">${total.toLocaleString('es-AR')}</p></div>
+                <div><p className="text-xs text-gray-400">Pagado</p><p className="text-xl font-bold text-emerald-600">${pagado.toLocaleString('es-AR')}</p></div>
+                <div><p className="text-xs text-gray-400">Cuotas</p><p className="text-xl font-bold text-gray-700">{getCuotasInfo(c)}</p></div>
+              </div>
+            );
+          })()}
 
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Notas / Comentarios</p>
