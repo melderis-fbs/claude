@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -246,8 +246,21 @@ export default function Documentos({ clientes = [] }) {
   const [clientSearch, setClientSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+
+  const closePreview = useCallback(() => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  }, [previewUrl]);
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') closePreview(); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [closePreview]);
 
   const moneda = tipo === 'Invoice' ? invState.moneda : recState.moneda;
   function setMoneda(m) {
@@ -286,19 +299,43 @@ export default function Documentos({ clientes = [] }) {
     setError(null);
   }
 
+  function buildFormData() {
+    if (tipo === 'Invoice') {
+      const { subtotal, taxAmount, total } = calcInvoice(invState.items, invState.tax);
+      return { ...invState, subtotal, taxAmount, total, origen: 'Manual' };
+    }
+    const { subtotal, vatAmount, total } = calcRecibo(recState.items, recState.vat);
+    return { ...recState, subtotal, vatAmount, total, origen: 'Manual' };
+  }
+
+  async function handlePreview() {
+    setError(null);
+    const formData = buildFormData();
+    if (!formData.nombre.trim()) { setError('El nombre es requerido.'); return; }
+    setPreviewing(true);
+    try {
+      const res = await fetch('/api/documentos/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, formData, moneda }),
+      });
+      if (!res.ok) throw new Error('Error al generar la vista previa');
+      const blob = await res.blob();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
   async function handleGenerar() {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      let formData;
-      if (tipo === 'Invoice') {
-        const { subtotal, taxAmount, total } = calcInvoice(invState.items, invState.tax);
-        formData = { ...invState, subtotal, taxAmount, total, origen: 'Manual' };
-      } else {
-        const { subtotal, vatAmount, total } = calcRecibo(recState.items, recState.vat);
-        formData = { ...recState, subtotal, vatAmount, total, origen: 'Manual' };
-      }
+      const formData = buildFormData();
 
       if (!formData.nombre.trim()) {
         setError('El nombre es requerido.');
@@ -335,6 +372,20 @@ export default function Documentos({ clientes = [] }) {
   }
 
   return (
+    <>
+    {/* Preview modal */}
+    {previewUrl && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closePreview}>
+        <div className="relative bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: 'min(820px, 96vw)', height: '90vh' }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
+            <span className="text-sm font-semibold text-gray-700">Vista previa — {tipo}</span>
+            <button onClick={closePreview} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-1">×</button>
+          </div>
+          <iframe src={previewUrl} className="flex-1 w-full rounded-b-xl" title="Vista previa" />
+        </div>
+      </div>
+    )}
+
     <div className="max-w-2xl mx-auto space-y-6">
 
       {/* Tipo + Moneda */}
@@ -411,14 +462,24 @@ export default function Documentos({ clientes = [] }) {
         </div>
       )}
 
-      {/* Generate */}
-      <button
-        onClick={handleGenerar}
-        disabled={loading}
-        className="w-full bg-gray-900 text-white py-3 rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
-      >
-        {loading ? 'Generando...' : `Generar ${tipo}`}
-      </button>
+      {/* Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={handlePreview}
+          disabled={previewing || loading}
+          className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          {previewing ? 'Cargando...' : 'Vista previa'}
+        </button>
+        <button
+          onClick={handleGenerar}
+          disabled={loading || previewing}
+          className="flex-1 bg-gray-900 text-white py-3 rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Generando...' : `Generar ${tipo}`}
+        </button>
+      </div>
     </div>
+    </>
   );
 }

@@ -1,6 +1,11 @@
 import React from 'react';
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 
+const DARK = '#1a1a1a';
+const GRAY = '#666666';
+const LIGHT = '#f4f4f4';
+const LINE  = '#dddddd';
+
 function fmt(amount, moneda) {
   const num = Number(amount) || 0;
   const [int, dec] = num.toFixed(2).split('.');
@@ -12,188 +17,208 @@ function fmt(amount, moneda) {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 56,
-    paddingBottom: 72,
-    paddingHorizontal: 56,
+    paddingTop: 44,
+    paddingBottom: 56,
+    paddingHorizontal: 50,
     fontFamily: 'Helvetica',
     backgroundColor: '#ffffff',
-    color: '#111111',
+    color: DARK,
+    fontSize: 9,
   },
 
-  // Header: line + INVOICE
-  headerRow: {
+  // ── Top header ───────────────────────────────────────────────────────────────
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 30,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 32,
   },
-  headerLineWrap: {
-    flex: 1,
-    marginRight: 20,
-    paddingBottom: 5,
+  fromBlock: {},
+  fromName: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 13,
+    color: DARK,
+    marginBottom: 3,
   },
-  headerLine: {
-    borderBottomWidth: 0.75,
-    borderBottomColor: '#000000',
+  fromLine: {
+    fontSize: 8,
+    color: GRAY,
+    marginBottom: 1.5,
   },
-  invoiceTitle: {
-    fontSize: 38,
-    letterSpacing: 9,
-    fontFamily: 'Helvetica',
-    color: '#000000',
+  docTitle: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 34,
+    color: DARK,
+    letterSpacing: 1,
     lineHeight: 1,
   },
 
-  // Meta (right-aligned)
-  metaBlock: {
+  // ── Info card ────────────────────────────────────────────────────────────────
+  infoCard: {
+    flexDirection: 'row',
+    backgroundColor: LIGHT,
+    borderRadius: 4,
+    padding: 20,
+    marginBottom: 28,
+  },
+  infoLeft: {
+    flex: 1,
+    paddingRight: 20,
+  },
+  infoRight: {
     alignItems: 'flex-end',
-    marginBottom: 34,
+    justifyContent: 'flex-start',
+  },
+  infoSectionLabel: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7.5,
+    letterSpacing: 0.8,
+    color: DARK,
+    marginBottom: 7,
+  },
+  infoName: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 11,
+    color: DARK,
+    marginBottom: 3,
+  },
+  infoLine: {
+    fontSize: 8.5,
+    color: GRAY,
+    marginBottom: 2,
   },
   metaRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'baseline',
     marginBottom: 4,
   },
   metaLabel: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 7.5,
-    letterSpacing: 0.8,
-    marginRight: 10,
-    color: '#000000',
+    letterSpacing: 0.5,
+    color: GRAY,
+    marginRight: 8,
   },
   metaValue: {
-    fontSize: 8.5,
-    color: '#111111',
-    minWidth: 100,
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 9,
+    color: DARK,
+    minWidth: 80,
+    textAlign: 'right',
   },
 
-  // Two columns
-  infoRow: {
+  // ── Table ────────────────────────────────────────────────────────────────────
+  tableHeadRow: {
     flexDirection: 'row',
-    marginBottom: 36,
-  },
-  infoCol: {
-    flex: 1,
-  },
-  sectionLabel: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 7,
-    letterSpacing: 1.5,
-    color: '#aaaaaa',
-    marginBottom: 8,
-  },
-  infoName: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 10.5,
-    marginBottom: 4,
-  },
-  infoLine: {
-    fontSize: 8.5,
-    color: '#555555',
-    marginBottom: 2.5,
-  },
-
-  // Table
-  tableHeaderRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
+    borderBottomWidth: 1.5,
+    borderBottomColor: DARK,
     paddingBottom: 6,
-    marginBottom: 0,
+    marginBottom: 2,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#e8e8e8',
+    borderBottomColor: LINE,
+    paddingVertical: 8,
   },
-  colDesc: { flex: 3 },
+  colDesc:  { flex: 1 },
   colPrice: { width: 72, alignItems: 'flex-end' },
-  colQty: { width: 36, alignItems: 'flex-end' },
-  colTotal: { width: 76, alignItems: 'flex-end' },
-
+  colQty:   { width: 40, alignItems: 'flex-end' },
+  colTotal: { width: 80, alignItems: 'flex-end' },
   thText: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 7.5,
-    letterSpacing: 0.5,
-    color: '#000000',
+    letterSpacing: 0.6,
+    color: DARK,
   },
   thRight: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 7.5,
-    letterSpacing: 0.5,
-    color: '#000000',
+    letterSpacing: 0.6,
+    color: DARK,
     textAlign: 'right',
   },
-  tdText: { fontSize: 9, color: '#222222' },
-  tdRight: { fontSize: 9, color: '#222222', textAlign: 'right' },
+  tdText:  { fontSize: 9, color: DARK },
+  tdRight: { fontSize: 9, color: DARK, textAlign: 'right' },
 
-  // Totals
-  totalsOuter: {
+  // ── Totals ───────────────────────────────────────────────────────────────────
+  totalsSection: {
+    marginTop: 4,
     alignItems: 'flex-end',
-    marginTop: 22,
   },
   totalsBox: {
-    width: 210,
-    borderTopWidth: 1,
-    borderTopColor: '#000000',
-    paddingTop: 10,
+    width: 220,
   },
-  totRow: {
+  totDividerTop: {
+    borderTopWidth: 1.5,
+    borderTopColor: DARK,
+    marginBottom: 8,
+  },
+  subtotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 5,
+    marginBottom: 4,
   },
-  totLabel: {
+  subtotalLabel: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 7.5,
+    fontSize: 8,
     letterSpacing: 0.5,
-    color: '#000000',
+    color: DARK,
   },
-  totValue: {
+  subtotalValue: {
     fontSize: 9,
-    color: '#000000',
+    color: DARK,
     textAlign: 'right',
   },
-  totDivider: {
-    borderTopWidth: 0.5,
-    borderTopColor: '#000000',
-    marginTop: 5,
-    marginBottom: 5,
+  taxRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
-  totRowFinal: {
+  taxLabel: { fontSize: 8.5, color: GRAY },
+  taxValue:  { fontSize: 8.5, color: GRAY, textAlign: 'right' },
+  totDividerBottom: {
+    borderTopWidth: 0.5,
+    borderTopColor: LINE,
+    marginBottom: 6,
+  },
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  totLabelFinal: {
+  totalLabel: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    color: DARK,
   },
-  totValueFinal: {
+  totalValue: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 10,
+    fontSize: 11,
+    color: DARK,
     textAlign: 'right',
   },
 
-  // Signature
+  // ── Signature ────────────────────────────────────────────────────────────────
   signatureBlock: {
-    marginTop: 52,
+    marginTop: 48,
   },
   signatureImage: {
     width: 110,
     height: 46,
     objectFit: 'contain',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   signaturePlaceholder: {
-    width: 120,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#aaaaaa',
-    marginBottom: 6,
-    paddingBottom: 30,
+    width: 150,
+    borderBottomWidth: 0.75,
+    borderBottomColor: '#bbbbbb',
+    paddingBottom: 26,
+    marginBottom: 5,
   },
   signatureName: {
     fontSize: 8.5,
-    color: '#555555',
+    color: GRAY,
   },
 });
 
@@ -212,53 +237,47 @@ export default function InvoiceDocument({ data, firmaSrc }) {
     <Document>
       <Page size="A4" style={styles.page}>
 
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerLineWrap}>
-            <View style={styles.headerLine} />
+        {/* Top: from info + title */}
+        <View style={styles.topRow}>
+          <View style={styles.fromBlock}>
+            <Text style={styles.fromName}>BECCI LLC</Text>
+            <Text style={styles.fromLine}>EIN: 35-2729822</Text>
+            <Text style={styles.fromLine}>8 The Green Ste R, Dover</Text>
+            <Text style={styles.fromLine}>Delaware 19901, USA</Text>
           </View>
-          <Text style={styles.invoiceTitle}>INVOICE</Text>
+          <Text style={styles.docTitle}>INVOICE</Text>
         </View>
 
-        {/* Meta block */}
-        <View style={styles.metaBlock}>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>INVOICE NO:</Text>
-            <Text style={styles.metaValue}>{numero}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>DATE:</Text>
-            <Text style={styles.metaValue}>{fecha}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>DUE DATE:</Text>
-            <Text style={styles.metaValue}>{dueDate}</Text>
-          </View>
-        </View>
-
-        {/* BILLED TO / FROM */}
-        <View style={styles.infoRow}>
-          <View style={styles.infoCol}>
-            <Text style={styles.sectionLabel}>BILLED TO:</Text>
+        {/* Info card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoLeft}>
+            <Text style={styles.infoSectionLabel}>BILLED TO:</Text>
             <Text style={styles.infoName}>{nombre}</Text>
             {!!telefono && <Text style={styles.infoLine}>{telefono}</Text>}
-            {!!email && <Text style={styles.infoLine}>{email}</Text>}
-            {!!dni && <Text style={styles.infoLine}>DNI: {dni}</Text>}
+            {!!email    && <Text style={styles.infoLine}>{email}</Text>}
+            {!!dni      && <Text style={styles.infoLine}>DNI: {dni}</Text>}
           </View>
-          <View style={styles.infoCol}>
-            <Text style={styles.sectionLabel}>FROM:</Text>
-            <Text style={styles.infoName}>BECCI LLC</Text>
-            <Text style={styles.infoLine}>EIN: 35-2729822</Text>
-            <Text style={styles.infoLine}>8 The Green Ste R, Dover</Text>
-            <Text style={styles.infoLine}>Delaware 19901, USA</Text>
+          <View style={styles.infoRight}>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>INVOICE NO:</Text>
+              <Text style={styles.metaValue}>{numero}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>DATE:</Text>
+              <Text style={styles.metaValue}>{fecha}</Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>DUE DATE:</Text>
+              <Text style={styles.metaValue}>{dueDate}</Text>
+            </View>
           </View>
         </View>
 
         {/* Table */}
-        <View style={styles.tableHeaderRow}>
-          <View style={styles.colDesc}><Text style={styles.thText}>DESCRIPTION</Text></View>
+        <View style={styles.tableHeadRow}>
+          <View style={styles.colDesc}> <Text style={styles.thText}>DESCRIPTION</Text></View>
           <View style={styles.colPrice}><Text style={styles.thRight}>UNIT PRICE</Text></View>
-          <View style={styles.colQty}><Text style={styles.thRight}>QTY</Text></View>
+          <View style={styles.colQty}>  <Text style={styles.thRight}>QTY</Text></View>
           <View style={styles.colTotal}><Text style={styles.thRight}>TOTAL</Text></View>
         </View>
 
@@ -275,38 +294,38 @@ export default function InvoiceDocument({ data, firmaSrc }) {
             </View>
             <View style={styles.colTotal}>
               <Text style={styles.tdRight}>
-                {fmt((Number(item.unitPrice) || 0) * (Number(item.qty) || 0), moneda)}
+                {fmt((Number(item.unitPrice) || 0) * (Number(item.qty) || 1), moneda)}
               </Text>
             </View>
           </View>
         ))}
 
         {/* Totals */}
-        <View style={styles.totalsOuter}>
+        <View style={styles.totalsSection}>
           <View style={styles.totalsBox}>
-            <View style={styles.totRow}>
-              <Text style={styles.totLabel}>SUBTOTAL</Text>
-              <Text style={styles.totValue}>{fmt(subtotal, moneda)}</Text>
+            <View style={styles.totDividerTop} />
+            <View style={styles.subtotalRow}>
+              <Text style={styles.subtotalLabel}>SUBTOTAL</Text>
+              <Text style={styles.subtotalValue}>{fmt(subtotal, moneda)}</Text>
             </View>
-            <View style={styles.totRow}>
-              <Text style={styles.totLabel}>TAX ({tax || 0}%)</Text>
-              <Text style={styles.totValue}>{fmt(taxAmount, moneda)}</Text>
+            <View style={styles.taxRow}>
+              <Text style={styles.taxLabel}>Tax ({tax || 0}%)</Text>
+              <Text style={styles.taxValue}>{fmt(taxAmount, moneda)}</Text>
             </View>
-            <View style={styles.totDivider} />
-            <View style={styles.totRowFinal}>
-              <Text style={styles.totLabelFinal}>TOTAL {monedaLabel}</Text>
-              <Text style={styles.totValueFinal}>{fmt(total, moneda)}</Text>
+            <View style={styles.totDividerBottom} />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>TOTAL {monedaLabel}</Text>
+              <Text style={styles.totalValue}>{fmt(total, moneda)}</Text>
             </View>
           </View>
         </View>
 
         {/* Signature */}
         <View style={styles.signatureBlock}>
-          {firmaSrc ? (
-            <Image src={firmaSrc} style={styles.signatureImage} />
-          ) : (
-            <View style={styles.signaturePlaceholder} />
-          )}
+          {firmaSrc
+            ? <Image src={firmaSrc} style={styles.signatureImage} />
+            : <View style={styles.signaturePlaceholder} />
+          }
           <Text style={styles.signatureName}>Victoria Becci</Text>
         </View>
 
