@@ -236,7 +236,12 @@ export default function ReciboDocument({ data, logoSrc }) {
         <View style={styles.topRow}>
           {logoSrc
             ? <Image src={logoSrc} style={styles.logoImage} />
-            : <View />
+            : (
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 16, letterSpacing: 2, color: '#1a1a1a' }}>FOUNDERS</Text>
+                <Text style={{ fontSize: 8, color: '#666', letterSpacing: 1, marginTop: 2 }}>BUSINESS STRATEGIES</Text>
+              </View>
+            )
           }
           <Text style={styles.docTitle}>RECIBO</Text>
         </View>
