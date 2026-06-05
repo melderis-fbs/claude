@@ -45,6 +45,7 @@ export async function POST(request) {
         ? React.createElement(InvoiceDocument, {
             data: { ...formData, numero, moneda },
             firmaSrc,
+            logoSrc,
           })
         : React.createElement(ReciboDocument, {
             data: { ...formData, numero, moneda },

@@ -34,17 +34,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 28,
   },
-  fromBlock: {},
-  fromName: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
-    color: DARK,
-    marginBottom: 4,
+  logoImage: {
+    width: 120,
+    height: 52,
+    objectFit: 'contain',
   },
-  fromLine: {
+  logoFallback: { alignItems: 'flex-start' },
+  logoFallbackName: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 16,
+    letterSpacing: 2,
+    color: DARK,
+  },
+  logoFallbackSub: {
     fontSize: 8,
     color: GRAY,
-    marginBottom: 1.5,
+    letterSpacing: 1,
+    marginTop: 2,
   },
   docTitle: {
     fontSize: 40,
@@ -63,7 +69,6 @@ const styles = StyleSheet.create({
   },
   infoCardTop: {
     flexDirection: 'row',
-    marginBottom: 0,
   },
   infoLeft: {
     flex: 1,
@@ -109,7 +114,35 @@ const styles = StyleSheet.create({
     minWidth: 80,
     textAlign: 'right',
   },
-  // Payment info divider + block
+  // FROM block (right column, below meta)
+  fromDivider: {
+    borderTopWidth: 0.5,
+    borderTopColor: LINE,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  fromSectionLabel: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    letterSpacing: 1,
+    color: LGRAY,
+    marginBottom: 5,
+    textAlign: 'right',
+  },
+  fromName: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 9,
+    color: DARK,
+    marginBottom: 2,
+    textAlign: 'right',
+  },
+  fromLine: {
+    fontSize: 8,
+    color: GRAY,
+    marginBottom: 1.5,
+    textAlign: 'right',
+  },
+  // Payment info (below issued to)
   paymentDivider: {
     borderTopWidth: 0.5,
     borderTopColor: LINE,
@@ -220,7 +253,7 @@ const styles = StyleSheet.create({
   signatureName: { fontSize: 8.5, color: GRAY },
 });
 
-export default function InvoiceDocument({ data, firmaSrc }) {
+export default function InvoiceDocument({ data, firmaSrc, logoSrc }) {
   const {
     numero, fecha, dueDate,
     nombre, telefono, email, dni,
@@ -236,27 +269,44 @@ export default function InvoiceDocument({ data, firmaSrc }) {
     <Document>
       <Page size="A4" style={styles.page}>
 
-        {/* Header */}
+        {/* Header: Founders logo left, INVOICE right */}
         <View style={styles.topRow}>
-          <View style={styles.fromBlock}>
-            <Text style={styles.fromName}>BECCI LLC</Text>
-            <Text style={styles.fromLine}>EIN: 35-2729822</Text>
-            <Text style={styles.fromLine}>8 The Green Ste R, Dover</Text>
-            <Text style={styles.fromLine}>Delaware 19901, USA</Text>
-          </View>
+          {logoSrc
+            ? <Image src={logoSrc} style={styles.logoImage} />
+            : (
+              <View style={styles.logoFallback}>
+                <Text style={styles.logoFallbackName}>FOUNDERS</Text>
+                <Text style={styles.logoFallbackSub}>BUSINESS STRATEGIES</Text>
+              </View>
+            )
+          }
           <Text style={styles.docTitle}>INVOICE</Text>
         </View>
 
         {/* Info card */}
         <View style={styles.infoCard}>
           <View style={styles.infoCardTop}>
+
+            {/* Left: Issued to + Payment info */}
             <View style={styles.infoLeft}>
               <Text style={styles.infoSectionLabel}>ISSUED TO:</Text>
               <Text style={styles.infoName}>{nombre}</Text>
               {!!telefono && <Text style={styles.infoLine}>{telefono}</Text>}
               {!!email    && <Text style={styles.infoLine}>{email}</Text>}
               {!!dni      && <Text style={styles.infoLine}>DNI: {dni}</Text>}
+
+              {!!paymentInfo && (
+                <>
+                  <View style={styles.paymentDivider} />
+                  <Text style={styles.paymentLabel}>PAYMENT INFO:</Text>
+                  {paymentInfo.split('\n').map((line, i) => (
+                    <Text key={i} style={styles.paymentLine}>{line}</Text>
+                  ))}
+                </>
+              )}
             </View>
+
+            {/* Right: Invoice meta + From */}
             <View style={styles.infoRight}>
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>INVOICE NO:</Text>
@@ -270,18 +320,16 @@ export default function InvoiceDocument({ data, firmaSrc }) {
                 <Text style={styles.metaLabel}>DUE DATE:</Text>
                 <Text style={styles.metaValue}>{dueDate}</Text>
               </View>
-            </View>
-          </View>
 
-          {!!paymentInfo && (
-            <>
-              <View style={styles.paymentDivider} />
-              <Text style={styles.paymentLabel}>PAYMENT INFO:</Text>
-              {paymentInfo.split('\n').map((line, i) => (
-                <Text key={i} style={styles.paymentLine}>{line}</Text>
-              ))}
-            </>
-          )}
+              <View style={styles.fromDivider} />
+              <Text style={styles.fromSectionLabel}>FROM:</Text>
+              <Text style={styles.fromName}>BECCI LLC</Text>
+              <Text style={styles.fromLine}>EIN: 35-2729822</Text>
+              <Text style={styles.fromLine}>8 The Green Ste R, Dover</Text>
+              <Text style={styles.fromLine}>Delaware 19901, USA</Text>
+            </View>
+
+          </View>
         </View>
 
         {/* Table */}
