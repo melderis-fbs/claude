@@ -38,6 +38,9 @@ export async function GET(request) {
     const deudores = calcularDeudores(clientes, deudoresRecords);
     const cobrosSemanales = calcularCobrosSemanales(clientes).filter(c => !c.pagado);
 
+    const cobrosKeys = new Set(cobrosSemanales.map(c => `${c.rowIndex}-${c.cuota}`));
+    const deudoresFiltrados = deudores.filter(d => !cobrosKeys.has(`${d.rowIndex}-${d.cuota}`));
+
     const recMap = {};
     for (const r of deudoresRecords) {
       recMap[`${r.rowIndex}-${r.cuotaNum}`] = r;
@@ -51,23 +54,23 @@ export async function GET(request) {
     ];
 
     // ── Deudores ──────────────────────────────────────────────────────────────
-    if (deudores.length === 0) {
+    if (deudoresFiltrados.length === 0) {
       blocks.push({
         type: 'section',
         text: { type: 'mrkdwn', text: '✅ No hay deudores pendientes.' },
       });
     } else {
-      const totalMonto = deudores.reduce((s, d) => s + d.monto, 0);
+      const totalMonto = deudoresFiltrados.reduce((s, d) => s + d.monto, 0);
       blocks.push({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${deudores.length} deudores pendientes* — Total: *${fmt(totalMonto)} USD*`,
+          text: `*${deudoresFiltrados.length} deudores pendientes* — Total: *${fmt(totalMonto)} USD*`,
         },
       });
       blocks.push({ type: 'divider' });
 
-      for (const d of deudores) {
+      for (const d of deudoresFiltrados) {
         const diasLabel = d.diasMora != null
           ? d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`
           : '';
@@ -136,7 +139,7 @@ export async function GET(request) {
 
     await postSlack(webhookUrl, { blocks });
 
-    return Response.json({ ok: true, deudores: deudores.length, cobros: cobrosSemanales.length });
+    return Response.json({ ok: true, deudores: deudoresFiltrados.length, cobros: cobrosSemanales.length });
   } catch (err) {
     console.error('[cobranzas-weekly] error:', err);
     return Response.json({ error: err.message }, { status: 500 });
