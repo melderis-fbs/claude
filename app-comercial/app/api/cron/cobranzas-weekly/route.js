@@ -38,6 +38,11 @@ export async function GET(request) {
     const deudores = calcularDeudores(clientes, deudoresRecords);
     const cobrosSemanales = calcularCobrosSemanales(clientes).filter(c => !c.pagado);
 
+    const recMap = {};
+    for (const r of deudoresRecords) {
+      recMap[`${r.rowIndex}-${r.cuotaNum}`] = r;
+    }
+
     const blocks = [
       {
         type: 'header',
@@ -104,11 +109,15 @@ export async function GET(request) {
       });
 
       for (const c of cobrosSemanales) {
+        const rec = recMap[`${c.rowIndex}-${c.cuota}`] || {};
+        const situacion = parseSituacionActual(rec.comentario || '');
+        const situacionText = situacion ? `\n> _${situacion}_` : '';
+
         blocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}`,
+            text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}${situacionText}`,
           },
         });
       }
