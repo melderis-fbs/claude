@@ -42,20 +42,38 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
         <>
           {/* Cards resumen */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ventas nuevas</p>
-              <p className="text-3xl font-bold text-gray-900">{mes.totalNuevas}</p>
-              <p className="text-sm text-gray-500 mt-1">{fmt(mes.montoFront)}</p>
+            <div
+              onClick={() => setFiltro(f => f === 'nuevas' ? 'todos' : 'nuevas')}
+              className={`rounded-xl shadow-sm p-5 cursor-pointer transition-all border ${
+                filtro === 'nuevas'
+                  ? 'bg-gray-900 border-gray-900 text-white'
+                  : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
+              }`}>
+              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'nuevas' ? 'text-gray-300' : 'text-gray-500'}`}>Ventas nuevas</p>
+              <p className={`text-3xl font-bold ${filtro === 'nuevas' ? 'text-white' : 'text-gray-900'}`}>{mes.totalNuevas}</p>
+              <p className={`text-sm mt-1 ${filtro === 'nuevas' ? 'text-gray-300' : 'text-gray-500'}`}>{fmt(mes.montoFront)}</p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ventas back</p>
-              <p className="text-3xl font-bold text-blue-700">{mes.totalBack}</p>
-              <p className="text-sm text-blue-600 mt-1">{fmt(mes.montoBack)}</p>
+            <div
+              onClick={() => setFiltro(f => f === 'back' ? 'todos' : 'back')}
+              className={`rounded-xl p-5 cursor-pointer transition-all border ${
+                filtro === 'back'
+                  ? 'bg-blue-700 border-blue-700'
+                  : 'bg-blue-50 border-blue-200 hover:border-blue-300 hover:shadow-md'
+              }`}>
+              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'back' ? 'text-blue-200' : 'text-gray-500'}`}>Ventas back</p>
+              <p className={`text-3xl font-bold ${filtro === 'back' ? 'text-white' : 'text-blue-700'}`}>{mes.totalBack}</p>
+              <p className={`text-sm mt-1 ${filtro === 'back' ? 'text-blue-200' : 'text-blue-600'}`}>{fmt(mes.montoBack)}</p>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total ventas</p>
-              <p className="text-3xl font-bold text-emerald-700">{mes.totalNuevas + mes.totalBack}</p>
-              <p className="text-sm text-emerald-600 mt-1">{fmt(mes.montoTotal)}</p>
+            <div
+              onClick={() => setFiltro('todos')}
+              className={`rounded-xl p-5 cursor-pointer transition-all border ${
+                filtro === 'todos'
+                  ? 'bg-emerald-700 border-emerald-700'
+                  : 'bg-emerald-50 border-emerald-200 hover:border-emerald-300 hover:shadow-md'
+              }`}>
+              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'todos' ? 'text-emerald-200' : 'text-gray-500'}`}>Total ventas</p>
+              <p className={`text-3xl font-bold ${filtro === 'todos' ? 'text-white' : 'text-emerald-700'}`}>{mes.totalNuevas + mes.totalBack}</p>
+              <p className={`text-sm mt-1 ${filtro === 'todos' ? 'text-emerald-200' : 'text-emerald-600'}`}>{fmt(mes.montoTotal)}</p>
             </div>
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ticket promedio</p>
