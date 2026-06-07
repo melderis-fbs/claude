@@ -220,7 +220,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
   const [notasLocal, setNotasLocal] = useState(() => {
     const m = {};
     for (const c of clientes) {
-      const nota = c['nota en gestión clientes'];
+      const nota = c['Notas'];
       if (nota) m[c._rowIndex] = nota;
     }
     return m;
@@ -242,7 +242,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
       const res = await fetch('/api/update-pago', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: 'nota en gestión clientes', value: textoEdit }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: 'Notas', value: textoEdit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
       setNotasLocal(prev => ({ ...prev, [cobro.rowIndex]: textoEdit }));
