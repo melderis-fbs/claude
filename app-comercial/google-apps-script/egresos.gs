@@ -15,6 +15,39 @@ function doGet(e) {
   }
 }
 
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const action = body.action;
+    if (action === 'appendEgreso') return ok(appendEgreso(body.rowValues));
+    return ok({ error: 'Acción no reconocida', action });
+  } catch (err) {
+    return error(err.message);
+  }
+}
+
+var TAB_REGISTROS = 'Registros';
+var HEADERS_REGISTROS = ['Fecha', 'Categoría', 'Subcategoría', 'Descripción', 'Monto', 'Medio de pago', 'País'];
+
+function appendEgreso(rowValues) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(TAB_REGISTROS);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB_REGISTROS);
+    var headerRange = sheet.getRange(1, 1, 1, HEADERS_REGISTROS.length);
+    headerRange.setValues([HEADERS_REGISTROS]);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#f3f4f6');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 100);
+    sheet.setColumnWidth(4, 220);
+  }
+
+  sheet.appendRow(rowValues);
+  return { ok: true };
+}
+
 function getTabs() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tabs = ss.getSheets().map(s => s.getName());

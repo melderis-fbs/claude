@@ -135,6 +135,11 @@ export async function getDocumentos() {
 
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
+export async function appendEgreso(rowValues) {
+  if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) throw new Error('APPS_SCRIPT_EGRESOS_URL no configurada');
+  return postScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'appendEgreso', rowValues });
+}
+
 export async function getEgresosTabs() {
   if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
   const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'getTabs' });
