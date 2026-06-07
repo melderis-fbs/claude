@@ -211,7 +211,7 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
 
 // ── Pagos semanales ───────────────────────────────────────────────────────────
 
-function VistaSemanal({ proyeccion, deudores = [] }) {
+function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
   const [offset, setOffset] = useState(0);
   const [marcando, setMarcando] = useState(new Set());
   const [errorMsg, setErrorMsg] = useState('');
@@ -219,9 +219,9 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
   const [textoEdit, setTextoEdit] = useState('');
   const [notasLocal, setNotasLocal] = useState(() => {
     const m = {};
-    for (const d of deudores) {
-      const k = `${d.rowIndex}-${d.cuota}`;
-      m[k] = { text: parseCom(d.comentario).sa || '', estado: d.estado || '' };
+    for (const c of clientes) {
+      const nota = c['nota en gestión clientes'];
+      if (nota) m[c._rowIndex] = nota;
     }
     return m;
   });
@@ -232,24 +232,20 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
   const semana = proyeccion[idx];
 
   const abrirNota = (cobro) => {
-    const k = `${cobro.rowIndex}-${cobro.cuota}`;
-    setTextoEdit(notasLocal[k]?.text || '');
-    setEditandoKey(k);
+    setTextoEdit(notasLocal[cobro.rowIndex] || '');
+    setEditandoKey(`${cobro.rowIndex}-${cobro.cuota}`);
   };
 
   const guardarNota = async (cobro) => {
-    const k = `${cobro.rowIndex}-${cobro.cuota}`;
-    const estadoExistente = notasLocal[k]?.estado || '';
-    const comentario = serializeCom({ uc: '', sa: textoEdit, dc: '' });
     setErrorMsg('');
     try {
-      const res = await fetch('/api/deudores', {
-        method: 'POST',
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: cobro.rowIndex, cuotaNum: cobro.cuota, estado: estadoExistente, comentario }),
+        body: JSON.stringify({ rowIndex: cobro.rowIndex, headerName: 'nota en gestión clientes', value: textoEdit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
-      setNotasLocal(prev => ({ ...prev, [k]: { text: textoEdit, estado: estadoExistente } }));
+      setNotasLocal(prev => ({ ...prev, [cobro.rowIndex]: textoEdit }));
       setEditandoKey(null);
       router.refresh();
     } catch (err) {
@@ -339,9 +335,9 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
                 </div>
                 <div className="divide-y divide-gray-100">
                   {visibles.map((co, j) => {
-                    const k = `${co.rowIndex}-${co.cuota}`;
-                    const nota = notasLocal[k];
-                    const isEditing = editandoKey === k;
+                    const editKey = `${co.rowIndex}-${co.cuota}`;
+                    const nota = notasLocal[co.rowIndex];
+                    const isEditing = editandoKey === editKey;
                     return (
                     <div key={j} className="px-5 py-3 space-y-1.5">
                       <div className="flex items-center justify-between gap-4">
@@ -840,7 +836,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
 
       <div>
         {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
-        {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} />}
+        {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {subTab === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
       </div>
     </div>
