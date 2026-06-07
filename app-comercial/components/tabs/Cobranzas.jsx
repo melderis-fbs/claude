@@ -251,6 +251,7 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
       if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
       setNotasLocal(prev => ({ ...prev, [k]: { text: textoEdit, estado: estadoExistente } }));
       setEditandoKey(null);
+      router.refresh();
     } catch (err) {
       setErrorMsg(err.message);
     }
