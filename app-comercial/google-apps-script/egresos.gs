@@ -7,8 +7,9 @@
 function doGet(e) {
   const action = e.parameter.action;
   try {
-    if (action === 'getTabs') return ok(getTabs());
-    if (action === 'getTab')  return ok(getTab(e.parameter.tab));
+    if (action === 'getTabs')       return ok(getTabs());
+    if (action === 'getTab')        return ok(getTab(e.parameter.tab));
+    if (action === 'getRegistros')  return ok(getRegistros(e.parameter.mes));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -27,12 +28,11 @@ function doPost(e) {
 }
 
 var TAB_REGISTROS = 'Registros';
-var HEADERS_REGISTROS = ['Fecha', 'Categoría', 'Subcategoría', 'Descripción', 'Monto', 'Medio de pago', 'País'];
+var HEADERS_REGISTROS = ['Mes', 'Categoría', 'Subcategoría', 'Detalle', 'Monto', 'Medio de pago', 'País'];
 
-function appendEgreso(rowValues) {
+function ensureSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(TAB_REGISTROS);
-
   if (!sheet) {
     sheet = ss.insertSheet(TAB_REGISTROS);
     var headerRange = sheet.getRange(1, 1, 1, HEADERS_REGISTROS.length);
@@ -40,12 +40,59 @@ function appendEgreso(rowValues) {
     headerRange.setFontWeight('bold');
     headerRange.setBackground('#f3f4f6');
     sheet.setFrozenRows(1);
-    sheet.setColumnWidth(1, 100);
-    sheet.setColumnWidth(4, 220);
+    sheet.setColumnWidth(1, 90);
+    sheet.setColumnWidth(2, 140);
+    sheet.setColumnWidth(3, 130);
+    sheet.setColumnWidth(4, 160);
+    sheet.setColumnWidth(5, 90);
+    sheet.setColumnWidth(6, 120);
+    sheet.setColumnWidth(7, 60);
   }
+  return sheet;
+}
 
+function appendEgreso(rowValues) {
+  var sheet = ensureSheet();
   sheet.appendRow(rowValues);
   return { ok: true };
+}
+
+function getRegistros(mes) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(TAB_REGISTROS);
+  if (!sheet) return { rows: [] };
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { rows: [] };
+
+  var lastCol = Math.max(sheet.getLastColumn(), HEADERS_REGISTROS.length);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+    return h ? h.toString().trim() : '';
+  });
+
+  var dataRows = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  var rows = dataRows
+    .map(function(row) {
+      var obj = {};
+      headers.forEach(function(h, j) {
+        if (!h) return;
+        var val = row[j];
+        obj[h] = (val !== null && val !== undefined) ? val : '';
+      });
+      return obj;
+    })
+    .filter(function(obj) {
+      // Solo filas con al menos categoría o monto
+      return obj['Categoría'] || obj['Monto'];
+    })
+    .filter(function(obj) {
+      // Filtrar por mes si se especifica
+      if (!mes) return true;
+      return String(obj['Mes']).trim() === mes;
+    });
+
+  return { rows: rows };
 }
 
 function getTabs() {
@@ -64,8 +111,6 @@ function getTab(tabName) {
 
   const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
 
-  // Detectar fila de cabeceras: primera fila con al menos 3 celdas no vacías
-  // (para saltar filas de título que solo tienen 1 celda con texto)
   var headerRowIdx = 0;
   for (var i = 0; i < Math.min(5, allValues.length); i++) {
     var nonEmpty = allValues[i].filter(function(v) {
@@ -87,7 +132,6 @@ function getTab(tabName) {
       headers.forEach(function(h, j) {
         if (!h) return;
         var val = row[j];
-        // Convertir Date a string para evitar serialización rara
         if (val instanceof Date) {
           obj[h] = val.getTime() > 0 ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd/MM/yyyy') : '';
         } else {

@@ -149,8 +149,15 @@ export async function getEgresosTabs() {
 export async function getEgresosTab(tabName) {
   if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
   const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'getTab', tab: tabName });
-  // Surfacear errores del GAS en lugar de silenciarlos
   if (data.error) throw new Error(`GAS: ${data.error}`);
-  // Compatibilidad con distintos formatos de respuesta
   return data.rows ?? data.data ?? (Array.isArray(data) ? data : []);
+}
+
+export async function getEgresosRegistros(mes) {
+  if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
+  const params = { action: 'getRegistros' };
+  if (mes) params.mes = mes;
+  const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, params);
+  if (data.error) throw new Error(`GAS: ${data.error}`);
+  return data.rows ?? [];
 }
