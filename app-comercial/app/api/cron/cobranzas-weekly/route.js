@@ -82,7 +82,14 @@ export async function GET(request) {
   try {
     const [clientes, deudoresRecords] = await Promise.all([getClientes(), getDeudores()]);
 
-    const cobrosSemanales = calcularCobrosSemanales(clientes).filter(c => !c.pagado);
+    const saldadosKeys = new Set(
+      deudoresRecords
+        .filter(r => r.estado === 'Saldado')
+        .map(r => `${r.rowIndex}-${r.cuotaNum}`)
+    );
+
+    const cobrosSemanales = calcularCobrosSemanales(clientes)
+      .filter(c => !c.pagado && !saldadosKeys.has(`${c.rowIndex}-${c.cuota}`));
     const cobrosKeys = new Set(cobrosSemanales.map(c => `${c.rowIndex}-${c.cuota}`));
 
     const deudores = buildDeudoresManuales(deudoresRecords, clientes)
