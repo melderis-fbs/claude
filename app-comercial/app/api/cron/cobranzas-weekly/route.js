@@ -83,6 +83,9 @@ async function runReporte() {
   const recMap = {};
   for (const r of deudoresRecords) recMap[`${r.rowIndex}-${r.cuotaNum}`] = r;
 
+  const clienteMap = {};
+  for (const c of clientes) clienteMap[c._rowIndex] = c;
+
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true } },
   ];
@@ -111,9 +114,8 @@ async function runReporte() {
     const totalPendiente = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
     blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `Total pendiente: *${fmt(totalPendiente)}*` } });
     for (const c of cobrosSemanales) {
-      const rec = recMap[`${c.rowIndex}-${c.cuota}`] || {};
-      const situacion = parseSituacionActual(rec.comentario || '');
-      const situacionText = situacion ? `\n> _${situacion}_` : '';
+      const nota = String(clienteMap[c.rowIndex]?.['Notas'] || '').trim();
+      const situacionText = nota ? `\n> _${nota}_` : '';
       blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}${situacionText}` } });
     }
   }
