@@ -47,14 +47,14 @@ function buildDeudoresManuales(deudoresRecords, clientes) {
       const fecha = parseFecha(fechaStr);
       const diasMora = fecha ? Math.floor((hoy - fecha) / (1000 * 60 * 60 * 24)) : null;
       return {
-        nombre:      (cliente['Nombre'] || '').trim(),
+        nombre:     (cliente['Nombre'] || '').trim(),
         monto,
-        cuota:       Number(r.cuotaNum),
-        fecha:       fechaStr,
+        cuota:      Number(r.cuotaNum),
+        fecha:      fechaStr,
         diasMora,
-        rowIndex:    r.rowIndex,
-        estado:      r.estado || '',
-        comentario:  r.comentario || '',
+        rowIndex:   r.rowIndex,
+        estado:     r.estado || '',
+        comentario: r.comentario || '',
       };
     })
     .filter(Boolean)
@@ -65,6 +65,67 @@ function buildDeudoresManuales(deudoresRecords, clientes) {
     });
 }
 
+async function runReporte() {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) throw new Error('SLACK_WEBHOOK_URL no configurada');
+
+  const [clientes, deudoresRecords] = await Promise.all([getClientes(), getDeudores()]);
+
+  const saldadosKeys = new Set(
+    deudoresRecords.filter(r => r.estado === 'Saldado').map(r => `${r.rowIndex}-${r.cuotaNum}`)
+  );
+  const cobrosSemanales = calcularCobrosSemanales(clientes)
+    .filter(c => !c.pagado && !saldadosKeys.has(`${c.rowIndex}-${c.cuota}`));
+  const cobrosKeys = new Set(cobrosSemanales.map(c => `${c.rowIndex}-${c.cuota}`));
+  const deudores = buildDeudoresManuales(deudoresRecords, clientes)
+    .filter(d => !cobrosKeys.has(`${d.rowIndex}-${d.cuota}`));
+
+  const recMap = {};
+  for (const r of deudoresRecords) recMap[`${r.rowIndex}-${r.cuotaNum}`] = r;
+
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true } },
+  ];
+
+  if (deudores.length === 0) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '✅ No hay deudores pendientes.' } });
+  } else {
+    const totalMonto = deudores.reduce((s, d) => s + d.monto, 0);
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${deudores.length} deudores pendientes* — Total: *${fmt(totalMonto)} USD*` } });
+    blocks.push({ type: 'divider' });
+    for (const d of deudores) {
+      const diasLabel = d.diasMora != null ? (d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`) : '';
+      const estadoText = d.estado ? `  •  ${d.estado}` : '';
+      const situacion = parseSituacionActual(d.comentario);
+      const situacionText = situacion ? `\n> _${situacion}_` : '';
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${d.nombre}*  •  ${fmt(d.monto)}  •  cuota ${d.cuota}${diasLabel ? `  •  ${diasLabel}` : ''}${estadoText}${situacionText}` } });
+    }
+  }
+
+  blocks.push({ type: 'divider' });
+  blocks.push({ type: 'header', text: { type: 'plain_text', text: '📅 Cobros pendientes esta semana', emoji: true } });
+
+  if (cobrosSemanales.length === 0) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '_No hay cobros pendientes para esta semana._' } });
+  } else {
+    const totalPendiente = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `Total pendiente: *${fmt(totalPendiente)}*` } });
+    for (const c of cobrosSemanales) {
+      const rec = recMap[`${c.rowIndex}-${c.cuota}`] || {};
+      const situacion = parseSituacionActual(rec.comentario || '');
+      const situacionText = situacion ? `\n> _${situacion}_` : '';
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}${situacionText}` } });
+    }
+  }
+
+  blocks.push({ type: 'divider' });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Generado el ${new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` }] });
+
+  await postSlack(webhookUrl, { blocks });
+  return { deudores: deudores.length, cobros: cobrosSemanales.length };
+}
+
+// GET — llamado por el cron de Vercel (requiere CRON_SECRET)
 export async function GET(request) {
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -73,126 +134,20 @@ export async function GET(request) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }
-
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  if (!webhookUrl) {
-    return Response.json({ error: 'SLACK_WEBHOOK_URL no configurada' }, { status: 500 });
-  }
-
   try {
-    const [clientes, deudoresRecords] = await Promise.all([getClientes(), getDeudores()]);
+    const result = await runReporte();
+    return Response.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[cobranzas-weekly] error:', err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
 
-    const saldadosKeys = new Set(
-      deudoresRecords
-        .filter(r => r.estado === 'Saldado')
-        .map(r => `${r.rowIndex}-${r.cuotaNum}`)
-    );
-
-    const cobrosSemanales = calcularCobrosSemanales(clientes)
-      .filter(c => !c.pagado && !saldadosKeys.has(`${c.rowIndex}-${c.cuota}`));
-    const cobrosKeys = new Set(cobrosSemanales.map(c => `${c.rowIndex}-${c.cuota}`));
-
-    const deudores = buildDeudoresManuales(deudoresRecords, clientes)
-      .filter(d => !cobrosKeys.has(`${d.rowIndex}-${d.cuota}`));
-
-    const recMap = {};
-    for (const r of deudoresRecords) {
-      recMap[`${r.rowIndex}-${r.cuotaNum}`] = r;
-    }
-
-    const blocks = [
-      {
-        type: 'header',
-        text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true },
-      },
-    ];
-
-    // ── Deudores (solo los cargados manualmente) ──────────────────────────────
-    if (deudores.length === 0) {
-      blocks.push({
-        type: 'section',
-        text: { type: 'mrkdwn', text: '✅ No hay deudores pendientes.' },
-      });
-    } else {
-      const totalMonto = deudores.reduce((s, d) => s + d.monto, 0);
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*${deudores.length} deudores pendientes* — Total: *${fmt(totalMonto)} USD*`,
-        },
-      });
-      blocks.push({ type: 'divider' });
-
-      for (const d of deudores) {
-        const diasLabel = d.diasMora != null
-          ? d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`
-          : '';
-        const estadoText = d.estado ? `  •  ${d.estado}` : '';
-        const situacion = parseSituacionActual(d.comentario);
-        const situacionText = situacion ? `\n> _${situacion}_` : '';
-
-        blocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*${d.nombre}*  •  ${fmt(d.monto)}  •  cuota ${d.cuota}${diasLabel ? `  •  ${diasLabel}` : ''}${estadoText}${situacionText}`,
-          },
-        });
-      }
-    }
-
-    // ── Cobros pendientes esta semana ─────────────────────────────────────────
-    blocks.push({ type: 'divider' });
-    blocks.push({
-      type: 'header',
-      text: { type: 'plain_text', text: '📅 Cobros pendientes esta semana', emoji: true },
-    });
-
-    if (cobrosSemanales.length === 0) {
-      blocks.push({
-        type: 'section',
-        text: { type: 'mrkdwn', text: '_No hay cobros pendientes para esta semana._' },
-      });
-    } else {
-      const totalPendiente = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `Total pendiente: *${fmt(totalPendiente)}*`,
-        },
-      });
-
-      for (const c of cobrosSemanales) {
-        const rec = recMap[`${c.rowIndex}-${c.cuota}`] || {};
-        const situacion = parseSituacionActual(rec.comentario || '');
-        const situacionText = situacion ? `\n> _${situacion}_` : '';
-
-        blocks.push({
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}${situacionText}`,
-          },
-        });
-      }
-    }
-
-    blocks.push({ type: 'divider' });
-    blocks.push({
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `Generado el ${new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
-        },
-      ],
-    });
-
-    await postSlack(webhookUrl, { blocks });
-
-    return Response.json({ ok: true, deudores: deudores.length, cobros: cobrosSemanales.length });
+// POST — trigger manual desde la app
+export async function POST() {
+  try {
+    const result = await runReporte();
+    return Response.json({ ok: true, ...result });
   } catch (err) {
     console.error('[cobranzas-weekly] error:', err);
     return Response.json({ error: err.message }, { status: 500 });
