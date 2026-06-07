@@ -381,8 +381,8 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                           </div>
                         ) : (
                           <button onClick={() => abrirNota(co)} className="text-xs italic text-left w-full hover:text-blue-500 transition-colors">
-                            {nota?.text
-                              ? <span className="text-gray-500">{nota.text}</span>
+                            {nota
+                              ? <span className="text-gray-500">{nota}</span>
                               : <span className="text-gray-300">+ Agregar nota de gestión…</span>
                             }
                           </button>
