@@ -9,7 +9,7 @@ export const MOCK_MODE =
 async function fetchScript(url, params = {}) {
   const qs = new URLSearchParams(params).toString();
   const fullUrl = qs ? `${url}?${qs}` : url;
-  const res = await fetch(fullUrl, { cache: 'no-store' });
+  const res = await fetch(fullUrl, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
   if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
   return res.json();
 }
@@ -20,6 +20,7 @@ async function postScript(url, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
+    signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
   const data = await res.json();
