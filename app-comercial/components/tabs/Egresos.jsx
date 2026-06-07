@@ -44,12 +44,14 @@ const fmtCell = n => n ? '$' + Math.round(n).toLocaleString('es-AR') : '';
 
 function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
   const anio = mesFull.split('-')[0];
-  const [detalle,   setDetalle]   = useState('');
-  const [monto,     setMonto]     = useState('');
-  const [medioPago, setMedioPago] = useState('');
-  const [pais,      setPais]      = useState('AR');
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState('');
+  const [detalle,     setDetalle]     = useState('');
+  const [monto,       setMonto]       = useState('');
+  const [medioPago,   setMedioPago]   = useState('');
+  const [pais,        setPais]        = useState('AR');
+  const [fechaVto,    setFechaVto]    = useState('');
+  const [dondePaga,   setDondePaga]   = useState('');
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState('');
 
   async function handleSave(e) {
     e.preventDefault();
@@ -61,7 +63,7 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
       const res = await fetch('/api/egresos/registros', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mes: mesFull, categoria: cat, subcategoria: sub, detalle, monto: Number(monto), medioPago, pais }),
+        body: JSON.stringify({ mes: mesFull, categoria: cat, subcategoria: sub, detalle, monto: Number(monto), medioPago, pais, fechaVto, dondePaga }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       onSaved();
@@ -126,6 +128,25 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
                     medioPago === m ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
                   }`}>{m}</button>
               ))}
+            </div>
+          </div>
+
+          {/* Fecha vto + Donde se paga */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Fecha vto <span className="text-gray-400">(opcional)</span>
+              </label>
+              <input type="date" value={fechaVto} onChange={e => setFechaVto(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Donde se paga <span className="text-gray-400">(opcional)</span>
+              </label>
+              <input value={dondePaga} onChange={e => setDondePaga(e.target.value)}
+                placeholder="ej. Banco Galicia, Wise…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
           </div>
 

@@ -28,7 +28,7 @@ function doPost(e) {
 }
 
 var TAB_REGISTROS = 'Registros';
-var HEADERS_REGISTROS = ['Mes', 'Categoría', 'Subcategoría', 'Detalle', 'Monto', 'Medio de pago', 'País'];
+var HEADERS_REGISTROS = ['Mes', 'Categoría', 'Subcategoría', 'Detalle', 'Monto', 'Medio de pago', 'País', 'Fecha vto', 'Donde se paga'];
 
 function ensureSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();

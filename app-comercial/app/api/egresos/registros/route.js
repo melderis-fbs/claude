@@ -16,7 +16,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { mes, categoria, subcategoria, detalle, monto, medioPago, pais } = await request.json();
+    const { mes, categoria, subcategoria, detalle, monto, medioPago, pais, fechaVto, dondePaga } = await request.json();
 
     if (!categoria) return Response.json({ error: 'Categoría requerida' }, { status: 400 });
     if (!monto)     return Response.json({ error: 'Monto requerido' }, { status: 400 });
@@ -29,6 +29,8 @@ export async function POST(request) {
       Number(monto),
       medioPago    ?? '',
       pais         ?? 'AR',
+      fechaVto     ?? '',
+      dondePaga    ?? '',
     ]);
 
     return Response.json({ ok: true });
