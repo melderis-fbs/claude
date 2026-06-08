@@ -1,69 +1,62 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 
-const MEDIOS_PAGO = ['Transferencia', 'Efectivo', 'Tarjeta', 'Wise', 'Stripe', 'Cripto', 'Otro'];
-
-const CATEGORIAS_DEF = [
-  { id: 'Sueldos',                subs: ['Comercial', 'Entrega', 'Ops/G&A', 'Marketing'] },
-  { id: 'Publicidad',             subs: [] },
-  { id: 'APPS',                   subs: [] },
-  { id: 'Gastos Administrativos', subs: [] },
-  { id: 'Formación',              subs: [] },
-  { id: 'Impuestos',              subs: [] },
-  { id: 'Extras',                 subs: [] },
-  { id: 'Retiros Personales',     subs: [] },
+const CATEGORIAS = [
+  'Sueldos', 'Publicidad', 'APPS', 'Gastos Administrativos',
+  'Formación', 'Impuestos', 'Extras', 'Retiros Personales',
 ];
 
-const MES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MEDIOS_PAGO = ['Transferencia', 'Efectivo', 'Tarjeta', 'Wise', 'Stripe', 'Cripto', 'Otro'];
+
+const MES_LABELS = [
+  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre',
+];
 
 function getMeses(anio) {
   return Array.from({ length: 12 }, (_, i) => ({
     mes:   `${anio}-${String(i + 1).padStart(2, '0')}`,
-    label: MES_SHORT[i],
+    label: MES_LABELS[i],
   }));
 }
 
-function buildPivot(registros) {
-  const p = {};
-  for (const r of registros) {
-    const cat   = r['Categoría']    || '';
-    const sub   = r['Subcategoría'] || '';
-    const mes   = r['Mes']          || '';
-    const monto = Number(r['Monto']) || 0;
-    if (!cat || !mes || !monto) continue;
-    if (!p[cat])      p[cat]      = {};
-    if (!p[cat][sub]) p[cat][sub] = {};
-    p[cat][sub][mes] = (p[cat][sub][mes] || 0) + monto;
-  }
-  return p;
-}
+const fmt = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
 
-const fmtCell = n => n ? '$' + Math.round(n).toLocaleString('es-AR') : '';
+// ── Modal añadir gasto ────────────────────────────────────────────────────────
 
-// ── Modal para cargar monto en una celda ─────────────────────────────────────
+function AddModal({ registros, mesSel, onClose, onSaved }) {
+  const [gasto,     setGasto]     = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [subcat,    setSubcat]    = useState('');
+  const [monto,     setMonto]     = useState('');
+  const [medioPago, setMedioPago] = useState('');
+  const [pais,      setPais]      = useState('AR');
+  const [fechaVto,  setFechaVto]  = useState('');
+  const [dondePaga, setDondePaga] = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState('');
 
-function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
-  const anio = mesFull.split('-')[0];
-  const [detalle,     setDetalle]     = useState('');
-  const [monto,       setMonto]       = useState('');
-  const [medioPago,   setMedioPago]   = useState('');
-  const [pais,        setPais]        = useState('AR');
-  const [fechaVto,    setFechaVto]    = useState('');
-  const [dondePaga,   setDondePaga]   = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
+  const subcatSuggestions = useMemo(() => {
+    if (!categoria) return [];
+    return [...new Set(
+      registros.filter(r => r['Categoría'] === categoria && r['Subcategoría']).map(r => r['Subcategoría'])
+    )];
+  }, [registros, categoria]);
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!monto || isNaN(Number(monto))) { setError('Ingresá un monto válido'); return; }
-    if (!medioPago) { setError('Elegí un medio de pago'); return; }
-    setLoading(true);
-    setError('');
+    if (!categoria)                    { setError('Elegí una categoría'); return; }
+    if (!monto || isNaN(Number(monto))){ setError('Ingresá un monto válido'); return; }
+    if (!medioPago)                    { setError('Elegí un medio de pago'); return; }
+    setLoading(true); setError('');
     try {
       const res = await fetch('/api/egresos/registros', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mes: mesFull, categoria: cat, subcategoria: sub, detalle, monto: Number(monto), medioPago, pais, fechaVto, dondePaga }),
+        body: JSON.stringify({
+          mes: mesSel, categoria, subcategoria: subcat, detalle: gasto,
+          monto: Number(monto), medioPago, pais, fechaVto, dondePaga,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       onSaved();
@@ -76,32 +69,50 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">{cat}</p>
-            <h3 className="font-semibold text-gray-900">{sub} — {mesLabel} {anio}</h3>
-          </div>
+          <h3 className="font-semibold text-gray-900">Añadir gasto</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSave} className="p-5 space-y-4">
 
-          {/* Nombre/Detalle — siempre disponible, label cambia para Sueldos */}
+          {/* Gasto + Categoría */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Gasto</label>
+              <input value={gasto} onChange={e => setGasto(e.target.value)} autoFocus
+                placeholder="ej. Kevin, Loom, Meta Ads…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Categoría *</label>
+              <select value={categoria} onChange={e => { setCategoria(e.target.value); setSubcat(''); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500">
+                <option value="">Seleccioná</option>
+                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Sub categoría */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              {cat === 'Sueldos' ? 'Nombre' : 'Detalle'}{' '}
-              <span className="text-gray-400">(opcional)</span>
+              Sub categoría <span className="text-gray-400">(opcional)</span>
             </label>
-            <input value={detalle} onChange={e => setDetalle(e.target.value)}
-              placeholder={cat === 'Sueldos' ? 'ej. Kevin, Jhosana…' : 'Detalle adicional'}
+            <input value={subcat} onChange={e => setSubcat(e.target.value)}
+              list="subcat-suggestions"
+              placeholder="ej. Comercial, Meta, Loom…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            <datalist id="subcat-suggestions">
+              {subcatSuggestions.map(s => <option key={s} value={s} />)}
+            </datalist>
           </div>
 
           {/* Monto + País */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
-              <input type="number" min="0" step="0.01" value={monto} autoFocus
+              <label className="block text-xs font-medium text-gray-500 mb-1">Monto *</label>
+              <input type="number" min="0" step="0.01" value={monto}
                 onChange={e => setMonto(e.target.value)} placeholder="0.00"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
@@ -110,7 +121,7 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
               <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                 {['AR', 'USA'].map(p => (
                   <button key={p} type="button" onClick={() => setPais(p)}
-                    className={`px-3 py-2 text-xs font-medium transition-colors ${pais === p ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${pais === p ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
                     {p}
                   </button>
                 ))}
@@ -120,7 +131,7 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
 
           {/* Medio de pago */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">Medio de pago</label>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Medio de pago *</label>
             <div className="flex flex-wrap gap-2">
               {MEDIOS_PAGO.map(m => (
                 <button key={m} type="button" onClick={() => setMedioPago(m)}
@@ -134,18 +145,14 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
           {/* Fecha vto + Donde se paga */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Fecha vto <span className="text-gray-400">(opcional)</span>
-              </label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Fecha vto <span className="text-gray-400">(opc.)</span></label>
               <input type="date" value={fechaVto} onChange={e => setFechaVto(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Donde se paga <span className="text-gray-400">(opcional)</span>
-              </label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Donde se paga <span className="text-gray-400">(opc.)</span></label>
               <input value={dondePaga} onChange={e => setDondePaga(e.target.value)}
-                placeholder="ej. Banco Galicia, Wise…"
+                placeholder="ej. Banco Galicia…"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
           </div>
@@ -158,8 +165,8 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
               Cancelar
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-              {loading ? 'Guardando…' : 'Guardar'}
+              className="flex-1 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
+              {loading ? 'Guardando…' : 'Guardar gasto'}
             </button>
           </div>
         </form>
@@ -170,22 +177,22 @@ function AddModal({ cat, sub, mesFull, mesLabel, onClose, onSaved }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function Egresos() {
-  const anio  = new Date().getFullYear();
-  const meses = useMemo(() => getMeses(anio), [anio]);
+export default function Egresos({ ventasPorMes = [] }) {
+  const anio      = new Date().getFullYear();
+  const meses     = useMemo(() => getMeses(anio), [anio]);
+  const mesActual = `${anio}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  const [registros,    setRegistros]    = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState('');
-  const [extraSubs,    setExtraSubs]    = useState({});        // { catId: string[] }
-  const [addingSubFor, setAddingSubFor] = useState(null);      // catId | null
-  const [newSubText,   setNewSubText]   = useState('');
-  const [modalCell,    setModalCell]    = useState(null);      // { cat, sub, mesFull, mesLabel }
+  const [mesSel,     setMesSel]     = useState(mesActual);
+  const [registros,  setRegistros]  = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [showModal,  setShowModal]  = useState(false);
+  const [catFilter,  setCatFilter]  = useState('');
 
-  async function fetchAll() {
-    setError('');
+  async function fetchRegistros(mes) {
+    setLoading(true); setError('');
     try {
-      const res = await fetch('/api/egresos/registros');
+      const res = await fetch(`/api/egresos/registros?mes=${mes}`);
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       const data = await res.json();
       setRegistros(data.rows || []);
@@ -196,175 +203,163 @@ export default function Egresos() {
     }
   }
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchRegistros(mesSel); }, [mesSel]);
 
-  const pivot = useMemo(() => buildPivot(registros), [registros]);
+  const totalEgresos = useMemo(
+    () => registros.reduce((s, r) => s + (Number(r['Monto']) || 0), 0),
+    [registros]
+  );
 
-  const subcatsPorCat = useMemo(() => {
-    const result = {};
-    for (const cat of CATEGORIAS_DEF) {
-      const fromData = registros
-        .filter(r => r['Categoría'] === cat.id && r['Subcategoría'])
-        .map(r => r['Subcategoría']);
-      const extras = extraSubs[cat.id] || [];
-      const all = [...cat.subs];
-      for (const s of [...fromData, ...extras]) {
-        if (!all.includes(s)) all.push(s);
-      }
-      result[cat.id] = all;
-    }
-    return result;
-  }, [registros, extraSubs]);
+  // Total ventas del mes para calcular %gasto/venta
+  const ventasMes = useMemo(
+    () => ventasPorMes.find(m => m.mes === mesSel)?.montoTotal ?? 0,
+    [ventasPorMes, mesSel]
+  );
 
-  const totalesPorMes = useMemo(() => {
-    const t = {};
+  const porCategoria = useMemo(() => {
+    const m = {};
     for (const r of registros) {
-      const mes   = r['Mes']    || '';
-      const monto = Number(r['Monto']) || 0;
-      t[mes] = (t[mes] || 0) + monto;
+      const cat = r['Categoría'] || '';
+      if (cat) m[cat] = (m[cat] || 0) + (Number(r['Monto']) || 0);
     }
-    return t;
+    return m;
   }, [registros]);
 
-  function confirmAddSub(catId) {
-    const s = newSubText.trim();
-    if (!s) return;
-    setExtraSubs(prev => ({ ...prev, [catId]: [...(prev[catId] || []), s] }));
-    setAddingSubFor(null);
-    setNewSubText('');
-  }
+  const registrosFiltrados = catFilter
+    ? registros.filter(r => r['Categoría'] === catFilter)
+    : registros;
 
-  const COL_N = 1 + meses.length; // Concepto + 12 meses
-
-  if (loading) return <div className="text-center py-16 text-gray-400 text-sm">Cargando…</div>;
+  const mesLabel = meses.find(m => m.mes === mesSel)?.label ?? '';
 
   return (
-    <div className="space-y-4 max-w-full">
-      {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{error}</div>}
+    <div className="space-y-5 max-w-6xl">
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-        <table className="text-sm border-collapse w-full" style={{ minWidth: '900px' }}>
-
-          {/* ── Encabezado ── */}
-          <thead>
-            <tr className="border-b-2 border-gray-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider
-                             sticky left-0 bg-white z-20 w-48 min-w-48 border-r border-gray-100">
-                Concepto
-              </th>
-              {meses.map(m => (
-                <th key={m.mes} className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-24">
-                  {m.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          {/* ── Fila TOTAL GENERAL ── */}
-          <tbody>
-            <tr className="bg-gray-900 border-b-2 border-gray-700">
-              <td className="px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider
-                             sticky left-0 bg-gray-900 z-10 border-r border-gray-700">
-                Total general
-              </td>
-              {meses.map(m => (
-                <td key={m.mes} className="px-3 py-2.5 text-right font-bold text-white text-xs">
-                  {fmtCell(totalesPorMes[m.mes])}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-
-          {/* ── Una tbody por categoría ── */}
-          {CATEGORIAS_DEF.map(cat => {
-            const subs     = subcatsPorCat[cat.id] || [];
-            const catPivot = pivot[cat.id] || {};
-
-            return (
-              <tbody key={cat.id}>
-                {/* Fila categoría (totales) */}
-                <tr className="bg-gray-50 border-t-2 border-gray-200 border-b border-gray-200">
-                  <td className="px-4 py-2.5 font-bold text-gray-800 text-xs uppercase tracking-wider
-                                 sticky left-0 bg-gray-50 z-10 border-r border-gray-100">
-                    {cat.id}
-                  </td>
-                  {meses.map(m => {
-                    const total = subs.reduce((s, sub) => s + (catPivot[sub]?.[m.mes] || 0), 0);
-                    return (
-                      <td key={m.mes} className="px-3 py-2.5 text-right font-bold text-gray-700 text-xs">
-                        {fmtCell(total)}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Filas subcategoría */}
-                {subs.map(sub => (
-                  <tr key={sub} className="border-b border-gray-50 hover:bg-blue-50/40 group transition-colors">
-                    <td className="px-4 py-2 pl-8 text-gray-600 text-sm
-                                   sticky left-0 bg-white group-hover:bg-blue-50/40 z-10 border-r border-gray-50 transition-colors">
-                      {sub}
-                    </td>
-                    {meses.map(m => {
-                      const val = catPivot[sub]?.[m.mes] || 0;
-                      return (
-                        <td key={m.mes}
-                          onClick={() => setModalCell({ cat: cat.id, sub, mesFull: m.mes, mesLabel: m.label })}
-                          className="px-3 py-2 text-right cursor-pointer hover:bg-blue-100 transition-colors text-xs font-medium group/cell">
-                          {val
-                            ? <span className="text-gray-800">{fmtCell(val)}</span>
-                            : <span className="text-gray-200 group-hover/cell:text-blue-300 select-none">+</span>
-                          }
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-
-                {/* Fila para agregar subcategoría */}
-                <tr className="border-b border-gray-100">
-                  <td colSpan={COL_N} className="px-4 py-1.5 pl-8 sticky left-0 bg-white z-10">
-                    {addingSubFor === cat.id ? (
-                      <div className="flex items-center gap-2">
-                        <input autoFocus value={newSubText}
-                          onChange={e => setNewSubText(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter')  confirmAddSub(cat.id);
-                            if (e.key === 'Escape') { setAddingSubFor(null); setNewSubText(''); }
-                          }}
-                          placeholder="Nombre de subcategoría…"
-                          className="border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500 w-48" />
-                        <button onClick={() => confirmAddSub(cat.id)}
-                          className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                          OK
-                        </button>
-                        <button onClick={() => { setAddingSubFor(null); setNewSubText(''); }}
-                          className="text-xs text-gray-400 hover:text-gray-600">
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setAddingSubFor(cat.id)}
-                        className="text-xs text-gray-300 hover:text-blue-500 transition-colors">
-                        + agregar subcategoría
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            );
-          })}
-        </table>
+      {/* ── Selector de mes ── */}
+      <div className="flex gap-2 flex-wrap">
+        {meses.map(m => (
+          <button key={m.mes} onClick={() => { setMesSel(m.mes); setCatFilter(''); }}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              m.mes === mesSel
+                ? 'bg-gray-800 text-white shadow-sm'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {m.label}
+          </button>
+        ))}
       </div>
 
-      {modalCell && (
+      {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{error}</div>}
+
+      {/* ── Cards de categorías + botón añadir ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {CATEGORIAS.map(cat => {
+          const total    = porCategoria[cat] || 0;
+          const isActive = catFilter === cat;
+          const pctVal   = ventasMes > 0 ? ((total / ventasMes) * 100).toFixed(1) + '%' : '—';
+          return (
+            <button key={cat} onClick={() => setCatFilter(f => f === cat ? '' : cat)}
+              className={`rounded-2xl p-4 text-center transition-all border-2 ${
+                isActive
+                  ? 'bg-gray-800 border-gray-800 text-white shadow-md'
+                  : total > 0
+                    ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    : 'bg-gray-50 border-gray-100'
+              }`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-2 truncate ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
+                {cat}
+              </p>
+              <p className={`text-xl font-bold ${isActive ? 'text-white' : total > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                {total > 0 ? fmt(total) : '—'}
+              </p>
+              <p className={`text-xs mt-1.5 ${isActive ? 'text-gray-400' : 'text-gray-400'}`}>
+                {pctVal} gasto/venta
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Botón añadir + resumen total */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          Total egresos {mesLabel}:{' '}
+          <span className="font-bold text-gray-900">{fmt(totalEgresos)}</span>
+          {ventasMes > 0 && (
+            <span className="ml-2 text-gray-400">
+              ({((totalEgresos / ventasMes) * 100).toFixed(1)}% de ventas)
+            </span>
+          )}
+        </p>
+        <button onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
+          Añadir gasto +
+        </button>
+      </div>
+
+      {/* ── Tabla de registros ── */}
+      {loading ? (
+        <div className="text-center py-12 text-gray-400 text-sm">Cargando…</div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-800">
+                {catFilter || 'Todos los gastos'} — {mesLabel}
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {registrosFiltrados.length} items · {fmt(registrosFiltrados.reduce((s, r) => s + (Number(r['Monto']) || 0), 0))}
+              </p>
+            </div>
+            {catFilter && (
+              <button onClick={() => setCatFilter('')}
+                className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1 transition-colors">
+                × Limpiar filtro
+              </button>
+            )}
+          </div>
+
+          {registrosFiltrados.length === 0 ? (
+            <div className="px-5 py-14 text-center text-gray-400 text-sm">
+              No hay gastos cargados para este mes.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Gasto','Categoría','Sub categoría','Descripción','Monto','Medio de pago'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {registrosFiltrados.map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-900">{r['Detalle'] || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-medium text-gray-600 whitespace-nowrap">
+                          {r['Categoría'] || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{r['Subcategoría'] || '—'}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs max-w-40 truncate">{r['Donde se paga'] || '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{fmt(Number(r['Monto']) || 0)}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{r['Medio de pago'] || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showModal && (
         <AddModal
-          cat={modalCell.cat}
-          sub={modalCell.sub}
-          mesFull={modalCell.mesFull}
-          mesLabel={modalCell.mesLabel}
-          onClose={() => setModalCell(null)}
-          onSaved={() => { setModalCell(null); fetchAll(); }}
+          registros={registros}
+          mesSel={mesSel}
+          onClose={() => setShowModal(false)}
+          onSaved={() => { setShowModal(false); fetchRegistros(mesSel); }}
         />
       )}
     </div>
