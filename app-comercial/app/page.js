@@ -4,6 +4,7 @@ import {
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
   calcularProyeccion, calcularDeudores,
+  calcularCobrosAutomaticaPorMes,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -20,9 +21,10 @@ export default async function Home() {
       getFacturas().catch(() => []),
     ]);
 
-    const resumen          = calcularResumenMensual(clientes, egresosRows);
-    const ventasPorMes     = calcularVentasPorMes(clientes);
-    const comisiones       = calcularComisiones(clientes);
+    const resumen              = calcularResumenMensual(clientes, egresosRows);
+    const ventasPorMes         = calcularVentasPorMes(clientes);
+    const cobrosAutomatica     = calcularCobrosAutomaticaPorMes(clientes);
+    const comisiones           = calcularComisiones(clientes);
     const cobranzas        = calcularCobranzas(clientes);
     const cobrosSemanales  = calcularCobrosSemanales(clientes);
     const pendientesPorMes = calcularPendientesPorMes(clientes);
@@ -52,6 +54,7 @@ export default async function Home() {
         abonos={abonos}
         deudores={deudores}
         facturas={facturas}
+        cobrosAutomatica={cobrosAutomatica}
       />
     );
   } catch (err) {

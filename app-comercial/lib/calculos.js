@@ -444,6 +444,24 @@ export function calcularProyeccion(clientes, semanasAtras = 2, semanasAdelante =
   return semanas;
 }
 
+// ── Cobros de clientes "Automática" por mes ───────────────────────────────────
+
+export function calcularCobrosAutomaticaPorMes(clientes) {
+  const porMes = {};
+  for (const c of clientes) {
+    if (!(c['Fuente'] || '').toLowerCase().includes('autom')) continue;
+    CUOTAS_DEF.forEach(q => {
+      if (!esPagado(c[q.estado])) return;
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const mes = normalizarMes(c[q.fecha]);
+      if (!mes || mes.startsWith('__')) return;
+      porMes[mes] = (porMes[mes] || 0) + monto;
+    });
+  }
+  return porMes;
+}
+
 // ── Señas por mes (solo primer pago = seña/depósito) ─────────────────────────
 
 export function calcularSeñasPorMes(clientes) {
