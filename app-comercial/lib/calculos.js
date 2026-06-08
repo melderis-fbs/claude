@@ -448,16 +448,15 @@ export function calcularProyeccion(clientes, semanasAtras = 2, semanasAdelante =
 
 export function calcularCobrosAutomaticaPorMes(clientes) {
   const porMes = {};
+  const q = CUOTAS_DEF[0]; // solo primer pago = venta nueva
   for (const c of clientes) {
     if (!(c['Fuente'] || '').toLowerCase().includes('autom')) continue;
-    CUOTAS_DEF.forEach(q => {
-      if (!esPagado(c[q.estado])) return;
-      const monto = parseMonto(c[q.monto]);
-      if (!monto) return;
-      const mes = normalizarMes(c[q.fecha]);
-      if (!mes || mes.startsWith('__')) return;
-      porMes[mes] = (porMes[mes] || 0) + monto;
-    });
+    if (!esPagado(c[q.estado])) continue;
+    const monto = parseMonto(c[q.monto]);
+    if (!monto) continue;
+    const mes = normalizarMes(c[q.fecha]);
+    if (!mes || mes.startsWith('__')) continue;
+    porMes[mes] = (porMes[mes] || 0) + monto;
   }
   return porMes;
 }
