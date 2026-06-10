@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 const fmt = n => n == null ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
 const pct = n => n == null ? '—' : `${n.toFixed(1)}%`;
@@ -113,65 +113,46 @@ function Card({ label, value, sub, color = 'blue' }) {
 }
 
 
-function ROASSection({ mes, ventasPorMes = [], cobrosAutomatica = {} }) {
-  const [meta, setMeta] = useState(null);
-
-  useEffect(() => {
-    if (!mes) return;
-    setMeta(null);
-    fetch(`/api/meta/spend?mes=${mes}`)
-      .then(r => r.json())
-      .then(d => setMeta(d))
-      .catch(() => setMeta({ spend: null, configured: false }));
-  }, [mes]);
-
-  const autoVentas = ventasPorMes.find(m => m.mes === mes)?.porFuente?.['Automática'] ?? { count: 0, monto: 0 };
-  const cobrosAuto  = cobrosAutomatica[mes] || 0;
-  const spend       = meta?.spend ?? null;
-
-  const roas     = spend && autoVentas.monto ? (autoVentas.monto / spend).toFixed(2) : null;
-  const roasCash = spend && cobrosAuto       ? (cobrosAuto / spend).toFixed(2)        : null;
-
-  if (meta && !meta.configured) {
-    return (
-      <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-1">Meta Ads — ROAS</p>
-        <p className="text-xs text-orange-400">Configurá <code className="bg-orange-100 px-1 rounded">META_ACCESS_TOKEN</code> y <code className="bg-orange-100 px-1 rounded">META_AD_ACCOUNT_ID</code> en Vercel para ver el ROAS en vivo.</p>
-      </div>
-    );
-  }
-
-  const loading = meta === null;
+function ROASSection({ mes, anunciosPorMes = {} }) {
+  const d = anunciosPorMes[mes] ?? {};
+  const fmtX    = v => v != null ? `${Number(v).toFixed(2)}x` : '—';
+  const fmtCost = v => v != null ? `$${Number(v).toFixed(2)}`  : '—';
 
   return (
     <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-orange-600">Meta Ads — ROAS</p>
-        {loading && <span className="text-xs text-orange-300 animate-pulse">cargando…</span>}
-        {meta?.error && <span className="text-xs text-red-400">{meta.error}</span>}
-      </div>
-      <div className="grid grid-cols-3 gap-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-orange-600 mb-4">Meta Ads — ROAS</p>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
           <p className="text-xs text-orange-500 font-medium mb-0.5">Inversión Meta</p>
-          <p className="text-xl font-bold text-orange-700">{spend != null ? fmt(spend) : '—'}</p>
+          <p className="text-xl font-bold text-orange-700">{d.inversion != null ? fmt(d.inversion) : '—'}</p>
           <p className="text-xs text-orange-400">gasto publicitario</p>
         </div>
         <div>
           <p className="text-xs text-orange-500 font-medium mb-0.5">ROAS</p>
-          <p className="text-xl font-bold text-orange-700">{roas != null ? `${roas}x` : '—'}</p>
+          <p className="text-xl font-bold text-orange-700">{fmtX(d.roas)}</p>
           <p className="text-xs text-orange-400">ventas auto / inversión</p>
         </div>
         <div>
           <p className="text-xs text-orange-500 font-medium mb-0.5">ROAS Cash</p>
-          <p className="text-xl font-bold text-orange-700">{roasCash != null ? `${roasCash}x` : '—'}</p>
+          <p className="text-xl font-bold text-orange-700">{fmtX(d.roasCash)}</p>
           <p className="text-xs text-orange-400">cobros auto / inversión</p>
+        </div>
+        <div>
+          <p className="text-xs text-orange-500 font-medium mb-0.5">Costo por lead</p>
+          <p className="text-xl font-bold text-orange-700">{fmtCost(d.costoLead)}</p>
+          <p className="text-xs text-orange-400">inversión / leads</p>
+        </div>
+        <div>
+          <p className="text-xs text-orange-500 font-medium mb-0.5">Costo por agenda</p>
+          <p className="text-xl font-bold text-orange-700">{fmtCost(d.costoAgenda)}</p>
+          <p className="text-xs text-orange-400">inversión / agendas</p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {} }) {
+export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {}, anunciosPorMes = {} }) {
   const [mesSel, setMesSel] = useState(resumen[resumen.length - 1]?.mes ?? '');
   const m = resumen.find(r => r.mes === mesSel) ?? resumen[resumen.length - 1];
 
@@ -210,7 +191,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
       </div>
 
       {/* Meta Ads / ROAS */}
-      <ROASSection mes={mesSel} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} />
+      <ROASSection mes={mesSel} anunciosPorMes={anunciosPorMes} />
 
       {/* Detalle del mes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

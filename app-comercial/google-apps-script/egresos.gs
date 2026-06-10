@@ -10,6 +10,7 @@ function doGet(e) {
     if (action === 'getTabs')       return ok(getTabs());
     if (action === 'getTab')        return ok(getTab(e.parameter.tab));
     if (action === 'getRegistros')  return ok(getRegistros(e.parameter.mes));
+    if (action === 'getAnuncios')   return ok(getAnuncios());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -157,6 +158,32 @@ function getTab(tabName) {
       rowsAfterFilter: rows.length
     }
   };
+}
+
+var ANUNCIOS_SHEET_ID  = '1CSHsgW9evTnPltELKmBfVUZq1vfzDaOzwUNu-cHOuQ8';
+var ANUNCIOS_TAB_NAME  = 'Anuncios';
+
+function getAnuncios() {
+  var ss    = SpreadsheetApp.openById(ANUNCIOS_SHEET_ID);
+  var sheet = ss.getSheetByName(ANUNCIOS_TAB_NAME);
+  if (!sheet) return { rows: [], error: 'Tab "Anuncios" no encontrado' };
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 1) return { rows: [] };
+
+  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+
+  var rows = values.map(function(row) {
+    return row.map(function(cell) {
+      if (cell instanceof Date) {
+        return cell.getTime() > 0 ? Utilities.formatDate(cell, Session.getScriptTimeZone(), 'dd/MM/yyyy') : '';
+      }
+      return cell !== null && cell !== undefined ? cell : '';
+    });
+  });
+
+  return { rows: rows };
 }
 
 function ok(data) {

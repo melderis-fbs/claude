@@ -680,3 +680,50 @@ export function calcularProyeccionAnual(clientes, resumen, ventasPorMes) {
 
   return Object.values(dataMap).sort((a, b) => a.mes.localeCompare(b.mes));
 }
+
+// Parsea la pestaña "Anuncios" (pivote: filas=métricas, columnas=meses) →
+// { 'YYYY-MM': { inversion, roas, roasCash, costoLead, costoAgenda } }
+export function parseAnunciosTab(rows) {
+  if (!rows || rows.length < 2) return {};
+
+  const anio = new Date().getFullYear().toString();
+  const headers = rows[0].map(v => String(v).trim().toLowerCase());
+
+  const colMes = {};
+  headers.forEach((h, i) => {
+    const num = MESES_ES[h];
+    if (num) colMes[i] = `${anio}-${num}`;
+  });
+
+  const parseVal = v => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = parseFloat(String(v).replace(/[$\s]/g, '').replace(',', '.'));
+    return isNaN(n) ? null : n;
+  };
+
+  const result = {};
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const metricRaw = String(row[0] || '').trim().toLowerCase();
+    if (!metricRaw) continue;
+
+    let field = null;
+    if (metricRaw.includes('invers'))                            field = 'inversion';
+    else if (metricRaw.includes('roas') && metricRaw.includes('cash')) field = 'roasCash';
+    else if (metricRaw === 'roas')                               field = 'roas';
+    else if (metricRaw.includes('lead'))                         field = 'costoLead';
+    else if (metricRaw.includes('agenda'))                       field = 'costoAgenda';
+
+    if (!field) continue;
+
+    Object.entries(colMes).forEach(([colIdx, mes]) => {
+      const val = parseVal(row[parseInt(colIdx)]);
+      if (val === null) return;
+      if (!result[mes]) result[mes] = {};
+      result[mes][field] = val;
+    });
+  }
+
+  return result;
+}

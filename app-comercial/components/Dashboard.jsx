@@ -55,6 +55,7 @@ export default function Dashboard({
   clientes, headers, resumen, ventasPorMes, comisiones,
   cobranzas, cobrosSemanales, pendientesPorMes,
   proyeccion, proyeccionAnual = [], abonos, deudores, facturas, cobrosAutomatica,
+  anunciosPorMes = {},
 }) {
   const [tab, setTab] = useState('resumen');
 
@@ -87,7 +88,7 @@ export default function Dashboard({
       </nav>
 
       <main className="flex-1 overflow-auto p-6">
-        {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} />}
+        {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} />}
         {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
         {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}

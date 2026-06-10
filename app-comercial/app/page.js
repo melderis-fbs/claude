@@ -1,10 +1,11 @@
-import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas } from '../lib/sheets.js';
+import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas, getAnuncios } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
   calcularProyeccion, calcularDeudores,
   calcularCobrosAutomaticaPorMes, calcularProyeccionAnual,
+  parseAnunciosTab,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -12,13 +13,14 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   try {
-    const [clientes, headers, egresosRows, abonos, deudoresRecords, facturas] = await Promise.all([
+    const [clientes, headers, egresosRows, abonos, deudoresRecords, facturas, anunciosRows] = await Promise.all([
       getClientes(),
       getClientesHeaders(),
       getEgresosTab('Consolidado').catch(() => []),
       getAbonos().catch(() => []),
       getDeudores().catch(() => []),
       getFacturas().catch(() => []),
+      getAnuncios().catch(() => []),
     ]);
 
     const resumen              = calcularResumenMensual(clientes, egresosRows);
@@ -40,6 +42,7 @@ export default async function Home() {
     const ventasPorMesFiltradas = ventasPorMes.filter(m => m.mes.startsWith(anoActual));
     const comisionesFiltradas   = comisiones.filter(m => m.mes.startsWith(anoActual));
     const proyeccionAnual = calcularProyeccionAnual(clientes, resumenFiltrado, ventasPorMesFiltradas);
+    const anunciosPorMes  = parseAnunciosTab(anunciosRows);
 
     return (
       <Dashboard
@@ -57,6 +60,7 @@ export default async function Home() {
         deudores={deudores}
         facturas={facturas}
         cobrosAutomatica={cobrosAutomatica}
+        anunciosPorMes={anunciosPorMes}
       />
     );
   } catch (err) {
