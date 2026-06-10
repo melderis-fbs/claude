@@ -65,9 +65,11 @@ function displayCom(raw) {
   return [p.uc && `Contacto: ${p.uc}`, p.sa, p.dc].filter(Boolean).join(' · ');
 }
 
+const esUSAMet = met => /stripe|wise|paypal|payoneer|cripto|crypto/i.test(met || '');
+
 // ── Resumen mensual ───────────────────────────────────────────────────────────
 
-function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
+function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = [] }) {
   const router = useRouter();
   const meses = cobranzas.map(m => m.mes);
   const [mesSel, setMesSel] = useState(meses[meses.length - 1] ?? '');
@@ -139,7 +141,7 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['Cliente','Programa','Closer','Cuota','Monto','Fecha','Método',''].map((h,i) => (
+                      {['Cliente','Programa','Closer','Cuota','Monto','Fecha','Método','Origen',''].map((h,i) => (
                         <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -154,6 +156,13 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
                         <td className="px-4 py-3 font-semibold text-red-600">{fmt(p.monto)}</td>
                         <td className="px-4 py-3 text-gray-500">{formatFecha(p.fecha)}</td>
                         <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
+                        <td className="px-4 py-3">
+                          {p.met1 ? (
+                            esUSAMet(p.met1)
+                              ? <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-semibold">USD</span>
+                              : <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold">AR</span>
+                          ) : null}
+                        </td>
                         <td className="px-4 py-3">
                           <button onClick={() => marcarPagado(p)}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
@@ -204,6 +213,138 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
             </table>
           </div>
         </>
+      )}
+
+      {proyeccionAnual.length > 0 && (
+        <div className="space-y-5">
+          {/* Table 1 - Por tipo de pago */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800">Proyección anual — Por tipo de pago</h3>
+            </div>
+            <table className="w-full text-sm min-w-max">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Mes','Venta PU','%PU','Venta Cuotas','%Cuotas','Front','Back','Total'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {proyeccionAnual.map(r => {
+                  const totalFront = r.ventaFront;
+                  const pctPU = totalFront > 0 ? (r.ventaPU / totalFront) * 100 : 0;
+                  const pctC  = totalFront > 0 ? (r.ventaCuotas / totalFront) * 100 : 0;
+                  return (
+                    <tr key={r.mes} className={r.esFuturo ? 'opacity-50' : 'hover:bg-gray-50'}>
+                      <td className="px-4 py-2.5 font-medium text-gray-800 whitespace-nowrap">
+                        {r.label}{r.esFuturo && <span className="ml-1 text-xs text-gray-400 font-normal">proy.</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(r.ventaPU)}</td>
+                      <td className="px-4 py-2.5 text-gray-500">{pct(pctPU)}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(r.ventaCuotas)}</td>
+                      <td className="px-4 py-2.5 text-gray-500">{pct(pctC)}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(r.ventaFront)}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(r.ventaBack)}</td>
+                      <td className="px-4 py-2.5 font-semibold text-gray-900">{fmt(r.total)}</td>
+                    </tr>
+                  );
+                })}
+                {/* Total row */}
+                <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                  <td className="px-4 py-2.5 text-gray-900">TOTAL</td>
+                  <td className="px-4 py-2.5 text-gray-900">{fmt(proyeccionAnual.reduce((a,r) => a+r.ventaPU,0))}</td>
+                  <td className="px-4 py-2.5 text-gray-500">
+                    {(() => { const t = proyeccionAnual.reduce((a,r)=>a+r.ventaFront,0); const pu = proyeccionAnual.reduce((a,r)=>a+r.ventaPU,0); return t>0?pct((pu/t)*100):'0%'; })()}
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-900">{fmt(proyeccionAnual.reduce((a,r) => a+r.ventaCuotas,0))}</td>
+                  <td className="px-4 py-2.5 text-gray-500">
+                    {(() => { const t = proyeccionAnual.reduce((a,r)=>a+r.ventaFront,0); const c = proyeccionAnual.reduce((a,r)=>a+r.ventaCuotas,0); return t>0?pct((c/t)*100):'0%'; })()}
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-900">{fmt(proyeccionAnual.reduce((a,r) => a+r.ventaFront,0))}</td>
+                  <td className="px-4 py-2.5 text-gray-900">{fmt(proyeccionAnual.reduce((a,r) => a+r.ventaBack,0))}</td>
+                  <td className="px-4 py-2.5 text-gray-900">{fmt(proyeccionAnual.reduce((a,r) => a+r.total,0))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table 2 - AR vs USA */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800">Proyección anual — AR vs USA</h3>
+            </div>
+            <table className="w-full text-sm min-w-max">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mes</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap">Venta AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-400 uppercase tracking-wider">%AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-500 uppercase tracking-wider whitespace-nowrap">Venta USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-400 uppercase tracking-wider">%USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-200 uppercase tracking-wider">│</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap">Ingreso AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-400 uppercase tracking-wider">%AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-500 uppercase tracking-wider whitespace-nowrap">Ingreso USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-400 uppercase tracking-wider">%USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total ingreso</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {proyeccionAnual.map(r => {
+                  const pVAR  = r.total > 0 ? (r.ventaAR  / r.total) * 100 : 0;
+                  const pVUSA = r.total > 0 ? (r.ventaUSA / r.total) * 100 : 0;
+                  const pIAR  = r.totalIngreso > 0 ? (r.ingresoAR  / r.totalIngreso) * 100 : 0;
+                  const pIUSA = r.totalIngreso > 0 ? (r.ingresoUSA / r.totalIngreso) * 100 : 0;
+                  return (
+                    <tr key={r.mes} className={r.esFuturo ? 'opacity-50' : 'hover:bg-gray-50'}>
+                      <td className="px-4 py-2.5 font-medium text-gray-800 whitespace-nowrap">
+                        {r.label}{r.esFuturo && <span className="ml-1 text-xs text-gray-400 font-normal">proy.</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-blue-700 font-medium">{fmt(r.ventaAR)}</td>
+                      <td className="px-4 py-2.5 text-blue-500 text-xs">{pct(pVAR)}</td>
+                      <td className="px-4 py-2.5 text-indigo-700 font-medium">{fmt(r.ventaUSA)}</td>
+                      <td className="px-4 py-2.5 text-indigo-500 text-xs">{pct(pVUSA)}</td>
+                      <td className="px-4 py-2.5 font-semibold text-gray-900">{fmt(r.total)}</td>
+                      <td className="px-4 py-2.5 text-gray-200">│</td>
+                      <td className="px-4 py-2.5 text-blue-700 font-medium">{fmt(r.ingresoAR)}</td>
+                      <td className="px-4 py-2.5 text-blue-500 text-xs">{pct(pIAR)}</td>
+                      <td className="px-4 py-2.5 text-indigo-700 font-medium">{fmt(r.ingresoUSA)}</td>
+                      <td className="px-4 py-2.5 text-indigo-500 text-xs">{pct(pIUSA)}</td>
+                      <td className="px-4 py-2.5 font-semibold text-gray-900">{fmt(r.totalIngreso)}</td>
+                    </tr>
+                  );
+                })}
+                {/* Total row */}
+                {(() => {
+                  const tVAR = proyeccionAnual.reduce((a,r)=>a+r.ventaAR,0);
+                  const tVUSA = proyeccionAnual.reduce((a,r)=>a+r.ventaUSA,0);
+                  const tV = proyeccionAnual.reduce((a,r)=>a+r.total,0);
+                  const tIAR = proyeccionAnual.reduce((a,r)=>a+r.ingresoAR,0);
+                  const tIUSA = proyeccionAnual.reduce((a,r)=>a+r.ingresoUSA,0);
+                  const tI = proyeccionAnual.reduce((a,r)=>a+r.totalIngreso,0);
+                  return (
+                    <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                      <td className="px-4 py-2.5 text-gray-900">TOTAL</td>
+                      <td className="px-4 py-2.5 text-blue-800">{fmt(tVAR)}</td>
+                      <td className="px-4 py-2.5 text-blue-600 text-xs">{tV>0?pct((tVAR/tV)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-indigo-800">{fmt(tVUSA)}</td>
+                      <td className="px-4 py-2.5 text-indigo-600 text-xs">{tV>0?pct((tVUSA/tV)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-900">{fmt(tV)}</td>
+                      <td className="px-4 py-2.5 text-gray-200">│</td>
+                      <td className="px-4 py-2.5 text-blue-800">{fmt(tIAR)}</td>
+                      <td className="px-4 py-2.5 text-blue-600 text-xs">{tI>0?pct((tIAR/tI)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-indigo-800">{fmt(tIUSA)}</td>
+                      <td className="px-4 py-2.5 text-indigo-600 text-xs">{tI>0?pct((tIUSA/tI)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-900">{fmt(tI)}</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -814,7 +955,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = [], deudores = [], clientes = [] }) {
+export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = [], proyeccionAnual = [], deudores = [], clientes = [] }) {
   const [subTab, setSubTab] = useState('mensual');
   const deudoresActivos = deudores.filter(d => d.estado !== 'Saldado');
 
@@ -835,7 +976,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
       </div>
 
       <div>
-        {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} />}
+        {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccionAnual={proyeccionAnual} />}
         {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {subTab === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
       </div>

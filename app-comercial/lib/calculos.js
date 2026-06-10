@@ -363,6 +363,7 @@ export function calcularPendientesPorMes(clientes) {
         monto,
         fecha:       c[q.fecha]  || '',
         metodo:      c[q.metodo] || '',
+        met1:        c['Met pago 1'] || '',
         rowIndex:    c._rowIndex,
         campoEstado: q.estado,
       });
@@ -619,4 +620,63 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
     if (b.diasMora === null) return -1;
     return b.diasMora - a.diasMora;
   });
+}
+
+// ── Proyección anual ──────────────────────────────────────────────────────────
+
+export function calcularProyeccionAnual(clientes, resumen, ventasPorMes) {
+  const anioActual = new Date().getFullYear().toString();
+  const dataMap = {};
+
+  // Initialize all 12 months
+  for (let m = 1; m <= 12; m++) {
+    const mes = `${anioActual}-${String(m).padStart(2, '0')}`;
+    dataMap[mes] = {
+      mes, label: mesLabel(mes),
+      ventaPU: 0, ventaCuotas: 0, ventaFront: 0, ventaBack: 0, total: 0,
+      ventaAR: 0, ventaUSA: 0,
+      ingresoAR: 0, ingresoUSA: 0, totalIngreso: 0,
+      esFuturo: true,
+    };
+  }
+
+  // Fill historical months from resumen + ventasPorMes
+  for (const r of resumen) {
+    if (!dataMap[r.mes]) continue;
+    const vpm = ventasPorMes.find(v => v.mes === r.mes);
+    const nuevas = (vpm?.ventas || []).filter(v => !v.esBack);
+    dataMap[r.mes] = {
+      mes: r.mes, label: r.label,
+      ventaPU:     nuevas.filter(v => (v.cuotas || 1) <= 1).reduce((a, v) => a + v.monto, 0),
+      ventaCuotas: nuevas.filter(v => (v.cuotas || 1) >  1).reduce((a, v) => a + v.monto, 0),
+      ventaFront:  r.montoFront  || 0,
+      ventaBack:   r.montoBack   || 0,
+      total:       (r.montoFront || 0) + (r.montoBack || 0),
+      ventaAR:     r.montoAR    || 0,
+      ventaUSA:    r.montoExt   || 0,
+      ingresoAR:   r.cashTotalAR || 0,
+      ingresoUSA:  r.cashTotalExt || 0,
+      totalIngreso: r.cashTotal  || 0,
+      esFuturo: false,
+    };
+  }
+
+  // Project future months from unpaid cuotas
+  for (const c of clientes) {
+    const met1 = c['Met pago 1'] || '';
+    const esUSA = /stripe|wise|paypal|payoneer|cripto|crypto/i.test(met1);
+    CUOTAS_DEF.forEach(q => {
+      if (esPagado(c[q.estado])) return;
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const mes = normalizarMes(c[q.fecha]);
+      if (!mes || mes.startsWith('__')) return;
+      if (!dataMap[mes] || !dataMap[mes].esFuturo) return;
+      if (esUSA) dataMap[mes].ingresoUSA += monto;
+      else       dataMap[mes].ingresoAR  += monto;
+      dataMap[mes].totalIngreso += monto;
+    });
+  }
+
+  return Object.values(dataMap).sort((a, b) => a.mes.localeCompare(b.mes));
 }

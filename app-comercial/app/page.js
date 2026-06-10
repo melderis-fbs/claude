@@ -4,7 +4,7 @@ import {
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
   calcularProyeccion, calcularDeudores,
-  calcularCobrosAutomaticaPorMes,
+  calcularCobrosAutomaticaPorMes, calcularProyeccionAnual,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
 
@@ -39,6 +39,7 @@ export default async function Home() {
     const resumenFiltrado    = resumen.filter(m => m.mes.startsWith(anoActual));
     const ventasPorMesFiltradas = ventasPorMes.filter(m => m.mes.startsWith(anoActual));
     const comisionesFiltradas   = comisiones.filter(m => m.mes.startsWith(anoActual));
+    const proyeccionAnual = calcularProyeccionAnual(clientes, resumenFiltrado, ventasPorMesFiltradas);
 
     return (
       <Dashboard
@@ -51,6 +52,7 @@ export default async function Home() {
         cobrosSemanales={cobrosSemanales}
         pendientesPorMes={pendientesPorMesFiltrados}
         proyeccion={proyeccion}
+        proyeccionAnual={proyeccionAnual}
         abonos={abonos}
         deudores={deudores}
         facturas={facturas}
