@@ -164,8 +164,8 @@ export async function getEgresosRegistros(mes) {
 }
 
 export async function getAnuncios() {
-  if (MOCK_MODE || !process.env.APPS_SCRIPT_EGRESOS_URL) return [];
-  const data = await fetchScript(process.env.APPS_SCRIPT_EGRESOS_URL, { action: 'getAnuncios' });
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getAnuncios' });
   if (data.error) throw new Error(`GAS: ${data.error}`);
   return data.rows ?? [];
 }

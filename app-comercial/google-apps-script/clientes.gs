@@ -9,6 +9,7 @@ const TAB_ABONOS     = 'Abonos';
 const TAB_DEUDORES   = 'Deudores';
 const TAB_FACTURAS   = 'Facturas';
 const TAB_DOCUMENTOS = 'Documentos_Emitidos';
+const TAB_ANUNCIOS   = 'Anuncios';
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -20,6 +21,7 @@ function doGet(e) {
     if (action === 'getFacturas')      return ok(getFacturas());
     if (action === 'getDocumentos')    return ok(getDocumentos());
     if (action === 'getUltimoNumero')  return ok(getUltimoNumero(e.parameter.tipo));
+    if (action === 'getAnuncios')      return ok(getAnuncios());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -311,6 +313,31 @@ function appendDocumento(rowValues) {
   }
   sheet.appendRow(rowValues);
   return { ok: true };
+}
+
+// ── Anuncios (pivote: filas=métricas, columnas=meses) ────────────────────────
+
+function getAnuncios() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_ANUNCIOS);
+  if (!sheet) return { rows: [], error: 'Tab "Anuncios" no encontrado' };
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 1) return { rows: [] };
+
+  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var tz = Session.getScriptTimeZone();
+
+  var rows = values.map(function(row) {
+    return row.map(function(cell) {
+      if (cell instanceof Date) {
+        return cell.getTime() > 0 ? Utilities.formatDate(cell, tz, 'dd/MM/yyyy') : '';
+      }
+      return cell !== null && cell !== undefined ? cell : '';
+    });
+  });
+
+  return { rows: rows };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
