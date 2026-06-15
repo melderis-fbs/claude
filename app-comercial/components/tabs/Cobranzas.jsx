@@ -267,6 +267,9 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [reporteModal, setReporteModal] = useState(false);
   const [textoReporte, setTextoReporte] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [errorSlack, setErrorSlack] = useState('');
   const [editandoKey, setEditandoKey] = useState(null);
   const [textoEdit, setTextoEdit] = useState('');
   const [notasLocal, setNotasLocal] = useState(() => {
@@ -354,22 +357,44 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
       </div>
 
       {reporteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReporteModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900">Reporte Slack — Cobranzas semanal</h3>
                 <p className="text-xs text-gray-400 mt-0.5">Deudores + cobros pendientes · {semana.label}</p>
               </div>
-              <button onClick={() => setReporteModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+              <button onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}
+                className="text-gray-400 hover:text-gray-700 text-xl">×</button>
             </div>
             <div className="p-5 space-y-3">
-              <p className="text-xs text-gray-400">Podés editar el texto antes de copiarlo.</p>
-              <textarea value={textoReporte} onChange={e => setTextoReporte(e.target.value)} rows={14}
+              <p className="text-xs text-gray-400">Editá el texto si necesitás y después enviá.</p>
+              <textarea value={textoReporte} onChange={e => { setTextoReporte(e.target.value); setEnviado(false); }} rows={14}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 focus:outline-none focus:border-blue-400 resize-y" />
-              <button onClick={() => navigator.clipboard.writeText(textoReporte)}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                📋 Copiar al portapapeles
+              {errorSlack && <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">{errorSlack}</p>}
+              <button
+                disabled={enviando || enviado}
+                onClick={async () => {
+                  setEnviando(true); setErrorSlack(''); setEnviado(false);
+                  try {
+                    const res = await fetch('/api/slack', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: textoReporte }),
+                    });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Error al enviar');
+                    setEnviado(true);
+                  } catch (err) {
+                    setErrorSlack(err.message);
+                  } finally {
+                    setEnviando(false);
+                  }
+                }}
+                className={`w-full py-2.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 ${
+                  enviado ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}>
+                {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
               </button>
             </div>
           </div>
