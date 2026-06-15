@@ -67,24 +67,53 @@ function displayCom(raw) {
 
 // ── Resumen mensual ───────────────────────────────────────────────────────────
 
-function generarReporteSemanal(semana) {
-  const cobros = Object.values(semana.dias).flat();
-  const cobrados  = cobros.filter(c => c.pagado);
-  const pendientes = cobros.filter(c => !c.pagado);
-  let texto = `📅 *Cobros semanales — ${semana.label}*\n━━━━━━━━━━━━━━━━━━━━\n`;
-  texto += `💰 Esperado: ${fmt(semana.totalEsperado)}  |  ✅ Cobrado: ${fmt(semana.totalCobrado)}  |  ⏳ Pendiente: ${fmt(semana.totalPendiente)}\n`;
-  if (cobrados.length > 0) {
-    texto += `\n✅ *COBRADO* (${cobrados.length})\n`;
-    for (const c of cobrados) {
-      texto += `• ${c.nombre} — ${c.programa} — ${c.esSeña ? 'Seña' : `Cuota ${c.cuota}`} — ${fmt(c.monto)}\n`;
-    }
+function generarReporteCompleto(semana, deudores) {
+  // ── Sección 1: deudores activos ordenados por días de mora ──────────────────
+  const activos = [...deudores]
+    .filter(d => d.estado !== 'Saldado')
+    .sort((a, b) => {
+      if (a.diasMora === null && b.diasMora === null) return 0;
+      if (a.diasMora === null) return 1;
+      if (b.diasMora === null) return -1;
+      return b.diasMora - a.diasMora;
+    });
+  const totalMora = activos.reduce((s, d) => s + d.monto, 0);
+
+  let texto = `📋 *Reporte semanal de cobranzas*\n`;
+  texto += `${activos.length} deudores pendientes — Total: ${fmt(totalMora)} USD\n`;
+
+  for (const d of activos) {
+    const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
+    const estado = d.estado || 'Sin clasificar';
+    texto += `\n${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${mora}  •  ${estado}`;
+    const com = parseCom(d.comentario);
+    const nota = [com.sa, com.dc].filter(Boolean).join(' ');
+    if (nota) texto += ` ${nota}`;
   }
+
+  // ── Sección 2: cobros pendientes de la semana seleccionada ──────────────────
+  const pendientes = Object.values(semana.dias).flat().filter(c => !c.pagado);
   if (pendientes.length > 0) {
-    texto += `\n⏳ *PENDIENTE* (${pendientes.length})\n`;
+    const totalPend = pendientes.reduce((s, c) => s + c.monto, 0);
+    const semLabel = semana.esActual ? 'esta semana' : semana.label;
+    texto += `\n\n📅 *Cobros pendientes ${semLabel}*\nTotal pendiente: ${fmt(totalPend)}\n`;
+
+    const deudorMap = {};
+    for (const d of deudores) {
+      deudorMap[`${d.rowIndex}-${d.cuota}`] = d;
+    }
+
     for (const c of pendientes) {
-      texto += `• ${c.nombre} — ${c.programa} — ${c.esSeña ? 'Seña' : `Cuota ${c.cuota}`} — ${fmt(c.monto)}${c.metodo ? ` — ${c.metodo}` : ''}\n`;
+      texto += `\n⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha || '—'}`;
+      const rec = deudorMap[`${c.rowIndex}-${c.cuota}`];
+      if (rec) {
+        const com = parseCom(rec.comentario);
+        const nota = [com.sa, com.dc].filter(Boolean).join(' ');
+        if (nota) texto += ` ${nota}`;
+      }
     }
   }
+
   return texto.trim();
 }
 
@@ -317,7 +346,7 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
         </div>
         <button onClick={() => setOffset(o => o + 1)} disabled={idx === proyeccion.length - 1}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">›</button>
-        <button onClick={() => { setTextoReporte(generarReporteSemanal(semana)); setReporteModal(true); }}
+        <button onClick={() => { setTextoReporte(generarReporteCompleto(semana, deudores)); setReporteModal(true); }}
           title="Generar reporte Slack de esta semana"
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
           📤
@@ -329,8 +358,8 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900">Reporte Slack — Pagos semanales</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{semana.label}</p>
+                <h3 className="font-semibold text-gray-900">Reporte Slack — Cobranzas semanal</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Deudores + cobros pendientes · {semana.label}</p>
               </div>
               <button onClick={() => setReporteModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
             </div>
