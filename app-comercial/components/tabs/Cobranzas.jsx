@@ -67,28 +67,39 @@ function displayCom(raw) {
 
 // ── Resumen mensual ───────────────────────────────────────────────────────────
 
+const CATEGORIAS = [
+  { estado: 'Incobrable',  emoji: '🔴', titulo: 'INCOBRABLES'  },
+  { estado: 'Moroso',      emoji: '🟡', titulo: 'MOROSOS'       },
+  { estado: 'En gestión',  emoji: '🔵', titulo: 'EN GESTIÓN'    },
+  { estado: '',            emoji: '⚪', titulo: 'SIN CLASIFICAR' },
+];
+
 function generarReporteCompleto(semana, deudores) {
-  // ── Sección 1: deudores activos ordenados por días de mora ──────────────────
-  const activos = [...deudores]
-    .filter(d => d.estado !== 'Saldado')
-    .sort((a, b) => {
-      if (a.diasMora === null && b.diasMora === null) return 0;
-      if (a.diasMora === null) return 1;
-      if (b.diasMora === null) return -1;
-      return b.diasMora - a.diasMora;
-    });
+  const activos = deudores.filter(d => d.estado !== 'Saldado');
   const totalMora = activos.reduce((s, d) => s + d.monto, 0);
 
   let texto = `📋 *Reporte semanal de cobranzas*\n`;
   texto += `${activos.length} deudores pendientes — Total: ${fmt(totalMora)} USD\n`;
 
-  for (const d of activos) {
-    const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
-    const estado = d.estado || 'Sin clasificar';
-    texto += `\n${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${mora}  •  ${estado}`;
-    const com = parseCom(d.comentario);
-    const nota = [com.sa, com.dc].filter(Boolean).join(' ');
-    if (nota) texto += ` ${nota}`;
+  for (const cat of CATEGORIAS) {
+    const lista = activos
+      .filter(d => d.estado === cat.estado)
+      .sort((a, b) => {
+        if (a.diasMora === null) return 1;
+        if (b.diasMora === null) return -1;
+        return b.diasMora - a.diasMora;
+      });
+    if (!lista.length) continue;
+
+    const totalCat = lista.reduce((s, d) => s + d.monto, 0);
+    texto += `\n${cat.emoji} *${cat.titulo}* (${lista.length}) — ${fmt(totalCat)}\n`;
+
+    for (const d of lista) {
+      const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
+      texto += `${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${mora}\n`;
+      const sa = parseCom(d.comentario).sa;
+      if (sa) texto += `${sa}\n`;
+    }
   }
 
   // ── Sección 2: cobros pendientes de la semana seleccionada ──────────────────
@@ -96,7 +107,7 @@ function generarReporteCompleto(semana, deudores) {
   if (pendientes.length > 0) {
     const totalPend = pendientes.reduce((s, c) => s + c.monto, 0);
     const semLabel = semana.esActual ? 'esta semana' : semana.label;
-    texto += `\n\n📅 *Cobros pendientes ${semLabel}*\nTotal pendiente: ${fmt(totalPend)}\n`;
+    texto += `\n📅 *Cobros pendientes ${semLabel}*\nTotal pendiente: ${fmt(totalPend)}\n\n`;
 
     const deudorMap = {};
     for (const d of deudores) {
@@ -104,13 +115,10 @@ function generarReporteCompleto(semana, deudores) {
     }
 
     for (const c of pendientes) {
-      texto += `\n⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha || '—'}`;
+      texto += `⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha || '—'}\n`;
       const rec = deudorMap[`${c.rowIndex}-${c.cuota}`];
-      if (rec) {
-        const com = parseCom(rec.comentario);
-        const nota = [com.sa, com.dc].filter(Boolean).join(' ');
-        if (nota) texto += ` ${nota}`;
-      }
+      const sa = rec ? parseCom(rec.comentario).sa : '';
+      if (sa) texto += `${sa}\n`;
     }
   }
 
