@@ -67,6 +67,27 @@ function displayCom(raw) {
 
 // ── Resumen mensual ───────────────────────────────────────────────────────────
 
+function generarReporteSemanal(semana) {
+  const cobros = Object.values(semana.dias).flat();
+  const cobrados  = cobros.filter(c => c.pagado);
+  const pendientes = cobros.filter(c => !c.pagado);
+  let texto = `📅 *Cobros semanales — ${semana.label}*\n━━━━━━━━━━━━━━━━━━━━\n`;
+  texto += `💰 Esperado: ${fmt(semana.totalEsperado)}  |  ✅ Cobrado: ${fmt(semana.totalCobrado)}  |  ⏳ Pendiente: ${fmt(semana.totalPendiente)}\n`;
+  if (cobrados.length > 0) {
+    texto += `\n✅ *COBRADO* (${cobrados.length})\n`;
+    for (const c of cobrados) {
+      texto += `• ${c.nombre} — ${c.programa} — ${c.esSeña ? 'Seña' : `Cuota ${c.cuota}`} — ${fmt(c.monto)}\n`;
+    }
+  }
+  if (pendientes.length > 0) {
+    texto += `\n⏳ *PENDIENTE* (${pendientes.length})\n`;
+    for (const c of pendientes) {
+      texto += `• ${c.nombre} — ${c.programa} — ${c.esSeña ? 'Seña' : `Cuota ${c.cuota}`} — ${fmt(c.monto)}${c.metodo ? ` — ${c.metodo}` : ''}\n`;
+    }
+  }
+  return texto.trim();
+}
+
 function VistaResumenMensual({ cobranzas, pendientesPorMes }) {
   const router = useRouter();
   const meses = cobranzas.map(m => m.mes);
@@ -215,6 +236,8 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
   const [offset, setOffset] = useState(0);
   const [marcando, setMarcando] = useState(new Set());
   const [errorMsg, setErrorMsg] = useState('');
+  const [reporteModal, setReporteModal] = useState(false);
+  const [textoReporte, setTextoReporte] = useState('');
   const [editandoKey, setEditandoKey] = useState(null);
   const [textoEdit, setTextoEdit] = useState('');
   const [notasLocal, setNotasLocal] = useState(() => {
@@ -294,7 +317,35 @@ function VistaSemanal({ proyeccion, deudores = [] }) {
         </div>
         <button onClick={() => setOffset(o => o + 1)} disabled={idx === proyeccion.length - 1}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">›</button>
+        <button onClick={() => { setTextoReporte(generarReporteSemanal(semana)); setReporteModal(true); }}
+          title="Generar reporte Slack de esta semana"
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
+          📤
+        </button>
       </div>
+
+      {reporteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReporteModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Reporte Slack — Pagos semanales</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{semana.label}</p>
+              </div>
+              <button onClick={() => setReporteModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-gray-400">Podés editar el texto antes de copiarlo.</p>
+              <textarea value={textoReporte} onChange={e => setTextoReporte(e.target.value)} rows={14}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 focus:outline-none focus:border-blue-400 resize-y" />
+              <button onClick={() => navigator.clipboard.writeText(textoReporte)}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                📋 Copiar al portapapeles
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
@@ -411,6 +462,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const [editando, setEditando] = useState(null);
   const [marcando, setMarcando] = useState(new Set());
   const [reporteModal, setReporteModal] = useState(false);
+  const [textoReporte, setTextoReporte] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mostrarSaldados, setMostrarSaldados] = useState(false);
 
@@ -563,7 +615,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => setReporteModal(true)}
+        <button onClick={() => { setTextoReporte(generarReporte()); setReporteModal(true); }}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
           📤 Generar reporte Slack
         </button>
@@ -797,13 +849,14 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReporteModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Reporte Slack</h3>
+              <h3 className="font-semibold text-gray-900">Reporte Slack — Deudores</h3>
               <button onClick={() => setReporteModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
             </div>
             <div className="p-5 space-y-3">
-              <textarea readOnly value={generarReporte()} rows={14}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none" />
-              <button onClick={() => navigator.clipboard.writeText(generarReporte())}
+              <p className="text-xs text-gray-400">Podés editar el texto antes de copiarlo.</p>
+              <textarea value={textoReporte} onChange={e => setTextoReporte(e.target.value)} rows={14}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 focus:outline-none focus:border-blue-400 resize-y" />
+              <button onClick={() => navigator.clipboard.writeText(textoReporte)}
                 className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
                 📋 Copiar al portapapeles
               </button>

@@ -199,7 +199,6 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   const [items, setItems] = useState(initialDeudores);
   const [editando, setEditando] = useState(null);
   const [marcando, setMarcando] = useState(new Set());
-  const [reporteModal, setReporteModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [mostrarSaldados, setMostrarSaldados] = useState(false);
 
@@ -310,33 +309,6 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
     }
   }, [router]);
 
-  const generarReporte = () => {
-    const hoy = new Date().toLocaleDateString('es-AR');
-    const grupos = { 'Incobrable': [], 'Moroso': [], 'En gestión': [], '': [] };
-    for (const d of visibles) {
-      if (d.estado === 'Saldado') continue;
-      (grupos[d.estado] !== undefined ? grupos[d.estado] : grupos['']).push(d);
-    }
-    const emojiMap  = { 'Incobrable':'🔴','Moroso':'🟡','En gestión':'🔵','':'⚪' };
-    const tituloMap = { 'Incobrable':'INCOBRABLES','Moroso':'MOROSOS','En gestión':'EN GESTIÓN','':'SIN CLASIFICAR' };
-    let texto = `📋 *Reporte de Deudores — ${hoy}*\n━━━━━━━━━━━━━━━━━━━━\n`;
-    texto += `💰 Total en mora: ${fmt(totalMora)} | ${visibles.filter(d => d.estado !== 'Saldado').length} deudores\n\n`;
-    for (const [estado, lista] of Object.entries(grupos)) {
-      if (!lista.length) continue;
-      texto += `${emojiMap[estado]} *${tituloMap[estado]}* (${lista.length})\n`;
-      for (const d of lista) {
-        const mora = d.diasMora !== null ? `${d.diasMora} días` : 'sin fecha';
-        texto += `• ${d.nombre} — Cuota ${d.cuota} — ${fmt(d.monto)} — ${mora}\n`;
-        const com = parseCom(d.comentario);
-        if (com.uc) texto += `  📅 Último contacto: ${com.uc}\n`;
-        if (com.sa) texto += `  📍 Situación: ${com.sa}\n`;
-        if (com.dc) texto += `  📝 Descripción: ${com.dc}\n`;
-      }
-      texto += '\n';
-    }
-    return texto.trim();
-  };
-
   return (
     <div className="space-y-4 max-w-5xl">
       {errorMsg && (
@@ -362,10 +334,6 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => setReporteModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
-          📤 Generar reporte Slack
-        </button>
         <button onClick={abrirAgregar}
           className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
           + Agregar deudor
@@ -608,25 +576,6 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
         </div>
       )}
 
-      {/* Modal reporte */}
-      {reporteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setReporteModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Reporte Slack</h3>
-              <button onClick={() => setReporteModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
-            </div>
-            <div className="p-5 space-y-3">
-              <textarea readOnly value={generarReporte()} rows={14}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none" />
-              <button onClick={() => navigator.clipboard.writeText(generarReporte())}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                📋 Copiar al portapapeles
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
