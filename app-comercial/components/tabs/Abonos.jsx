@@ -8,10 +8,9 @@ const CLOSERS = ['Kevin','Vicky','Braian','Fabricio'];
 const FORMAS_PAGO = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Cripto','Transferencia ARS'];
 
 const ESTADOS = [
-  { value: '',             label: '—',           color: 'bg-gray-100 text-gray-400'       },
-  { value: 'Ingresó',      label: 'Ingresó',      color: 'bg-emerald-100 text-emerald-700' },
-  { value: 'En espera',    label: 'En espera',    color: 'bg-amber-100 text-amber-700'     },
-  { value: 'Seguimiento',  label: 'Seguimiento',  color: 'bg-blue-100 text-blue-700'       },
+  { value: '',         label: '—',        color: 'bg-gray-100 text-gray-400'       },
+  { value: 'Ingresó',  label: 'Ingresó',  color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'Devuelta', label: 'Devuelta', color: 'bg-red-100 text-red-700'         },
 ];
 
 const estadoStyle = val => ESTADOS.find(e => e.value === val) || ESTADOS[0];
@@ -41,7 +40,13 @@ export default function Abonos({ abonos }) {
            String(get(a,'Seguimiento','seguimiento')).toLowerCase().includes(q);
   });
 
-  const montoTotal = abonosLocal.reduce((s,a) => s + Number(get(a,'Monto','monto') || 0), 0);
+  const montoIngreso  = abonosLocal.filter(a => get(a,'Estado','estado') === 'Ingresó')
+    .reduce((s,a) => s + Number(get(a,'Monto','monto') || 0), 0);
+  const montoDevuelta = abonosLocal.filter(a => get(a,'Estado','estado') === 'Devuelta')
+    .reduce((s,a) => s + Number(get(a,'Monto','monto') || 0), 0);
+  const montoPendiente = abonosLocal.filter(a => !get(a,'Estado','estado'))
+    .reduce((s,a) => s + Number(get(a,'Monto','monto') || 0), 0);
+  const totalResta = montoIngreso + montoDevuelta;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setE = (k, v) => setEditForm(f => ({ ...f, [k]: v }));
@@ -119,16 +124,26 @@ export default function Abonos({ abonos }) {
   return (
     <div className="space-y-5 max-w-5xl">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total abonos / señas</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total abonos</p>
           <p className="text-3xl font-bold text-gray-900">{abonosLocal.length}</p>
-          <p className="text-xs text-gray-400 mt-1">reservas registradas</p>
+          <p className="text-xs text-gray-400 mt-1">registradas</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Monto total señas</p>
-          <p className="text-3xl font-bold text-amber-700">{fmt(montoTotal)}</p>
-          <p className="text-xs text-amber-600 mt-1">suma a la recolección</p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ingresaron</p>
+          <p className="text-3xl font-bold text-emerald-700">{fmt(montoIngreso)}</p>
+          <p className="text-xs text-emerald-600 mt-1">{abonosLocal.filter(a => get(a,'Estado','estado') === 'Ingresó').length} señas</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Devueltas</p>
+          <p className="text-3xl font-bold text-red-700">{fmt(montoDevuelta)}</p>
+          <p className="text-xs text-red-500 mt-1">{abonosLocal.filter(a => get(a,'Estado','estado') === 'Devuelta').length} señas</p>
+        </div>
+        <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Resta del cashflow</p>
+          <p className="text-3xl font-bold text-white">-{fmt(totalResta)}</p>
+          <p className="text-xs text-gray-400 mt-1">{montoPendiente > 0 ? `+ ${fmt(montoPendiente)} sin estado` : 'ingresadas + devueltas'}</p>
         </div>
       </div>
 
