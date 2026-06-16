@@ -1,8 +1,25 @@
 'use client';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
 import { useComentarios } from './useComentarios.js';
+
+function getWeekBounds(offset) {
+  const now = new Date();
+  const dow = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  return { start: monday, end: sunday };
+}
+
+function weekLabel(start, end) {
+  const fmt = d => `${d.getDate()}/${d.getMonth() + 1}`;
+  return `${fmt(start)} al ${fmt(end)}`;
+}
 
 function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
 
@@ -127,6 +144,12 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
   const [sortField, setSortField] = useState('mes');
   const [sortDir, setSortDir] = useState('asc');
   const [filterEstado, setFilterEstado] = useState('todos'); // todos | vencido | pendiente
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [reporteModal, setReporteModal] = useState(false);
+  const [textoReporte, setTextoReporte] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [errorSlack, setErrorSlack] = useState('');
 
   // ── Monthly summary rows ──
   const rows = useMemo(() => {
@@ -221,6 +244,72 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
   const totalPendiente = pendientes.filter(p => p.estado === 'Pendiente').reduce((s, p) => s + p.monto, 0);
   const conComentario = pendientes.filter(p => getComentario('cobranza', p.nombre)?.trim()).length;
 
+  const semana = useMemo(() => getWeekBounds(weekOffset), [weekOffset]);
+
+  const cobrosSemanales = useMemo(() => {
+    const all = [];
+    function collect(dataset) {
+      dataset.forEach(cliente => {
+        (cliente.pagos || []).forEach(p => {
+          if (!p || !p.fechaISO || p.estado === 'Cobrado') return;
+          const d = new Date(p.fechaISO);
+          if (d >= semana.start && d <= semana.end) {
+            all.push({ nombre: cliente.nombre, monto: p.monto, n: p.n, fecha: p.fecha, fechaISO: p.fechaISO });
+          }
+        });
+      });
+    }
+    collect(clientesNuevos);
+    collect(recoleccion);
+    return all.sort((a, b) => a.fechaISO.localeCompare(b.fechaISO));
+  }, [clientesNuevos, recoleccion, semana]);
+
+  const generarReporte = useCallback(() => {
+    const today = new Date();
+    const deudoresMap = {};
+    function collectDeudores(dataset) {
+      dataset.forEach(cliente => {
+        (cliente.pagos || []).forEach(p => {
+          if (!p || p.estado !== 'Vencido') return;
+          const key = cliente.nombre + '-' + p.n;
+          const fechaD = p.fechaISO ? new Date(p.fechaISO) : null;
+          const diasMora = fechaD ? Math.floor((today - fechaD) / (1000 * 60 * 60 * 24)) : null;
+          if (!deudoresMap[key]) {
+            deudoresMap[key] = { nombre: cliente.nombre, monto: p.monto, n: p.n, diasMora };
+          }
+        });
+      });
+    }
+    collectDeudores(clientesNuevos);
+    collectDeudores(recoleccion);
+
+    const deudores = Object.values(deudoresMap).sort((a, b) => (b.diasMora || 0) - (a.diasMora || 0));
+    const totalMora = deudores.reduce((s, d) => s + d.monto, 0);
+
+    let texto = `📋 *Reporte semanal de cobranzas*\n`;
+    texto += `${deudores.length} deudores pendientes — Total: ${usd(totalMora)} USD\n`;
+    for (const d of deudores) {
+      const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
+      texto += `${d.nombre}  •  ${usd(d.monto)}  •  cuota ${d.n}  •  ${mora}`;
+      const com = getComentario('cobranza', d.nombre);
+      if (com) texto += `  ${com}`;
+      texto += '\n';
+    }
+
+    if (cobrosSemanales.length > 0) {
+      const totalSem = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
+      const label = weekOffset === 0 ? 'esta semana' : `semana del ${weekLabel(semana.start, semana.end)}`;
+      texto += `\n📅 *Cobros pendientes ${label}*\nTotal pendiente: ${usd(totalSem)}\n\n`;
+      for (const c of cobrosSemanales) {
+        texto += `⏳ ${c.nombre}  •  ${usd(c.monto)}  •  cuota ${c.n}  •  ${c.fecha || '—'}\n`;
+        const com = getComentario('cobranza', c.nombre);
+        if (com) texto += `${com}\n`;
+      }
+    }
+
+    return texto.trim();
+  }, [clientesNuevos, recoleccion, cobrosSemanales, semana, weekOffset, getComentario]);
+
   function SortIcon({ field }) {
     if (sortField !== field) return <span className="text-ink-3 opacity-40 ml-0.5">↕</span>;
     return <span className="text-gold ml-0.5">{sortDir === 'asc' ? '↑' : '↓'}</span>;
@@ -304,26 +393,48 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
                 )}
               </p>
             </div>
-            {/* Filter tabs */}
-            <div className="flex gap-1 bg-page rounded-lg p-1">
-              {[
-                { id: 'todos', label: `Todos (${pendientes.length})` },
-                { id: 'vencido', label: `Vencidos (${pendientes.filter(p => p.estado === 'Vencido').length})` },
-                { id: 'pendiente', label: `Pendientes (${pendientes.filter(p => p.estado === 'Pendiente').length})` },
-              ].map(tab => (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Week selector + report button */}
+              <div className="flex items-center gap-1">
                 <button
-                  key={tab.id}
-                  onClick={() => setFilterEstado(tab.id)}
-                  className={clsx(
-                    'text-xs px-3 py-1.5 rounded-md font-medium transition-colors',
-                    filterEstado === tab.id
-                      ? 'bg-white text-ink-1 shadow-sm'
-                      : 'text-ink-3 hover:text-ink-2'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                  onClick={() => setWeekOffset(w => w - 1)}
+                  className="w-7 h-7 flex items-center justify-center rounded border border-cream bg-white hover:bg-page text-ink-2 text-sm font-bold"
+                >‹</button>
+                <span className="px-2 text-xs text-ink-2 whitespace-nowrap min-w-[110px] text-center">
+                  {weekOffset === 0 ? 'Esta semana' : weekLabel(semana.start, semana.end)}
+                </span>
+                <button
+                  onClick={() => setWeekOffset(w => Math.min(0, w + 1))}
+                  disabled={weekOffset >= 0}
+                  className="w-7 h-7 flex items-center justify-center rounded border border-cream bg-white hover:bg-page text-ink-2 text-sm font-bold disabled:opacity-30"
+                >›</button>
+                <button
+                  onClick={() => { setTextoReporte(generarReporte()); setReporteModal(true); setEnviado(false); setErrorSlack(''); }}
+                  title="Generar reporte Slack"
+                  className="w-7 h-7 flex items-center justify-center rounded border border-cream bg-white hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 text-ink-3 text-sm ml-1 transition-colors"
+                >📤</button>
+              </div>
+              {/* Filter tabs */}
+              <div className="flex gap-1 bg-page rounded-lg p-1">
+                {[
+                  { id: 'todos', label: `Todos (${pendientes.length})` },
+                  { id: 'vencido', label: `Vencidos (${pendientes.filter(p => p.estado === 'Vencido').length})` },
+                  { id: 'pendiente', label: `Pendientes (${pendientes.filter(p => p.estado === 'Pendiente').length})` },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFilterEstado(tab.id)}
+                    className={clsx(
+                      'text-xs px-3 py-1.5 rounded-md font-medium transition-colors',
+                      filterEstado === tab.id
+                        ? 'bg-white text-ink-1 shadow-sm'
+                        : 'text-ink-3 hover:text-ink-2'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -342,6 +453,82 @@ export default function CobranzasSection({ clientesNuevos = [], recoleccion = []
                 />
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Slack report modal */}
+      {reporteModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-cream">
+              <div>
+                <h3 className="font-semibold text-ink-1">Reporte de cobranzas</h3>
+                <p className="text-xs text-ink-3 mt-0.5">
+                  {weekOffset === 0 ? 'Esta semana' : weekLabel(semana.start, semana.end)}
+                  {' · '}{cobrosSemanales.length} cobros pendientes
+                </p>
+              </div>
+              <button
+                onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}
+                className="text-ink-3 hover:text-ink-1 text-lg leading-none"
+              >✕</button>
+            </div>
+
+            <div className="px-5 py-4">
+              <textarea
+                value={textoReporte}
+                onChange={e => { setTextoReporte(e.target.value); setEnviado(false); }}
+                rows={14}
+                className="w-full text-xs font-mono border border-cream rounded-lg p-3 resize-none focus:outline-none focus:border-gold-dark bg-page text-ink-2"
+              />
+            </div>
+
+            {errorSlack && (
+              <p className="px-5 pb-2 text-red-600 text-xs">{errorSlack}</p>
+            )}
+
+            <div className="px-5 pb-5 flex gap-2 justify-end">
+              <button
+                onClick={() => navigator.clipboard.writeText(textoReporte)}
+                className="px-4 py-2 text-xs rounded-lg border border-cream text-ink-2 hover:bg-page transition-colors"
+              >
+                Copiar
+              </button>
+              <button
+                disabled={enviando || enviado}
+                onClick={async () => {
+                  setEnviando(true); setErrorSlack(''); setEnviado(false);
+                  try {
+                    const res = await fetch('/api/slack', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: textoReporte }),
+                    });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Error al enviar');
+                    setEnviado(true);
+                  } catch (err) {
+                    setErrorSlack(err.message);
+                  } finally {
+                    setEnviando(false);
+                  }
+                }}
+                className={clsx(
+                  'px-4 py-2 text-xs rounded-lg font-semibold transition-colors',
+                  enviado
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60'
+                )}
+              >
+                {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
+              </button>
+            </div>
           </div>
         </div>
       )}
