@@ -366,6 +366,11 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
     }
     return m;
   });
+  const [reporteModal, setReporteModal] = useState(false);
+  const [textoReporte, setTextoReporte] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [errorSlack, setErrorSlack] = useState('');
   const router = useRouter();
 
   const idx = Math.max(0, Math.min(proyeccion.length - 1,
@@ -412,6 +417,47 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
     }
   }, [router]);
 
+  const generarReporteCompleto = () => {
+    const activos = deudores.filter(d => d.estado !== 'Saldado');
+    const totalMora = activos.reduce((s, d) => s + d.monto, 0);
+    const CATS = [
+      { estado: 'Incobrable', emoji: '🔴', titulo: 'INCOBRABLES' },
+      { estado: 'Moroso',     emoji: '🟡', titulo: 'MOROSOS' },
+      { estado: 'En gestión', emoji: '🔵', titulo: 'EN GESTIÓN' },
+      { estado: '',           emoji: '⚪', titulo: 'SIN CLASIFICAR' },
+    ];
+    let texto = `📋 *Reporte semanal de cobranzas*\n`;
+    texto += `${activos.length} deudores pendientes — Total: ${fmt(totalMora)} USD\n`;
+    for (const cat of CATS) {
+      const lista = activos.filter(d => d.estado === cat.estado)
+        .sort((a, b) => (b.diasMora ?? -1) - (a.diasMora ?? -1));
+      if (!lista.length) continue;
+      const totalCat = lista.reduce((s, d) => s + d.monto, 0);
+      texto += `\n${cat.emoji} *${cat.titulo}* (${lista.length}) — ${fmt(totalCat)}\n`;
+      for (const d of lista) {
+        const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
+        texto += `${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${mora}\n`;
+        const sa = parseCom(d.comentario).sa;
+        if (sa) texto += `${sa}\n`;
+      }
+    }
+    if (semana) {
+      const pendientes = Object.values(semana.dias).flat().filter(c => !c.pagado);
+      if (pendientes.length > 0) {
+        const totalPend = pendientes.reduce((s, c) => s + c.monto, 0);
+        const label = semana.esActual ? 'esta semana' : semana.label;
+        texto += `\n📅 *Cobros pendientes ${label}*\nTotal pendiente: ${fmt(totalPend)}\n\n`;
+        for (const c of pendientes) {
+          texto += `⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha || '—'}\n`;
+          const d = activos.find(x => x.rowIndex === c.rowIndex && x.cuota === c.cuota);
+          const sa = d ? parseCom(d.comentario).sa : '';
+          if (sa) texto += `${sa}\n`;
+        }
+      }
+    }
+    return texto.trim();
+  };
+
   if (!semana) return <p className="text-gray-400 text-sm">Sin datos de proyección.</p>;
 
   const diasEntries = Object.entries(semana.dias);
@@ -432,6 +478,12 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
         </div>
         <button onClick={() => setOffset(o => o + 1)} disabled={idx === proyeccion.length - 1}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">›</button>
+        <button
+          onClick={() => { setTextoReporte(generarReporteCompleto()); setReporteModal(true); setEnviado(false); setErrorSlack(''); }}
+          title="Generar reporte Slack"
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
+          📤
+        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -535,6 +587,63 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal reporte Slack */}
+      {reporteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col"
+            onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Reporte semanal</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{semana?.esActual ? 'Esta semana' : semana?.label}</p>
+              </div>
+              <button onClick={() => { setReporteModal(false); setEnviado(false); setErrorSlack(''); }}
+                className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-5">
+              <textarea
+                value={textoReporte}
+                onChange={e => { setTextoReporte(e.target.value); setEnviado(false); }}
+                rows={14}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-blue-300"
+              />
+            </div>
+            {errorSlack && <p className="px-5 pb-2 text-red-600 text-xs">{errorSlack}</p>}
+            <div className="px-5 pb-5 flex gap-2 justify-end">
+              <button onClick={() => navigator.clipboard.writeText(textoReporte)}
+                className="px-4 py-2 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                Copiar
+              </button>
+              <button
+                disabled={enviando || enviado}
+                onClick={async () => {
+                  setEnviando(true); setErrorSlack(''); setEnviado(false);
+                  try {
+                    const res = await fetch('/api/slack', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text: textoReporte }),
+                    });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Error al enviar');
+                    setEnviado(true);
+                  } catch (err) {
+                    setErrorSlack(err.message);
+                  } finally {
+                    setEnviando(false);
+                  }
+                }}
+                className={`px-4 py-2 text-xs rounded-lg font-semibold transition-colors ${
+                  enviado ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60'
+                }`}
+              >
+                {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
