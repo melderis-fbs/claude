@@ -26,7 +26,9 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function Closers({ data = [], months = [], selectedMonth, onMonthChange }) {
+function usd(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
+
+export default function Closers({ data = [], months = [], selectedMonth, onMonthChange, clientesNuevos = [] }) {
   const [compareMode, setCompareMode]   = useState(false);
   const [compareMonth, setCompareMonth] = useState('');
 
@@ -45,6 +47,25 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
   const filteredB = useMemo(() =>
     compareMode && compareMonth ? data.filter(d => d.mes === compareMonth) : [],
   [data, compareMode, compareMonth]);
+
+  // Commissions from clientesNuevos
+  const commissions = useMemo(() => {
+    const map = {};
+    clientesNuevos.forEach(c => {
+      const closer = c.closer;
+      if (!closer) return;
+      if (!map[closer]) map[closer] = { closer, ventas: 0, facturado: 0, cobrado: 0 };
+      map[closer].ventas++;
+      map[closer].facturado += c.montoTotal || 0;
+      (c.pagos || []).forEach(p => {
+        if (p && p.estado === 'Cobrado') map[closer].cobrado += p.monto || 0;
+      });
+    });
+    return Object.values(map).map(r => ({
+      ...r,
+      comision: Math.round(r.cobrado * 0.08),
+    })).sort((a, b) => b.cobrado - a.cobrado);
+  }, [clientesNuevos]);
 
   const chartData = sorted.map(c => ({
     name:        c.closer.split(' ')[0],
@@ -236,6 +257,42 @@ export default function Closers({ data = [], months = [], selectedMonth, onMonth
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Commissions table */}
+      {commissions.length > 0 && (
+        <div className="bg-white rounded-xl border border-cream shadow-sm p-4">
+          <h2 className="text-sm font-semibold text-ink-2 mb-4">Comisiones (Clientes nuevos)</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max text-sm">
+              <thead>
+                <tr className="border-b border-cream">
+                  {['Closer', 'Ventas', 'Facturado', 'Cobrado', 'Comisión (8%)'].map(h => (
+                    <th key={h} className="pb-2 px-3 text-left text-xs text-ink-3 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {commissions.map(r => (
+                  <tr key={r.closer} className="border-b border-cream/50 hover:bg-page transition-colors">
+                    <td className="py-2.5 px-3 font-medium text-ink-1">{r.closer}</td>
+                    <td className="py-2.5 px-3 text-ink-2">{r.ventas}</td>
+                    <td className="py-2.5 px-3 text-ink-2">{usd(r.facturado)}</td>
+                    <td className="py-2.5 px-3 font-semibold text-pos">{usd(r.cobrado)}</td>
+                    <td className="py-2.5 px-3 font-bold text-gold-dark">{usd(r.comision)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-page border-t border-cream">
+                  <td className="py-2.5 px-3 font-semibold text-ink-1">Total</td>
+                  <td className="py-2.5 px-3 font-semibold text-ink-1">{commissions.reduce((s, r) => s + r.ventas, 0)}</td>
+                  <td className="py-2.5 px-3 font-semibold text-ink-1">{usd(commissions.reduce((s, r) => s + r.facturado, 0))}</td>
+                  <td className="py-2.5 px-3 font-semibold text-pos">{usd(commissions.reduce((s, r) => s + r.cobrado, 0))}</td>
+                  <td className="py-2.5 px-3 font-bold text-gold-dark">{usd(commissions.reduce((s, r) => s + r.comision, 0))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

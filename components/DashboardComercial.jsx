@@ -1,29 +1,21 @@
 'use client';
 import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, Calendar, Phone, Users, Megaphone, Wallet, RefreshCw, Users2, ArrowDownCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Users2, ArrowDownCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import TabNav from './ui/TabNav.jsx';
 import MonthSelector from './ui/MonthSelector.jsx';
 import Overview from './tabs/Overview.jsx';
-import Agendas from './tabs/Agendas.jsx';
-import LlamadasSeguimientos from './tabs/LlamadasSeguimientos.jsx';
 import Closers from './tabs/Closers.jsx';
-import Anuncios from './tabs/Anuncios.jsx';
-import IngresosEgresos from './tabs/IngresosEgresos.jsx';
 import SeguimientoClientes from './tabs/SeguimientoClientes.jsx';
 import Recoleccion from './tabs/Recoleccion.jsx';
 
 const TABS = [
-  { id: 'overview',     label: 'Overview',              icon: LayoutDashboard },
-  { id: 'agendas',      label: 'Agendas',               icon: Calendar },
-  { id: 'llamadas',     label: 'Llamadas y Seguimientos', icon: Phone },
-  { id: 'closers',      label: 'Closers',               icon: Users },
-  { id: 'anuncios',     label: 'Anuncios',              icon: Megaphone },
-  { id: 'ingresos',     label: 'Ingresos y Egresos',    icon: Wallet },
-  { id: 'seguimiento',  label: 'Clientes',              icon: Users2 },
-  { id: 'recoleccion',  label: 'Recolección',           icon: ArrowDownCircle },
+  { id: 'overview',    label: 'Overview',    icon: LayoutDashboard },
+  { id: 'closers',     label: 'Closers',     icon: Users },
+  { id: 'clientes',    label: 'Clientes',    icon: Users2 },
+  { id: 'recoleccion', label: 'Recolección', icon: ArrowDownCircle },
 ];
 
 function getMonthsList() {
@@ -40,7 +32,7 @@ function getMonthsList() {
   }).reverse();
 }
 
-export default function Dashboard({ negocio, agendas, llamadas, closers, anuncios, ingresosEgresos, clientesNuevos = [], recoleccion = [] }) {
+export default function DashboardComercial({ negocio, clientesNuevos = [], recoleccion = [], closers = [], anuncios = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
   const months = useMemo(() => getMonthsList(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -87,24 +79,25 @@ export default function Dashboard({ negocio, agendas, llamadas, closers, anuncio
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-5">
         {activeTab === 'overview' && (
-          <Overview negocio={negocio} anuncios={anuncios} closers={closers} selectedMonth={selectedMonth} clientesNuevos={clientesNuevos} recoleccion={recoleccion} />
-        )}
-        {activeTab === 'agendas' && (
-          <Agendas data={agendas} />
-        )}
-        {activeTab === 'llamadas' && (
-          <LlamadasSeguimientos data={llamadas} />
+          <Overview
+            negocio={negocio}
+            anuncios={anuncios}
+            closers={closers}
+            selectedMonth={selectedMonth}
+            clientesNuevos={clientesNuevos}
+            recoleccion={recoleccion}
+          />
         )}
         {activeTab === 'closers' && (
-          <Closers data={closers} months={months} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} clientesNuevos={clientesNuevos} />
+          <Closers
+            data={closers}
+            months={months}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            clientesNuevos={clientesNuevos}
+          />
         )}
-        {activeTab === 'anuncios' && (
-          <Anuncios data={anuncios} months={months} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
-        )}
-        {activeTab === 'ingresos' && (
-          <IngresosEgresos data={ingresosEgresos} months={months} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
-        )}
-        {activeTab === 'seguimiento' && (
+        {activeTab === 'clientes' && (
           <SeguimientoClientes data={clientesNuevos} months={months} />
         )}
         {activeTab === 'recoleccion' && (
