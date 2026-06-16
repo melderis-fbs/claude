@@ -126,9 +126,9 @@ export default function Abonos({ abonos }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total abonos</p>
-          <p className="text-3xl font-bold text-gray-900">{fmt(montoIngreso + montoDevuelta + montoPendiente)}</p>
-          <p className="text-xs text-gray-400 mt-1">{abonosLocal.length} señas registradas</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Activas</p>
+          <p className="text-3xl font-bold text-gray-900">{fmt(montoPendiente)}</p>
+          <p className="text-xs text-gray-400 mt-1">{abonosLocal.filter(a => !get(a,'Estado','estado')).length} señas sin resolver</p>
         </div>
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ingresaron</p>
