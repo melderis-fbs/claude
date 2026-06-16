@@ -124,11 +124,11 @@ export default function Abonos({ abonos }) {
   return (
     <div className="space-y-5 max-w-5xl">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total abonos</p>
-          <p className="text-3xl font-bold text-gray-900">{abonosLocal.length}</p>
-          <p className="text-xs text-gray-400 mt-1">registradas</p>
+          <p className="text-3xl font-bold text-gray-900">{fmt(montoIngreso + montoDevuelta + montoPendiente)}</p>
+          <p className="text-xs text-gray-400 mt-1">{abonosLocal.length} señas registradas</p>
         </div>
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ingresaron</p>
@@ -139,11 +139,6 @@ export default function Abonos({ abonos }) {
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Devueltas</p>
           <p className="text-3xl font-bold text-red-700">{fmt(montoDevuelta)}</p>
           <p className="text-xs text-red-500 mt-1">{abonosLocal.filter(a => get(a,'Estado','estado') === 'Devuelta').length} señas</p>
-        </div>
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Resta del cashflow</p>
-          <p className="text-3xl font-bold text-white">-{fmt(totalResta)}</p>
-          <p className="text-xs text-gray-400 mt-1">{montoPendiente > 0 ? `+ ${fmt(montoPendiente)} sin estado` : 'ingresadas + devueltas'}</p>
         </div>
       </div>
 
