@@ -20,7 +20,8 @@ function getMeses(anio) {
   }));
 }
 
-const fmt = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
+const fmt  = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
+const pct  = n => n == null ? '—' : `${Number(n).toFixed(1)}%`;
 
 // ── Modal añadir gasto ────────────────────────────────────────────────────────
 
@@ -75,8 +76,6 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSave} className="p-5 space-y-4">
-
-          {/* Gasto + Categoría */}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Gasto</label>
@@ -93,22 +92,17 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
               </select>
             </div>
           </div>
-
-          {/* Sub categoría */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               Sub categoría <span className="text-gray-400">(opcional)</span>
             </label>
             <input value={subcat} onChange={e => setSubcat(e.target.value)}
-              list="subcat-suggestions"
-              placeholder="ej. Comercial, Meta, Loom…"
+              list="subcat-suggestions" placeholder="ej. Comercial, Meta, Loom…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             <datalist id="subcat-suggestions">
               {subcatSuggestions.map(s => <option key={s} value={s} />)}
             </datalist>
           </div>
-
-          {/* Monto + País */}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Monto *</label>
@@ -128,8 +122,6 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
               </div>
             </div>
           </div>
-
-          {/* Medio de pago */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-2">Medio de pago *</label>
             <div className="flex flex-wrap gap-2">
@@ -141,8 +133,6 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
               ))}
             </div>
           </div>
-
-          {/* Fecha vto + Donde se paga */}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Fecha vto <span className="text-gray-400">(opc.)</span></label>
@@ -156,9 +146,7 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             </div>
           </div>
-
           {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
@@ -175,19 +163,149 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+// ── Vista proyección anual ────────────────────────────────────────────────────
 
-export default function Egresos({ ventasPorMes = [] }) {
+function VistaProyeccion({ resumen = [] }) {
+  const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+  const totalVentas   = resumen.reduce((s, r) => s + (r.montoFront || 0), 0);
+  const totalCash     = resumen.reduce((s, r) => s + (r.cashTotal  || 0), 0);
+  const totalEgresos  = resumen.reduce((s, r) => s + (r.totalCostos|| 0), 0);
+  const totalGanancia = resumen.reduce((s, r) => s + (r.ganancia   || 0), 0);
+  const rentAnual     = totalVentas > 0 ? (totalGanancia / totalVentas) * 100 : 0;
+
+  if (!resumen.length) {
+    return <p className="text-gray-400 text-sm py-8 text-center">Sin datos de proyección disponibles.</p>;
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Totales del año */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Ventas año',    val: fmt(totalVentas),   color: 'bg-blue-50 border-blue-200 text-blue-700'         },
+          { label: 'Cobrado año',   val: fmt(totalCash),     color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+          { label: 'Egresos año',   val: fmt(totalEgresos),  color: 'bg-red-50 border-red-200 text-red-700'             },
+          { label: 'Ganancia año',  val: fmt(totalGanancia), color: totalGanancia >= 0 ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-red-50 border-red-200 text-red-700' },
+        ].map(c => (
+          <div key={c.label} className={`rounded-xl border p-4 ${c.color.split(' ').slice(0,2).join(' ')}`}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{c.label}</p>
+            <p className={`text-2xl font-bold ${c.color.split(' ')[2]}`}>{c.val}</p>
+            {c.label === 'Ganancia año' && <p className="text-xs text-gray-400 mt-0.5">Rent. {pct(rentAnual)}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla mes a mes */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">Comparativo mensual — Ingresos vs Egresos</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Ganancia = Ventas nuevas − Egresos del período</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {['Mes','Ventas nuevas','Recolección','Egresos','Ganancia','Rentabilidad','Barra'].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {resumen.map(r => {
+                const isActual   = r.mes === mesActual;
+                const rentColor  = r.rentabilidad >= 40 ? 'text-emerald-600' : r.rentabilidad >= 20 ? 'text-amber-600' : 'text-red-500';
+                const ganColor   = r.ganancia >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold';
+                const barPct     = r.montoFront > 0 ? Math.min(100, (r.totalCostos / r.montoFront) * 100) : 0;
+                return (
+                  <tr key={r.mes} className={`hover:bg-gray-50 transition-colors ${isActual ? 'bg-blue-50/40' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                      {r.label}
+                      {isActual && <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">actual</span>}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{r.montoFront > 0 ? fmt(r.montoFront) : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-600">{r.cashTotal  > 0 ? fmt(r.cashTotal)  : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-red-600">{r.totalCostos > 0 ? fmt(r.totalCostos) : <span className="text-gray-300">—</span>}</td>
+                    <td className={`px-4 py-3 ${ganColor}`}>
+                      {r.montoFront > 0 || r.totalCostos > 0 ? fmt(r.ganancia) : <span className="text-gray-300 font-normal">—</span>}
+                    </td>
+                    <td className={`px-4 py-3 font-semibold ${rentColor}`}>
+                      {r.montoFront > 0 ? pct(r.rentabilidad) : <span className="text-gray-300 font-normal">—</span>}
+                    </td>
+                    <td className="px-4 py-3 min-w-[120px]">
+                      {r.montoFront > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${barPct > 80 ? 'bg-red-400' : barPct > 50 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                              style={{ width: `${barPct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-400 w-10 text-right">{pct(barPct)}</span>
+                        </div>
+                      ) : <span className="text-gray-200">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {/* Fila totales */}
+            <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+              <tr>
+                <td className="px-4 py-3 font-bold text-gray-900 text-xs uppercase tracking-wider">TOTAL AÑO</td>
+                <td className="px-4 py-3 font-bold text-gray-900">{fmt(totalVentas)}</td>
+                <td className="px-4 py-3 font-bold text-gray-900">{fmt(totalCash)}</td>
+                <td className="px-4 py-3 font-bold text-red-600">{fmt(totalEgresos)}</td>
+                <td className={`px-4 py-3 font-bold ${totalGanancia >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(totalGanancia)}</td>
+                <td className="px-4 py-3 font-bold text-gray-700">{pct(rentAnual)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Breakdown de costos por categoría del año */}
+      {totalEgresos > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="font-semibold text-gray-800 mb-4">Egresos por categoría — año completo</h3>
+          <div className="space-y-2">
+            {(() => {
+              const totales = {};
+              resumen.forEach(r => Object.entries(r.costos || {}).forEach(([cat, val]) => {
+                totales[cat] = (totales[cat] || 0) + val;
+              }));
+              return Object.entries(totales)
+                .sort(([,a],[,b]) => b - a)
+                .map(([cat, val]) => (
+                  <div key={cat} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 w-40 truncate">{cat}</span>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gray-400 rounded-full" style={{ width: `${Math.min(100, (val / totalEgresos) * 100)}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700 w-24 text-right">{fmt(val)}</span>
+                    <span className="text-xs text-gray-400 w-10 text-right">{pct((val / totalEgresos) * 100)}</span>
+                  </div>
+                ));
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Vista detalle mensual ─────────────────────────────────────────────────────
+
+function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
   const anio      = new Date().getFullYear();
   const meses     = useMemo(() => getMeses(anio), [anio]);
   const mesActual = `${anio}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  const [mesSel,     setMesSel]     = useState(mesActual);
-  const [registros,  setRegistros]  = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState('');
-  const [showModal,  setShowModal]  = useState(false);
-  const [catFilter,  setCatFilter]  = useState('');
+  const [mesSel,    setMesSel]    = useState(mesActual);
+  const [registros, setRegistros] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [catFilter, setCatFilter] = useState('');
 
   async function fetchRegistros(mes) {
     setLoading(true); setError('');
@@ -205,16 +323,20 @@ export default function Egresos({ ventasPorMes = [] }) {
 
   useEffect(() => { fetchRegistros(mesSel); }, [mesSel]);
 
-  const totalEgresos = useMemo(
+  const totalRegistros = useMemo(
     () => registros.reduce((s, r) => s + (Number(r['Monto']) || 0), 0),
     [registros]
   );
 
-  // Total ventas del mes para calcular %gasto/venta
   const ventasMes = useMemo(
     () => ventasPorMes.find(m => m.mes === mesSel)?.montoTotal ?? 0,
     [ventasPorMes, mesSel]
   );
+
+  // Egresos del Consolidado para este mes
+  const resumenMes = useMemo(() => resumen.find(r => r.mes === mesSel), [resumen, mesSel]);
+  const costosConsolidado = resumenMes?.costos || {};
+  const totalConsolidado  = resumenMes?.totalCostos || 0;
 
   const porCategoria = useMemo(() => {
     const m = {};
@@ -232,9 +354,8 @@ export default function Egresos({ ventasPorMes = [] }) {
   const mesLabel = meses.find(m => m.mes === mesSel)?.label ?? '';
 
   return (
-    <div className="space-y-5 max-w-6xl">
-
-      {/* ── Selector de mes ── */}
+    <div className="space-y-5">
+      {/* Selector de mes */}
       <div className="flex gap-2 flex-wrap">
         {meses.map(m => (
           <button key={m.mes} onClick={() => { setMesSel(m.mes); setCatFilter(''); }}
@@ -250,7 +371,59 @@ export default function Egresos({ ventasPorMes = [] }) {
 
       {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{error}</div>}
 
-      {/* ── Cards de categorías + botón añadir ── */}
+      {/* Resumen del mes: Ventas / Egresos (Consolidado) / Ganancia */}
+      {resumenMes && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ventas {mesLabel}</p>
+            <p className="text-2xl font-bold text-blue-700">{fmt(resumenMes.montoFront)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{resumenMes.ventasNuevas} clientes nuevos</p>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Egresos {mesLabel}</p>
+            <p className="text-2xl font-bold text-red-700">{fmt(totalConsolidado || totalRegistros)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {totalConsolidado > 0 ? 'desde hoja Consolidado' : 'desde registros cargados'}
+            </p>
+          </div>
+          <div className={`rounded-xl p-4 border ${resumenMes.ganancia >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ganancia {mesLabel}</p>
+            <p className={`text-2xl font-bold ${resumenMes.ganancia >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {fmt(resumenMes.ganancia)}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Rent. {pct(resumenMes.rentabilidad)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Categorías del Consolidado (si hay) */}
+      {totalConsolidado > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="font-semibold text-gray-800 mb-3 text-sm">
+            Egresos por categoría — {mesLabel}
+            <span className="ml-2 text-xs text-gray-400 font-normal">desde hoja Consolidado</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Object.entries(costosConsolidado).sort(([,a],[,b]) => b - a).map(([cat, val]) => (
+              <div key={cat} className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 truncate">{cat}</p>
+                <p className="text-lg font-bold text-gray-900">{fmt(val)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{pct((val / totalConsolidado) * 100)} del total</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cards de categorías (registros propios) + botón añadir */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-700">Registros cargados — {mesLabel}</p>
+        <button onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
+          Añadir gasto +
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CATEGORIAS.map(cat => {
           const total    = porCategoria[cat] || 0;
@@ -272,31 +445,14 @@ export default function Egresos({ ventasPorMes = [] }) {
                 {total > 0 ? fmt(total) : '—'}
               </p>
               <p className={`text-xs mt-1.5 ${isActive ? 'text-gray-400' : 'text-gray-400'}`}>
-                {pctVal} gasto/venta
+                {pctVal} de ventas
               </p>
             </button>
           );
         })}
       </div>
 
-      {/* Botón añadir + resumen total */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          Total egresos {mesLabel}:{' '}
-          <span className="font-bold text-gray-900">{fmt(totalEgresos)}</span>
-          {ventasMes > 0 && (
-            <span className="ml-2 text-gray-400">
-              ({((totalEgresos / ventasMes) * 100).toFixed(1)}% de ventas)
-            </span>
-          )}
-        </p>
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
-          Añadir gasto +
-        </button>
-      </div>
-
-      {/* ── Tabla de registros ── */}
+      {/* Tabla de registros */}
       {loading ? (
         <div className="text-center py-12 text-gray-400 text-sm">Cargando…</div>
       ) : (
@@ -327,7 +483,7 @@ export default function Egresos({ ventasPorMes = [] }) {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Gasto','Categoría','Sub categoría','Descripción','Monto','Medio de pago'].map(h => (
+                    {['Gasto','Categoría','Sub categoría','Dónde se paga','Monto','Medio de pago'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -362,6 +518,29 @@ export default function Egresos({ ventasPorMes = [] }) {
           onSaved={() => { setShowModal(false); fetchRegistros(mesSel); }}
         />
       )}
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
+
+export default function Egresos({ ventasPorMes = [], resumen = [] }) {
+  const [subTab, setSubTab] = useState('proyeccion');
+
+  return (
+    <div className="space-y-5 max-w-6xl">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 border-b border-gray-200 pb-0">
+        {[['proyeccion','Proyección & Rentabilidad'],['detalle','Detalle mensual']].map(([v, l]) => (
+          <button key={v} onClick={() => setSubTab(v)}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              subTab === v ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}>{l}</button>
+        ))}
+      </div>
+
+      {subTab === 'proyeccion' && <VistaProyeccion resumen={resumen} />}
+      {subTab === 'detalle'    && <VistaDetalle ventasPorMes={ventasPorMes} resumen={resumen} />}
     </div>
   );
 }

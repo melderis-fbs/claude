@@ -96,7 +96,7 @@ export default function Dashboard({
         {tab === 'facturas'   && <Facturas facturas={facturas} />}
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
         {tab === 'documentos' && <Documentos clientes={clientes} />}
-        {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} />}
+        {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} resumen={resumen} />}
       </main>
     </div>
   );
