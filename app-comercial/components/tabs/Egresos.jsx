@@ -48,9 +48,23 @@ function groupByCat(rows) {
   return m;
 }
 
-async function loadRegistros(mes) {
-  const url = `/api/egresos/registros${mes ? `?mes=${mes}` : ''}`;
-  const res  = await fetch(url);
+// Convierte cualquier formato de fecha a clave YYYY-MM
+function parseMesKey(val) {
+  const s = String(val ?? '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY — formato argentino que devuelve el GAS
+  const ddmm = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}`;
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  } catch {}
+  return s;
+}
+
+async function loadRegistros() {
+  const res = await fetch('/api/egresos/registros');
   if (!res.ok) throw new Error((await res.json()).error || 'Error');
   return (await res.json()).rows || [];
 }
@@ -210,8 +224,12 @@ export default function Egresos({ ventasPorMes = [] }) {
 
   useEffect(() => {
     setLoading(true); setLoadErr('');
-    Promise.all([loadRegistros(mesSel), loadRegistros(getMesAnterior(mesSel))])
-      .then(([act, ant]) => { setRegistros(act); setRegAnt(ant); })
+    const mesAnt = getMesAnterior(mesSel);
+    loadRegistros()
+      .then(allRows => {
+        setRegistros(allRows.filter(r => parseMesKey(r['Mes'] ?? r['mes'] ?? '') === mesSel));
+        setRegAnt(allRows.filter(r => parseMesKey(r['Mes'] ?? r['mes'] ?? '') === mesAnt));
+      })
       .catch(err => setLoadErr(err.message))
       .finally(() => setLoading(false));
   }, [mesSel, refreshKey]);
