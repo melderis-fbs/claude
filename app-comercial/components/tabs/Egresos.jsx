@@ -291,8 +291,11 @@ export default function Egresos({ ventasPorMes = [] }) {
   const mesLabelAnt = meses.find(m => m.mes === getMesAnterior(mesSel))?.label ?? 'mes anterior';
 
   const ventasMes  = useMemo(() => ventasPorMes.find(m => m.mes === mesSel)?.montoFront ?? 0, [ventasPorMes, mesSel]);
-  const realPorCat = useMemo(() => groupByCat(registros), [registros]);
-  const proyPorCat = useMemo(() => groupByCat(regAnt),    [regAnt]);
+  // Solo registros cargados desde la app (no del Consolidado GAS)
+  const registrosApp = useMemo(() => registros.filter(r => r._source !== 'consolidado'), [registros]);
+  const realPorCat   = useMemo(() => groupByCat(registrosApp), [registrosApp]);
+  // Proyección: mes anterior (puede incluir Consolidado como referencia histórica)
+  const proyPorCat   = useMemo(() => groupByCat(regAnt),       [regAnt]);
   const totalReal  = useMemo(() => Object.values(realPorCat).reduce((a, b) => a + b, 0), [realPorCat]);
   const totalProy  = useMemo(() => Object.values(proyPorCat).reduce((a, b) => a + b, 0), [proyPorCat]);
 
@@ -308,9 +311,9 @@ export default function Egresos({ ventasPorMes = [] }) {
 
   // Categories to show: always main list + any extras found in data
   const todasCats = useMemo(() => {
-    const extra = [...Object.keys(realPorCat), ...Object.keys(proyPorCat)].filter(c => !CATEGORIAS.includes(c));
+    const extra = Object.keys(realPorCat).filter(c => !CATEGORIAS.includes(c));
     return [...CATEGORIAS, ...new Set(extra)];
-  }, [realPorCat, proyPorCat]);
+  }, [realPorCat]);
 
   function generarMensaje(esAlerta) {
     const icon  = esAlerta ? '⚠️' : '📊';
@@ -448,7 +451,7 @@ export default function Egresos({ ventasPorMes = [] }) {
             <CategoryRow
               key={cat}
               cat={cat}
-              items={registros.filter(r => (r['Categoría'] || 'Otros') === cat)}
+              items={registrosApp.filter(r => (r['Categoría'] || 'Otros') === cat)}
               proyeccion={proyPorCat[cat] || 0}
               onAdd={() => setAddCat(cat)}
             />
@@ -458,7 +461,7 @@ export default function Egresos({ ventasPorMes = [] }) {
 
       {addCat !== null && (
         <AddModal
-          registros={registros}
+          registros={registrosApp}
           mesSel={mesSel}
           categoriaPre={addCat}
           onClose={() => setAddCat(null)}
