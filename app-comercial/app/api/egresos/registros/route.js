@@ -65,14 +65,37 @@ function consolidadoToFlat(rows) {
   return flat;
 }
 
+// Normaliza cualquier representación de mes a YYYY-MM
+function toMesKey(val) {
+  const s = String(val ?? '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+  // Puede venir como YYYY-MM-DD, ISO, o fecha JS serializada
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+  } catch {}
+  // Número serial de Excel (días desde 1899-12-30)
+  const n = Number(s);
+  if (!isNaN(n) && n > 40000) {
+    const d = new Date((n - 25569) * 86400000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
+  return s;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const mes = searchParams.get('mes') || '';
 
-    // Leer pestaña "Registros" directamente (igual que Consolidado, que sí funciona)
     const [registrosTab, consolidadoRows] = await Promise.all([
-      getEgresosTab('Registros').catch(() => []),
+      getEgresosTab('Registros').catch(err => {
+        console.error('[egresos/registros] error al leer pestaña Registros:', err.message);
+        return [];
+      }),
       getEgresosTab('Consolidado').catch(() => []),
     ]);
 
@@ -80,7 +103,7 @@ export async function GET(request) {
     const registros = registrosTab
       .filter(r => {
         if (!mes) return true;
-        const mesFila = String(r['Mes'] || r['mes'] || '').trim();
+        const mesFila = toMesKey(r['Mes'] ?? r['mes'] ?? '');
         return mesFila === mes;
       })
       .map(r => ({ ...r, _source: 'registros' }));
@@ -96,7 +119,15 @@ export async function GET(request) {
       r => !keysRegistros.has(`${r['Mes']}-${r['Categoría']}-${r['Subcategoría']}`)
     );
 
-    return Response.json({ rows: [...registros, ...historicoFiltrado] });
+    return Response.json({
+      rows: [...registros, ...historicoFiltrado],
+      _debug: {
+        registrosTabCount: registrosTab.length,
+        registrosFiltradosCount: registros.length,
+        sampleRaw: registrosTab[0] ?? null,
+        mes,
+      },
+    });
   } catch (err) {
     console.error('[egresos/registros GET] error:', err);
     return Response.json({ error: err.message }, { status: 500 });
