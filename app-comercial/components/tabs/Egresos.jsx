@@ -447,15 +447,38 @@ export default function Egresos({ ventasPorMes = [] }) {
       {/* Categories accordion */}
       {!loading && (
         <div className="space-y-2">
-          {todasCats.map(cat => (
-            <CategoryRow
-              key={cat}
-              cat={cat}
-              items={registrosApp.filter(r => (r['Categoría'] || 'Otros') === cat)}
-              proyeccion={proyPorCat[cat] || 0}
-              onAdd={() => setAddCat(cat)}
-            />
-          ))}
+          {todasCats.map(cat => {
+            const items = registrosApp.filter(r => (r['Categoría'] || 'Otros') === cat);
+            const proy  = proyPorCat[cat] || 0;
+            if (!items.length && !proy) return null;
+            return (
+              <CategoryRow
+                key={cat}
+                cat={cat}
+                items={items}
+                proyeccion={proy}
+                onAdd={() => setAddCat(cat)}
+              />
+            );
+          })}
+          {/* Categorías sin datos — siempre accesibles para agregar */}
+          <details className="group">
+            <summary className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer select-none py-1 list-none flex items-center gap-1">
+              <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
+              Ver todas las categorías
+            </summary>
+            <div className="space-y-1 mt-1">
+              {CATEGORIAS.filter(cat => !registrosApp.some(r => (r['Categoría'] || 'Otros') === cat) && !proyPorCat[cat]).map(cat => (
+                <div key={cat} className="flex items-center justify-between bg-white border border-dashed border-gray-200 rounded-xl px-5 py-3">
+                  <span className="text-sm text-gray-400">{cat}</span>
+                  <button onClick={() => setAddCat(cat)}
+                    className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center text-gray-400 text-sm font-bold transition-colors">
+                    +
+                  </button>
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
       )}
 

@@ -3,10 +3,16 @@ import { getEgresosRegistros, appendEgreso, getEgresosTab } from '../../../../li
 export const dynamic = 'force-dynamic';
 
 // ── Convierte el formato pivot de "Consolidado" a filas planas ────────────────
-const MAIN_CATS = new Set([
+const MAIN_CATS_LIST = [
   'Sueldos', 'Publicidad', 'APPS', 'Gastos Administrativos',
   'Formación', 'Impuestos', 'Extras', 'Retiros Personales',
-]);
+];
+
+// Mapa normalizado (sin acentos, minúsculas) → nombre canónico
+function normalize(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+const MAIN_CATS_NORM = new Map(MAIN_CATS_LIST.map(c => [normalize(c), c]));
 
 const MESES_MAP = {
   'enero':'01','febrero':'02','marzo':'03','abril':'04',
@@ -30,8 +36,10 @@ function consolidadoToFlat(rows) {
     }
     if (!concepto || /^total/i.test(concepto)) continue;
 
-    if (MAIN_CATS.has(concepto)) {
-      currentCat = concepto;
+    // Reconoce categoría principal aunque tenga diferente case o acentos
+    const canonico = MAIN_CATS_NORM.get(normalize(concepto));
+    if (canonico) {
+      currentCat = canonico;
       continue; // fila de total por categoría — la saltamos, usamos las subcategorías
     }
 
