@@ -69,15 +69,19 @@ function consolidadoToFlat(rows) {
 function toMesKey(val) {
   const s = String(val ?? '').trim();
   if (!s) return '';
+  // Ya en formato correcto
   if (/^\d{4}-\d{2}$/.test(s)) return s;
-  // Puede venir como YYYY-MM-DD, ISO, o fecha JS serializada
+  // DD/MM/YYYY — formato que devuelve el GAS para fechas argentinas
+  const ddmm = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}`;
+  // ISO / YYYY-MM-DD / cualquier fecha parseable — usar UTC para evitar desfases de zona horaria
   try {
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
     }
   } catch {}
-  // Número serial de Excel (días desde 1899-12-30)
+  // Serial numérico de Excel/Sheets
   const n = Number(s);
   if (!isNaN(n) && n > 40000) {
     const d = new Date((n - 25569) * 86400000);
