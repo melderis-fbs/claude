@@ -20,8 +20,39 @@ function getMeses(anio) {
   }));
 }
 
-const fmt  = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
-const pct  = n => n == null ? '—' : `${Number(n).toFixed(1)}%`;
+const fmt = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
+const pct = n => n == null ? '—' : `${Number(n).toFixed(1)}%`;
+
+// ── Agrupa registros planos → { 'YYYY-MM': { Categoría: total } } ─────────────
+function agruparPorMesCat(rows) {
+  const grouped = {};
+  for (const r of rows) {
+    const mes   = r['Mes'];
+    const cat   = r['Categoría'] || 'Otros';
+    const monto = Number(r['Monto']) || 0;
+    if (!mes || !monto) continue;
+    if (!grouped[mes]) grouped[mes] = {};
+    grouped[mes][cat] = (grouped[mes][cat] || 0) + monto;
+  }
+  return grouped;
+}
+
+// ── Fusiona egresosRows frescos con resumen server-side ───────────────────────
+function mergeResumen(resumen, egresosRows) {
+  const grouped = agruparPorMesCat(egresosRows);
+  return resumen.map(r => {
+    const costos     = grouped[r.mes] ?? r.costos ?? {};
+    const totalCostos = Object.values(costos).reduce((a, b) => a + b, 0);
+    const ganancia   = r.montoFront - totalCostos;
+    return {
+      ...r,
+      costos,
+      totalCostos,
+      ganancia,
+      rentabilidad: r.montoFront > 0 ? (ganancia / r.montoFront) * 100 : 0,
+    };
+  });
+}
 
 // ── Modal añadir gasto ────────────────────────────────────────────────────────
 
@@ -168,10 +199,10 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
 function VistaProyeccion({ resumen = [] }) {
   const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  const totalVentas   = resumen.reduce((s, r) => s + (r.montoFront || 0), 0);
-  const totalCash     = resumen.reduce((s, r) => s + (r.cashTotal  || 0), 0);
-  const totalEgresos  = resumen.reduce((s, r) => s + (r.totalCostos|| 0), 0);
-  const totalGanancia = resumen.reduce((s, r) => s + (r.ganancia   || 0), 0);
+  const totalVentas   = resumen.reduce((s, r) => s + (r.montoFront  || 0), 0);
+  const totalCash     = resumen.reduce((s, r) => s + (r.cashTotal   || 0), 0);
+  const totalEgresos  = resumen.reduce((s, r) => s + (r.totalCostos || 0), 0);
+  const totalGanancia = resumen.reduce((s, r) => s + (r.ganancia    || 0), 0);
   const rentAnual     = totalVentas > 0 ? (totalGanancia / totalVentas) * 100 : 0;
 
   if (!resumen.length) {
@@ -183,17 +214,20 @@ function VistaProyeccion({ resumen = [] }) {
       {/* Totales del año */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Ventas año',    val: fmt(totalVentas),   color: 'bg-blue-50 border-blue-200 text-blue-700'         },
-          { label: 'Cobrado año',   val: fmt(totalCash),     color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-          { label: 'Egresos año',   val: fmt(totalEgresos),  color: 'bg-red-50 border-red-200 text-red-700'             },
-          { label: 'Ganancia año',  val: fmt(totalGanancia), color: totalGanancia >= 0 ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-red-50 border-red-200 text-red-700' },
-        ].map(c => (
-          <div key={c.label} className={`rounded-xl border p-4 ${c.color.split(' ').slice(0,2).join(' ')}`}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{c.label}</p>
-            <p className={`text-2xl font-bold ${c.color.split(' ')[2]}`}>{c.val}</p>
-            {c.label === 'Ganancia año' && <p className="text-xs text-gray-400 mt-0.5">Rent. {pct(rentAnual)}</p>}
-          </div>
-        ))}
+          { label: 'Ventas año',   val: fmt(totalVentas),   sub: null,                              color: 'bg-blue-50 border-blue-200 text-blue-700'     },
+          { label: 'Cobrado año',  val: fmt(totalCash),     sub: null,                              color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+          { label: 'Egresos año',  val: fmt(totalEgresos),  sub: null,                              color: 'bg-red-50 border-red-200 text-red-700'         },
+          { label: 'Ganancia año', val: fmt(totalGanancia), sub: `Rent. ${pct(rentAnual)}`,         color: totalGanancia >= 0 ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-red-50 border-red-200 text-red-700' },
+        ].map(c => {
+          const [bg, border, text] = c.color.split(' ');
+          return (
+            <div key={c.label} className={`rounded-xl border p-4 ${bg} ${border}`}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{c.label}</p>
+              <p className={`text-2xl font-bold ${text}`}>{c.val}</p>
+              {c.sub && <p className="text-xs text-gray-400 mt-0.5">{c.sub}</p>}
+            </div>
+          );
+        })}
       </div>
 
       {/* Tabla mes a mes */}
@@ -213,21 +247,22 @@ function VistaProyeccion({ resumen = [] }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {resumen.map(r => {
-                const isActual   = r.mes === mesActual;
-                const rentColor  = r.rentabilidad >= 40 ? 'text-emerald-600' : r.rentabilidad >= 20 ? 'text-amber-600' : 'text-red-500';
-                const ganColor   = r.ganancia >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold';
-                const barPct     = r.montoFront > 0 ? Math.min(100, (r.totalCostos / r.montoFront) * 100) : 0;
+                const isActual  = r.mes === mesActual;
+                const rentColor = r.rentabilidad >= 40 ? 'text-emerald-600' : r.rentabilidad >= 20 ? 'text-amber-600' : 'text-red-500';
+                const ganColor  = (r.ganancia ?? 0) >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold';
+                const barPct    = r.montoFront > 0 ? Math.min(100, (r.totalCostos / r.montoFront) * 100) : 0;
+                const hayDatos  = r.montoFront > 0 || r.totalCostos > 0;
                 return (
                   <tr key={r.mes} className={`hover:bg-gray-50 transition-colors ${isActual ? 'bg-blue-50/40' : ''}`}>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                       {r.label}
                       {isActual && <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">actual</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{r.montoFront > 0 ? fmt(r.montoFront) : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.cashTotal  > 0 ? fmt(r.cashTotal)  : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-red-600">{r.totalCostos > 0 ? fmt(r.totalCostos) : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-700">{r.montoFront  > 0 ? fmt(r.montoFront)  : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-600">{r.cashTotal   > 0 ? fmt(r.cashTotal)   : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-red-600"> {r.totalCostos > 0 ? fmt(r.totalCostos) : <span className="text-gray-300">—</span>}</td>
                     <td className={`px-4 py-3 ${ganColor}`}>
-                      {r.montoFront > 0 || r.totalCostos > 0 ? fmt(r.ganancia) : <span className="text-gray-300 font-normal">—</span>}
+                      {hayDatos ? fmt(r.ganancia) : <span className="text-gray-300 font-normal">—</span>}
                     </td>
                     <td className={`px-4 py-3 font-semibold ${rentColor}`}>
                       {r.montoFront > 0 ? pct(r.rentabilidad) : <span className="text-gray-300 font-normal">—</span>}
@@ -247,7 +282,6 @@ function VistaProyeccion({ resumen = [] }) {
                 );
               })}
             </tbody>
-            {/* Fila totales */}
             <tfoot className="bg-gray-50 border-t-2 border-gray-200">
               <tr>
                 <td className="px-4 py-3 font-bold text-gray-900 text-xs uppercase tracking-wider">TOTAL AÑO</td>
@@ -263,7 +297,7 @@ function VistaProyeccion({ resumen = [] }) {
         </div>
       </div>
 
-      {/* Breakdown de costos por categoría del año */}
+      {/* Breakdown de costos por categoría */}
       {totalEgresos > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h3 className="font-semibold text-gray-800 mb-4">Egresos por categoría — año completo</h3>
@@ -277,7 +311,7 @@ function VistaProyeccion({ resumen = [] }) {
                 .sort(([,a],[,b]) => b - a)
                 .map(([cat, val]) => (
                   <div key={cat} className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500 w-40 truncate">{cat}</span>
+                    <span className="text-xs text-gray-500 w-44 truncate">{cat}</span>
                     <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-gray-400 rounded-full" style={{ width: `${Math.min(100, (val / totalEgresos) * 100)}%` }} />
                     </div>
@@ -295,7 +329,7 @@ function VistaProyeccion({ resumen = [] }) {
 
 // ── Vista detalle mensual ─────────────────────────────────────────────────────
 
-function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
+function VistaDetalle({ ventasPorMes = [], resumen = [], onEgresoAdded }) {
   const anio      = new Date().getFullYear();
   const meses     = useMemo(() => getMeses(anio), [anio]);
   const mesActual = `${anio}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
@@ -323,20 +357,10 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
 
   useEffect(() => { fetchRegistros(mesSel); }, [mesSel]);
 
-  const totalRegistros = useMemo(
-    () => registros.reduce((s, r) => s + (Number(r['Monto']) || 0), 0),
-    [registros]
-  );
-
-  const ventasMes = useMemo(
-    () => ventasPorMes.find(m => m.mes === mesSel)?.montoTotal ?? 0,
-    [ventasPorMes, mesSel]
-  );
-
-  // Egresos del Consolidado para este mes
-  const resumenMes = useMemo(() => resumen.find(r => r.mes === mesSel), [resumen, mesSel]);
-  const costosConsolidado = resumenMes?.costos || {};
-  const totalConsolidado  = resumenMes?.totalCostos || 0;
+  const ventasMes     = useMemo(() => ventasPorMes.find(m => m.mes === mesSel)?.montoTotal ?? 0, [ventasPorMes, mesSel]);
+  const resumenMes    = useMemo(() => resumen.find(r => r.mes === mesSel), [resumen, mesSel]);
+  const totalCostos   = resumenMes?.totalCostos || 0;
+  const costosDetalle = resumenMes?.costos || {};
 
   const porCategoria = useMemo(() => {
     const m = {};
@@ -347,11 +371,14 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
     return m;
   }, [registros]);
 
-  const registrosFiltrados = catFilter
-    ? registros.filter(r => r['Categoría'] === catFilter)
-    : registros;
-
+  const registrosFiltrados = catFilter ? registros.filter(r => r['Categoría'] === catFilter) : registros;
   const mesLabel = meses.find(m => m.mes === mesSel)?.label ?? '';
+
+  function handleEgresoSaved() {
+    setShowModal(false);
+    fetchRegistros(mesSel);
+    onEgresoAdded?.();
+  }
 
   return (
     <div className="space-y-5">
@@ -371,7 +398,7 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
 
       {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{error}</div>}
 
-      {/* Resumen del mes: Ventas / Egresos (Consolidado) / Ganancia */}
+      {/* Resumen del mes: Ventas / Egresos / Ganancia */}
       {resumenMes && (
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -381,14 +408,14 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Egresos {mesLabel}</p>
-            <p className="text-2xl font-bold text-red-700">{fmt(totalConsolidado || totalRegistros)}</p>
+            <p className="text-2xl font-bold text-red-700">{fmt(totalCostos)}</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {totalConsolidado > 0 ? 'desde hoja Consolidado' : 'desde registros cargados'}
+              {Object.keys(costosDetalle).length} categorías
             </p>
           </div>
-          <div className={`rounded-xl p-4 border ${resumenMes.ganancia >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+          <div className={`rounded-xl p-4 border ${(resumenMes.ganancia ?? 0) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ganancia {mesLabel}</p>
-            <p className={`text-2xl font-bold ${resumenMes.ganancia >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+            <p className={`text-2xl font-bold ${(resumenMes.ganancia ?? 0) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
               {fmt(resumenMes.ganancia)}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">Rent. {pct(resumenMes.rentabilidad)}</p>
@@ -396,26 +423,25 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
         </div>
       )}
 
-      {/* Categorías del Consolidado (si hay) */}
-      {totalConsolidado > 0 && (
+      {/* Egresos por categoría del mes (desde resumen actualizado) */}
+      {totalCostos > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h3 className="font-semibold text-gray-800 mb-3 text-sm">
             Egresos por categoría — {mesLabel}
-            <span className="ml-2 text-xs text-gray-400 font-normal">desde hoja Consolidado</span>
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(costosConsolidado).sort(([,a],[,b]) => b - a).map(([cat, val]) => (
+            {Object.entries(costosDetalle).sort(([,a],[,b]) => b - a).map(([cat, val]) => (
               <div key={cat} className="bg-gray-50 rounded-lg p-3">
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 truncate">{cat}</p>
                 <p className="text-lg font-bold text-gray-900">{fmt(val)}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{pct((val / totalConsolidado) * 100)} del total</p>
+                <p className="text-xs text-gray-400 mt-0.5">{pct((val / totalCostos) * 100)} del total</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Cards de categorías (registros propios) + botón añadir */}
+      {/* Cards de categorías (registros) + botón añadir */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-700">Registros cargados — {mesLabel}</p>
         <button onClick={() => setShowModal(true)}
@@ -515,7 +541,7 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
           registros={registros}
           mesSel={mesSel}
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); fetchRegistros(mesSel); }}
+          onSaved={handleEgresoSaved}
         />
       )}
     </div>
@@ -525,7 +551,23 @@ function VistaDetalle({ ventasPorMes = [], resumen = [] }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function Egresos({ ventasPorMes = [], resumen = [] }) {
-  const [subTab, setSubTab] = useState('proyeccion');
+  const [subTab,      setSubTab]      = useState('proyeccion');
+  const [egresosRows, setEgresosRows] = useState(null); // null = cargando
+  const [refreshKey,  setRefreshKey]  = useState(0);
+
+  // Fetch de TODOS los registros (todas los meses) para recalcular la proyección
+  useEffect(() => {
+    fetch('/api/egresos/registros')   // sin ?mes= → todos los meses
+      .then(r => r.json())
+      .then(data => setEgresosRows(data.rows || []))
+      .catch(() => setEgresosRows([]));
+  }, [refreshKey]);
+
+  // Resumen con egresos actualizados (Consolidado + registros manuales)
+  const resumenActualizado = useMemo(() => {
+    if (!egresosRows) return resumen; // mientras carga, usar datos server-side
+    return mergeResumen(resumen, egresosRows);
+  }, [resumen, egresosRows]);
 
   return (
     <div className="space-y-5 max-w-6xl">
@@ -537,10 +579,19 @@ export default function Egresos({ ventasPorMes = [], resumen = [] }) {
               subTab === v ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}>{l}</button>
         ))}
+        {egresosRows === null && (
+          <span className="ml-auto self-center text-xs text-gray-400 animate-pulse">Actualizando egresos…</span>
+        )}
       </div>
 
-      {subTab === 'proyeccion' && <VistaProyeccion resumen={resumen} />}
-      {subTab === 'detalle'    && <VistaDetalle ventasPorMes={ventasPorMes} resumen={resumen} />}
+      {subTab === 'proyeccion' && <VistaProyeccion resumen={resumenActualizado} />}
+      {subTab === 'detalle'    && (
+        <VistaDetalle
+          ventasPorMes={ventasPorMes}
+          resumen={resumenActualizado}
+          onEgresoAdded={() => setRefreshKey(k => k + 1)}
+        />
+      )}
     </div>
   );
 }
