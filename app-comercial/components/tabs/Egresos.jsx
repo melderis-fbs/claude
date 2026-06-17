@@ -5,13 +5,14 @@ const CATEGORIAS = [
   'Sueldos', 'Publicidad', 'APPS', 'Gastos Administrativos',
   'Formación', 'Impuestos', 'Extras', 'Retiros Personales',
 ];
-
 const MEDIOS_PAGO = ['Transferencia', 'Efectivo', 'Tarjeta', 'Wise', 'Stripe', 'Cripto', 'Otro'];
-
 const MES_LABELS = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre',
 ];
+
+const fmt = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
+const pct = n => n == null ? '—' : `${Number(n).toFixed(1)}%`;
 
 function getMeses(anio) {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -20,45 +21,32 @@ function getMeses(anio) {
   }));
 }
 
-const fmt = n => `$${Math.round(n || 0).toLocaleString('es-AR')}`;
-const pct = n => n == null ? '—' : `${Number(n).toFixed(1)}%`;
+function getMesAnterior(mesKey) {
+  const [y, m] = mesKey.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
 
-// ── Agrupa registros planos → { 'YYYY-MM': { Categoría: total } } ─────────────
-function agruparPorMesCat(rows) {
-  const grouped = {};
+function groupByCat(rows) {
+  const m = {};
   for (const r of rows) {
-    const mes   = r['Mes'];
     const cat   = r['Categoría'] || 'Otros';
     const monto = Number(r['Monto']) || 0;
-    if (!mes || !monto) continue;
-    if (!grouped[mes]) grouped[mes] = {};
-    grouped[mes][cat] = (grouped[mes][cat] || 0) + monto;
+    if (monto) m[cat] = (m[cat] || 0) + monto;
   }
-  return grouped;
+  return m;
 }
 
-// ── Fusiona egresosRows frescos con resumen server-side ───────────────────────
-function mergeResumen(resumen, egresosRows) {
-  const grouped = agruparPorMesCat(egresosRows);
-  return resumen.map(r => {
-    const costos     = grouped[r.mes] ?? r.costos ?? {};
-    const totalCostos = Object.values(costos).reduce((a, b) => a + b, 0);
-    const ganancia   = r.montoFront - totalCostos;
-    return {
-      ...r,
-      costos,
-      totalCostos,
-      ganancia,
-      rentabilidad: r.montoFront > 0 ? (ganancia / r.montoFront) * 100 : 0,
-    };
-  });
+async function loadRegistros(mes) {
+  const res = await fetch(`/api/egresos/registros${mes ? `?mes=${mes}` : ''}`);
+  if (!res.ok) throw new Error((await res.json()).error || 'Error al cargar egresos');
+  return (await res.json()).rows || [];
 }
 
-// ── Modal añadir gasto ────────────────────────────────────────────────────────
+// ── AddModal ──────────────────────────────────────────────────────────────────
 
-function AddModal({ registros, mesSel, onClose, onSaved }) {
+function AddModal({ registros, mesSel, categoriaPre, onClose, onSaved }) {
   const [gasto,     setGasto]     = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [categoria, setCategoria] = useState(categoriaPre || '');
   const [subcat,    setSubcat]    = useState('');
   const [monto,     setMonto]     = useState('');
   const [medioPago, setMedioPago] = useState('');
@@ -68,7 +56,7 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState('');
 
-  const subcatSuggestions = useMemo(() => {
+  const subcatSugg = useMemo(() => {
     if (!categoria) return [];
     return [...new Set(
       registros.filter(r => r['Categoría'] === categoria && r['Subcategoría']).map(r => r['Subcategoría'])
@@ -77,39 +65,35 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!categoria)                    { setError('Elegí una categoría'); return; }
-    if (!monto || isNaN(Number(monto))){ setError('Ingresá un monto válido'); return; }
-    if (!medioPago)                    { setError('Elegí un medio de pago'); return; }
+    if (!categoria)                     { setError('Elegí una categoría'); return; }
+    if (!monto || isNaN(Number(monto))) { setError('Ingresá un monto válido'); return; }
+    if (!medioPago)                     { setError('Elegí un medio de pago'); return; }
     setLoading(true); setError('');
     try {
       const res = await fetch('/api/egresos/registros', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mes: mesSel, categoria, subcategoria: subcat, detalle: gasto,
-          monto: Number(monto), medioPago, pais, fechaVto, dondePaga,
-        }),
+        body:    JSON.stringify({ mes: mesSel, categoria, subcategoria: subcat, detalle: gasto, monto: Number(monto), medioPago, pais, fechaVto, dondePaga }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Error');
       onSaved();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally       { setLoading(false); }
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Añadir gasto</h3>
+          <h3 className="font-semibold text-gray-900">
+            Añadir gasto{categoria ? ` — ${categoria}` : ''}
+          </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSave} className="p-5 space-y-4">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Gasto</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Detalle</label>
               <input value={gasto} onChange={e => setGasto(e.target.value)} autoFocus
                 placeholder="ej. Kevin, Loom, Meta Ads…"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
@@ -117,7 +101,8 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Categoría *</label>
               <select value={categoria} onChange={e => { setCategoria(e.target.value); setSubcat(''); }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500">
+                disabled={!!categoriaPre}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500 disabled:bg-gray-50">
                 <option value="">Seleccioná</option>
                 {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -127,11 +112,11 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
             <label className="block text-xs font-medium text-gray-500 mb-1">
               Sub categoría <span className="text-gray-400">(opcional)</span>
             </label>
-            <input value={subcat} onChange={e => setSubcat(e.target.value)}
-              list="subcat-suggestions" placeholder="ej. Comercial, Meta, Loom…"
+            <input value={subcat} onChange={e => setSubcat(e.target.value)} list="subcat-sugg"
+              placeholder="ej. Comercial, Meta, Loom…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-            <datalist id="subcat-suggestions">
-              {subcatSuggestions.map(s => <option key={s} value={s} />)}
+            <datalist id="subcat-sugg">
+              {subcatSugg.map(s => <option key={s} value={s} />)}
             </datalist>
           </div>
           <div className="flex gap-3">
@@ -194,339 +179,78 @@ function AddModal({ registros, mesSel, onClose, onSaved }) {
   );
 }
 
-// ── Vista proyección anual ────────────────────────────────────────────────────
+// ── CategoryRow ───────────────────────────────────────────────────────────────
 
-function VistaProyeccion({ resumen = [] }) {
-  const mesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-
-  const totalVentas   = resumen.reduce((s, r) => s + (r.montoFront  || 0), 0);
-  const totalCash     = resumen.reduce((s, r) => s + (r.cashTotal   || 0), 0);
-  const totalEgresos  = resumen.reduce((s, r) => s + (r.totalCostos || 0), 0);
-  const totalGanancia = resumen.reduce((s, r) => s + (r.ganancia    || 0), 0);
-  const rentAnual     = totalVentas > 0 ? (totalGanancia / totalVentas) * 100 : 0;
-
-  if (!resumen.length) {
-    return <p className="text-gray-400 text-sm py-8 text-center">Sin datos de proyección disponibles.</p>;
-  }
+function CategoryRow({ cat, items, proyeccion, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const real      = items.reduce((s, r) => s + (Number(r['Monto']) || 0), 0);
+  const proy      = proyeccion || 0;
+  const ejecutado = proy > 0 ? Math.min(100, (real / proy) * 100) : (real > 0 ? 100 : 0);
+  const barColor  = ejecutado >= 100 ? 'bg-red-400' : ejecutado >= 75 ? 'bg-amber-400' : 'bg-emerald-400';
 
   return (
-    <div className="space-y-5">
-      {/* Totales del año */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Ventas año',   val: fmt(totalVentas),   sub: null,                              color: 'bg-blue-50 border-blue-200 text-blue-700'     },
-          { label: 'Cobrado año',  val: fmt(totalCash),     sub: null,                              color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-          { label: 'Egresos año',  val: fmt(totalEgresos),  sub: null,                              color: 'bg-red-50 border-red-200 text-red-700'         },
-          { label: 'Ganancia año', val: fmt(totalGanancia), sub: `Rent. ${pct(rentAnual)}`,         color: totalGanancia >= 0 ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-red-50 border-red-200 text-red-700' },
-        ].map(c => {
-          const [bg, border, text] = c.color.split(' ');
-          return (
-            <div key={c.label} className={`rounded-xl border p-4 ${bg} ${border}`}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{c.label}</p>
-              <p className={`text-2xl font-bold ${text}`}>{c.val}</p>
-              {c.sub && <p className="text-xs text-gray-400 mt-0.5">{c.sub}</p>}
+    <div className={`bg-white border rounded-xl overflow-hidden transition-shadow ${open ? 'border-gray-300 shadow-sm' : 'border-gray-200'}`}>
+      <div className="flex items-center gap-3 px-5 py-3.5">
+        {/* Toggle + name */}
+        <button onClick={() => setOpen(o => !o)}
+          className="flex-1 flex items-center gap-3 text-left min-w-0">
+          <span className={`text-gray-400 text-[10px] transition-transform duration-150 shrink-0 ${open ? 'rotate-90' : ''}`}>▶</span>
+          <span className="font-semibold text-gray-900 text-sm truncate">{cat}</span>
+          {items.length > 0 && (
+            <span className="text-xs text-gray-400 shrink-0">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          )}
+        </button>
+
+        {/* Progress bar vs projection */}
+        {proy > 0 && (
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${ejecutado}%` }} />
             </div>
-          );
-        })}
-      </div>
-
-      {/* Tabla mes a mes */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800">Comparativo mensual — Ingresos vs Egresos</h3>
-          <p className="text-xs text-gray-400 mt-0.5">Ganancia = Ventas nuevas − Egresos del período</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Mes','Ventas nuevas','Recolección','Egresos','Ganancia','Rentabilidad','Barra'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {resumen.map(r => {
-                const isActual  = r.mes === mesActual;
-                const rentColor = r.rentabilidad >= 40 ? 'text-emerald-600' : r.rentabilidad >= 20 ? 'text-amber-600' : 'text-red-500';
-                const ganColor  = (r.ganancia ?? 0) >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold';
-                const barPct    = r.montoFront > 0 ? Math.min(100, (r.totalCostos / r.montoFront) * 100) : 0;
-                const hayDatos  = r.montoFront > 0 || r.totalCostos > 0;
-                return (
-                  <tr key={r.mes} className={`hover:bg-gray-50 transition-colors ${isActual ? 'bg-blue-50/40' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {r.label}
-                      {isActual && <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">actual</span>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{r.montoFront  > 0 ? fmt(r.montoFront)  : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.cashTotal   > 0 ? fmt(r.cashTotal)   : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-red-600"> {r.totalCostos > 0 ? fmt(r.totalCostos) : <span className="text-gray-300">—</span>}</td>
-                    <td className={`px-4 py-3 ${ganColor}`}>
-                      {hayDatos ? fmt(r.ganancia) : <span className="text-gray-300 font-normal">—</span>}
-                    </td>
-                    <td className={`px-4 py-3 font-semibold ${rentColor}`}>
-                      {r.montoFront > 0 ? pct(r.rentabilidad) : <span className="text-gray-300 font-normal">—</span>}
-                    </td>
-                    <td className="px-4 py-3 min-w-[120px]">
-                      {r.montoFront > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${barPct > 80 ? 'bg-red-400' : barPct > 50 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                              style={{ width: `${barPct}%` }} />
-                          </div>
-                          <span className="text-xs text-gray-400 w-10 text-right">{pct(barPct)}</span>
-                        </div>
-                      ) : <span className="text-gray-200">—</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-              <tr>
-                <td className="px-4 py-3 font-bold text-gray-900 text-xs uppercase tracking-wider">TOTAL AÑO</td>
-                <td className="px-4 py-3 font-bold text-gray-900">{fmt(totalVentas)}</td>
-                <td className="px-4 py-3 font-bold text-gray-900">{fmt(totalCash)}</td>
-                <td className="px-4 py-3 font-bold text-red-600">{fmt(totalEgresos)}</td>
-                <td className={`px-4 py-3 font-bold ${totalGanancia >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(totalGanancia)}</td>
-                <td className="px-4 py-3 font-bold text-gray-700">{pct(rentAnual)}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      {/* Breakdown de costos por categoría */}
-      {totalEgresos > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">Egresos por categoría — año completo</h3>
-          <div className="space-y-2">
-            {(() => {
-              const totales = {};
-              resumen.forEach(r => Object.entries(r.costos || {}).forEach(([cat, val]) => {
-                totales[cat] = (totales[cat] || 0) + val;
-              }));
-              return Object.entries(totales)
-                .sort(([,a],[,b]) => b - a)
-                .map(([cat, val]) => (
-                  <div key={cat} className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500 w-44 truncate">{cat}</span>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-gray-400 rounded-full" style={{ width: `${Math.min(100, (val / totalEgresos) * 100)}%` }} />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-700 w-24 text-right">{fmt(val)}</span>
-                    <span className="text-xs text-gray-400 w-10 text-right">{pct((val / totalEgresos) * 100)}</span>
-                  </div>
-                ));
-            })()}
+            <span className="text-xs text-gray-400 w-9 text-right">{Math.round(ejecutado)}%</span>
           </div>
+        )}
+
+        {/* Amounts */}
+        <div className="text-right shrink-0 min-w-[90px]">
+          <p className={`text-sm font-bold ${real > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+            {real > 0 ? fmt(real) : '—'}
+          </p>
+          {proy > 0 && (
+            <p className="text-xs text-gray-400">/ {fmt(proy)}</p>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
 
-// ── Vista detalle mensual ─────────────────────────────────────────────────────
-
-function VistaDetalle({ ventasPorMes = [], resumen = [], onEgresoAdded }) {
-  const anio      = new Date().getFullYear();
-  const meses     = useMemo(() => getMeses(anio), [anio]);
-  const mesActual = `${anio}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-
-  const [mesSel,    setMesSel]    = useState(mesActual);
-  const [registros, setRegistros] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [catFilter, setCatFilter] = useState('');
-
-  async function fetchRegistros(mes) {
-    setLoading(true); setError('');
-    try {
-      const res = await fetch(`/api/egresos/registros?mes=${mes}`);
-      if (!res.ok) throw new Error((await res.json()).error || 'Error');
-      const data = await res.json();
-      setRegistros(data.rows || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { fetchRegistros(mesSel); }, [mesSel]);
-
-  const ventasMes     = useMemo(() => ventasPorMes.find(m => m.mes === mesSel)?.montoTotal ?? 0, [ventasPorMes, mesSel]);
-  const resumenMes    = useMemo(() => resumen.find(r => r.mes === mesSel), [resumen, mesSel]);
-  const totalCostos   = resumenMes?.totalCostos || 0;
-  const costosDetalle = resumenMes?.costos || {};
-
-  const porCategoria = useMemo(() => {
-    const m = {};
-    for (const r of registros) {
-      const cat = r['Categoría'] || '';
-      if (cat) m[cat] = (m[cat] || 0) + (Number(r['Monto']) || 0);
-    }
-    return m;
-  }, [registros]);
-
-  const registrosFiltrados = catFilter ? registros.filter(r => r['Categoría'] === catFilter) : registros;
-  const mesLabel = meses.find(m => m.mes === mesSel)?.label ?? '';
-
-  function handleEgresoSaved() {
-    setShowModal(false);
-    fetchRegistros(mesSel);
-    onEgresoAdded?.();
-  }
-
-  return (
-    <div className="space-y-5">
-      {/* Selector de mes */}
-      <div className="flex gap-2 flex-wrap">
-        {meses.map(m => (
-          <button key={m.mes} onClick={() => { setMesSel(m.mes); setCatFilter(''); }}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              m.mes === mesSel
-                ? 'bg-gray-800 text-white shadow-sm'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{error}</div>}
-
-      {/* Resumen del mes: Ventas / Egresos / Ganancia */}
-      {resumenMes && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ventas {mesLabel}</p>
-            <p className="text-2xl font-bold text-blue-700">{fmt(resumenMes.montoFront)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{resumenMes.ventasNuevas} clientes nuevos</p>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Egresos {mesLabel}</p>
-            <p className="text-2xl font-bold text-red-700">{fmt(totalCostos)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {Object.keys(costosDetalle).length} categorías
-            </p>
-          </div>
-          <div className={`rounded-xl p-4 border ${(resumenMes.ganancia ?? 0) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ganancia {mesLabel}</p>
-            <p className={`text-2xl font-bold ${(resumenMes.ganancia ?? 0) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-              {fmt(resumenMes.ganancia)}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">Rent. {pct(resumenMes.rentabilidad)}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Egresos por categoría del mes (desde resumen actualizado) */}
-      {totalCostos > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-3 text-sm">
-            Egresos por categoría — {mesLabel}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(costosDetalle).sort(([,a],[,b]) => b - a).map(([cat, val]) => (
-              <div key={cat} className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 truncate">{cat}</p>
-                <p className="text-lg font-bold text-gray-900">{fmt(val)}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{pct((val / totalCostos) * 100)} del total</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Cards de categorías (registros) + botón añadir */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-700">Registros cargados — {mesLabel}</p>
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
-          Añadir gasto +
+        {/* Quick add button */}
+        <button onClick={onAdd} title={`Agregar en ${cat}`}
+          className="shrink-0 w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 hover:text-blue-600 flex items-center justify-center text-gray-500 text-sm font-bold transition-colors">
+          +
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {CATEGORIAS.map(cat => {
-          const total    = porCategoria[cat] || 0;
-          const isActive = catFilter === cat;
-          const pctVal   = ventasMes > 0 ? ((total / ventasMes) * 100).toFixed(1) + '%' : '—';
-          return (
-            <button key={cat} onClick={() => setCatFilter(f => f === cat ? '' : cat)}
-              className={`rounded-2xl p-4 text-center transition-all border-2 ${
-                isActive
-                  ? 'bg-gray-800 border-gray-800 text-white shadow-md'
-                  : total > 0
-                    ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                    : 'bg-gray-50 border-gray-100'
-              }`}>
-              <p className={`text-xs font-semibold uppercase tracking-wider mb-2 truncate ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
-                {cat}
-              </p>
-              <p className={`text-xl font-bold ${isActive ? 'text-white' : total > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
-                {total > 0 ? fmt(total) : '—'}
-              </p>
-              <p className={`text-xs mt-1.5 ${isActive ? 'text-gray-400' : 'text-gray-400'}`}>
-                {pctVal} de ventas
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tabla de registros */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">Cargando…</div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-gray-800">
-                {catFilter || 'Todos los gastos'} — {mesLabel}
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {registrosFiltrados.length} items · {fmt(registrosFiltrados.reduce((s, r) => s + (Number(r['Monto']) || 0), 0))}
-              </p>
-            </div>
-            {catFilter && (
-              <button onClick={() => setCatFilter('')}
-                className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1 transition-colors">
-                × Limpiar filtro
-              </button>
-            )}
-          </div>
-
-          {registrosFiltrados.length === 0 ? (
-            <div className="px-5 py-14 text-center text-gray-400 text-sm">
-              No hay gastos cargados para este mes.
-            </div>
+      {/* Expanded detail */}
+      {open && (
+        <div className="border-t border-gray-100">
+          {items.length === 0 ? (
+            <p className="px-14 py-4 text-xs text-gray-400 italic">Sin gastos cargados este mes.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Gasto','Categoría','Sub categoría','Dónde se paga','Monto','Medio de pago'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    {['Detalle','Sub categoría','Dónde se paga','Monto','Medio de pago'].map(h => (
+                      <th key={h} className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {registrosFiltrados.map((r, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-gray-900">{r['Detalle'] || '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-medium text-gray-600 whitespace-nowrap">
-                          {r['Categoría'] || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{r['Subcategoría'] || '—'}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs max-w-40 truncate">{r['Donde se paga'] || '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{fmt(Number(r['Monto']) || 0)}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{r['Medio de pago'] || '—'}</td>
+                <tbody className="divide-y divide-gray-50">
+                  {items.map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-gray-800">{r['Detalle'] || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-400">{r['Subcategoría'] || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-400">{r['Donde se paga'] || '—'}</td>
+                      <td className="px-4 py-2.5 font-semibold text-gray-900 whitespace-nowrap">{fmt(Number(r['Monto']) || 0)}</td>
+                      <td className="px-4 py-2.5 text-gray-400">{r['Medio de pago'] || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -535,61 +259,210 @@ function VistaDetalle({ ventasPorMes = [], resumen = [], onEgresoAdded }) {
           )}
         </div>
       )}
-
-      {showModal && (
-        <AddModal
-          registros={registros}
-          mesSel={mesSel}
-          onClose={() => setShowModal(false)}
-          onSaved={handleEgresoSaved}
-        />
-      )}
     </div>
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function Egresos({ ventasPorMes = [], resumen = [] }) {
-  const [subTab,      setSubTab]      = useState('proyeccion');
-  const [egresosRows, setEgresosRows] = useState(null); // null = cargando
-  const [refreshKey,  setRefreshKey]  = useState(0);
+export default function Egresos({ ventasPorMes = [] }) {
+  const anio      = new Date().getFullYear();
+  const meses     = useMemo(() => getMeses(anio), [anio]);
+  const mesActual = `${anio}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  // Fetch de TODOS los registros (todas los meses) para recalcular la proyección
+  const [mesSel,     setMesSel]     = useState(mesActual);
+  const [registros,  setRegistros]  = useState([]);
+  const [regAnt,     setRegAnt]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [loadErr,    setLoadErr]    = useState('');
+  const [addCat,     setAddCat]     = useState(null);
+  const [slackState, setSlackState] = useState('idle');
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
-    fetch('/api/egresos/registros')   // sin ?mes= → todos los meses
-      .then(r => r.json())
-      .then(data => setEgresosRows(data.rows || []))
-      .catch(() => setEgresosRows([]));
-  }, [refreshKey]);
+    setLoading(true); setLoadErr('');
+    Promise.all([loadRegistros(mesSel), loadRegistros(getMesAnterior(mesSel))])
+      .then(([act, ant]) => { setRegistros(act); setRegAnt(ant); })
+      .catch(err => setLoadErr(err.message))
+      .finally(() => setLoading(false));
+  }, [mesSel, refreshKey]);
 
-  // Resumen con egresos actualizados (Consolidado + registros manuales)
-  const resumenActualizado = useMemo(() => {
-    if (!egresosRows) return resumen; // mientras carga, usar datos server-side
-    return mergeResumen(resumen, egresosRows);
-  }, [resumen, egresosRows]);
+  const mesLabelSel = meses.find(m => m.mes === mesSel)?.label ?? '';
+  const mesLabelAnt = meses.find(m => m.mes === getMesAnterior(mesSel))?.label ?? 'mes anterior';
+
+  const ventasMes  = useMemo(() => ventasPorMes.find(m => m.mes === mesSel)?.montoFront ?? 0, [ventasPorMes, mesSel]);
+  const realPorCat = useMemo(() => groupByCat(registros), [registros]);
+  const proyPorCat = useMemo(() => groupByCat(regAnt),    [regAnt]);
+  const totalReal  = useMemo(() => Object.values(realPorCat).reduce((a, b) => a + b, 0), [realPorCat]);
+  const totalProy  = useMemo(() => Object.values(proyPorCat).reduce((a, b) => a + b, 0), [proyPorCat]);
+
+  const rentReal = ventasMes > 0 ? ((ventasMes - totalReal) / ventasMes) * 100 : null;
+  const rentProy = ventasMes > 0 && totalProy > 0 ? ((ventasMes - totalProy) / ventasMes) * 100 : null;
+
+  // Alert logic: last 2 weeks of current month + projected rent < 40%
+  const diasRestantes = mesSel === mesActual ? (() => {
+    const hoy = new Date();
+    return new Date(anio, hoy.getMonth() + 1, 0).getDate() - hoy.getDate();
+  })() : null;
+  const mostrarAlerta = diasRestantes !== null && diasRestantes <= 14 && rentProy !== null && rentProy < 40;
+
+  // Categories to show: always main list + any extras found in data
+  const todasCats = useMemo(() => {
+    const extra = [...Object.keys(realPorCat), ...Object.keys(proyPorCat)].filter(c => !CATEGORIAS.includes(c));
+    return [...CATEGORIAS, ...new Set(extra)];
+  }, [realPorCat, proyPorCat]);
+
+  function generarMensaje(esAlerta) {
+    const icon  = esAlerta ? '⚠️' : '📊';
+    const titulo = esAlerta ? `${icon} *ALERTA Rentabilidad — ${mesLabelSel} ${anio}*` : `${icon} *Reporte de Egresos — ${mesLabelSel} ${anio}*`;
+    let t = `${titulo}\n\n`;
+    t += `Ventas nuevas: ${fmt(ventasMes)}\n`;
+    t += `Egresos reales: ${fmt(totalReal)}\n`;
+    if (totalProy > 0) t += `Proyección (base ${mesLabelAnt}): ${fmt(totalProy)}\n`;
+    if (rentReal !== null) t += `Rentabilidad real: ${pct(rentReal)}\n`;
+    if (rentProy !== null) t += `Rentabilidad proyectada: ${pct(rentProy)} (objetivo ≥40%)\n`;
+    if (esAlerta && diasRestantes !== null) t += `\n⚠️ *Por debajo del objetivo — quedan ${diasRestantes} días para fin de mes*\n`;
+    t += `\n*Por categoría:*\n`;
+    for (const cat of todasCats) {
+      const r = realPorCat[cat] || 0;
+      const p = proyPorCat[cat] || 0;
+      if (!r && !p) continue;
+      t += `• ${cat}: ${fmt(r)} real${p ? ` / ${fmt(p)} proy.` : ''}\n`;
+    }
+    return t.trim();
+  }
+
+  async function enviarSlack(esAlerta) {
+    setSlackState('loading');
+    try {
+      const res  = await fetch('/api/slack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: generarMensaje(esAlerta) }) });
+      const data = await res.json();
+      setSlackState(data.ok ? 'ok' : 'error');
+    } catch { setSlackState('error'); }
+    finally   { setTimeout(() => setSlackState('idle'), 3000); }
+  }
 
   return (
-    <div className="space-y-5 max-w-6xl">
-      {/* Sub-tabs */}
-      <div className="flex gap-1 border-b border-gray-200 pb-0">
-        {[['proyeccion','Proyección & Rentabilidad'],['detalle','Detalle mensual']].map(([v, l]) => (
-          <button key={v} onClick={() => setSubTab(v)}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              subTab === v ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}>{l}</button>
+    <div className="space-y-4 max-w-4xl">
+
+      {/* Month selector */}
+      <div className="flex gap-2 flex-wrap">
+        {meses.map(m => (
+          <button key={m.mes} onClick={() => setMesSel(m.mes)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors relative ${
+              m.mes === mesSel ? 'bg-gray-800 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {m.label}
+            {m.mes === mesActual && m.mes !== mesSel && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+            )}
+          </button>
         ))}
-        {egresosRows === null && (
-          <span className="ml-auto self-center text-xs text-gray-400 animate-pulse">Actualizando egresos…</span>
-        )}
       </div>
 
-      {subTab === 'proyeccion' && <VistaProyeccion resumen={resumenActualizado} />}
-      {subTab === 'detalle'    && (
-        <VistaDetalle
-          ventasPorMes={ventasPorMes}
-          resumen={resumenActualizado}
-          onEgresoAdded={() => setRefreshKey(k => k + 1)}
+      {/* Alert banner — only last 2 weeks + rent < 40% */}
+      {mostrarAlerta && (
+        <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-200 rounded-xl px-5 py-4">
+          <div>
+            <p className="font-semibold text-red-700 text-sm">
+              ⚠️ Rentabilidad proyectada {pct(rentProy)} — objetivo ≥40%
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">
+              Quedan {diasRestantes} días para fin de mes.
+            </p>
+          </div>
+          <button onClick={() => enviarSlack(true)} disabled={slackState === 'loading'}
+            className={`shrink-0 text-xs px-4 py-2 rounded-lg font-semibold border transition-colors ${
+              slackState === 'ok'    ? 'bg-green-50 border-green-300 text-green-700' :
+              slackState === 'error' ? 'bg-red-100 border-red-400 text-red-800' :
+              'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
+            }`}>
+            {slackState === 'loading' ? 'Enviando…' : slackState === 'ok' ? '✓ Enviado' : slackState === 'error' ? 'Error' : '📤 Alerta Slack'}
+          </button>
+        </div>
+      )}
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ventas nuevas</p>
+          <p className="text-2xl font-bold text-blue-700">{fmt(ventasMes)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{mesLabelSel} {anio}</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Egresos reales</p>
+          <p className="text-2xl font-bold text-red-700">{fmt(totalReal)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {totalProy > 0 ? `${Math.round((totalReal / totalProy) * 100)}% del presupuesto` : 'cargados hasta ahora'}
+          </p>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Proyección</p>
+          <p className="text-2xl font-bold text-amber-700">{totalProy > 0 ? fmt(totalProy) : '—'}</p>
+          <p className="text-xs text-gray-400 mt-0.5">base: {mesLabelAnt}</p>
+        </div>
+        <div className={`rounded-xl p-4 border ${
+          rentProy === null ? 'bg-gray-50 border-gray-200' :
+          rentProy >= 40   ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-300'
+        }`}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Rent. proyectada</p>
+          <p className={`text-2xl font-bold ${
+            rentProy === null ? 'text-gray-300' : rentProy >= 40 ? 'text-emerald-700' : 'text-red-600'
+          }`}>{rentProy !== null ? pct(rentProy) : '—'}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {rentReal !== null ? `real: ${pct(rentReal)}` : 'objetivo ≥40%'}
+          </p>
+        </div>
+      </div>
+
+      {/* Header + actions */}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold text-gray-800">
+          {mesLabelSel} {anio}
+          {loading && <span className="ml-2 text-xs text-gray-400 font-normal animate-pulse">cargando…</span>}
+        </h3>
+        <div className="flex items-center gap-2">
+          <button onClick={() => enviarSlack(false)} disabled={slackState === 'loading'}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors ${
+              slackState === 'ok'    ? 'bg-green-50 border-green-200 text-green-700' :
+              slackState === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
+              'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {slackState === 'loading' ? 'Enviando…' : slackState === 'ok' ? '✓ Enviado' : slackState === 'error' ? 'Error' : '📤 Reporte Slack'}
+          </button>
+          <button onClick={() => setAddCat('')}
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
+            + Agregar gasto
+          </button>
+        </div>
+      </div>
+
+      {loadErr && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-600">{loadErr}</div>
+      )}
+
+      {/* Categories accordion */}
+      {!loading && (
+        <div className="space-y-2">
+          {todasCats.map(cat => (
+            <CategoryRow
+              key={cat}
+              cat={cat}
+              items={registros.filter(r => (r['Categoría'] || 'Otros') === cat)}
+              proyeccion={proyPorCat[cat] || 0}
+              onAdd={() => setAddCat(cat)}
+            />
+          ))}
+        </div>
+      )}
+
+      {addCat !== null && (
+        <AddModal
+          registros={registros}
+          mesSel={mesSel}
+          categoriaPre={addCat}
+          onClose={() => setAddCat(null)}
+          onSaved={() => { setAddCat(null); setRefreshKey(k => k + 1); }}
         />
       )}
     </div>
