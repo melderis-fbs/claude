@@ -1,4 +1,4 @@
-import { getEgresosRegistros, appendEgreso, getEgresosTab } from '../../../../lib/sheets.js';
+import { appendEgreso, getEgresosTab } from '../../../../lib/sheets.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,19 +70,30 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const mes = searchParams.get('mes') || '';
 
-    // Cargar en paralelo: nuevos registros + histórico de Consolidado
-    const [registros, consolidadoRows] = await Promise.all([
-      getEgresosRegistros(mes),
+    // Leer pestaña "Registros" directamente (igual que Consolidado, que sí funciona)
+    const [registrosTab, consolidadoRows] = await Promise.all([
+      getEgresosTab('Registros').catch(() => []),
       getEgresosTab('Consolidado').catch(() => []),
     ]);
+
+    // Filtrar por mes y marcar fuente
+    const registros = registrosTab
+      .filter(r => {
+        if (!mes) return true;
+        const mesFila = String(r['Mes'] || r['mes'] || '').trim();
+        return mesFila === mes;
+      })
+      .map(r => ({ ...r, _source: 'registros' }));
 
     const historico = consolidadoToFlat(consolidadoRows)
       .filter(r => !mes || r['Mes'] === mes);
 
-    // Los registros nuevos tienen precedencia; el histórico llena los meses sin datos nuevos
-    const mesesConDatos = new Set(registros.map(r => `${r['Mes']}-${r['Categoría']}-${r['Subcategoría']}`));
+    // Registros manuales tienen precedencia sobre Consolidado en la misma categoría+subcategoría
+    const keysRegistros = new Set(
+      registros.map(r => `${r['Mes'] || ''}-${r['Categoría'] || ''}-${r['Subcategoría'] || ''}`)
+    );
     const historicoFiltrado = historico.filter(
-      r => !mesesConDatos.has(`${r['Mes']}-${r['Categoría']}-${r['Subcategoría']}`)
+      r => !keysRegistros.has(`${r['Mes']}-${r['Categoría']}-${r['Subcategoría']}`)
     );
 
     return Response.json({ rows: [...registros, ...historicoFiltrado] });
