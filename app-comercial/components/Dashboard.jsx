@@ -38,6 +38,7 @@ import Facturas        from './tabs/Facturas.jsx';
 import Clientes        from './tabs/Clientes.jsx';
 import Documentos      from './tabs/Documentos.jsx';
 import Egresos         from './tabs/Egresos.jsx';
+import Cashflow        from './tabs/Cashflow.jsx';
 
 const TABS = [
   { id: 'resumen',    label: 'Resumen' },
@@ -49,6 +50,7 @@ const TABS = [
   { id: 'clientes',   label: 'Clientes' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'egresos',    label: 'Egresos' },
+  { id: 'cashflow',   label: 'Cashflow' },
 ];
 
 export default function Dashboard({
@@ -97,6 +99,7 @@ export default function Dashboard({
         {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
         {tab === 'documentos' && <Documentos clientes={clientes} />}
         {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} />}
+        {tab === 'cashflow'   && <Cashflow />}
       </main>
     </div>
   );
