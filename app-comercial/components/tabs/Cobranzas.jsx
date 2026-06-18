@@ -65,7 +65,32 @@ function displayCom(raw) {
   return [p.uc && `Contacto: ${p.uc}`, p.sa, p.dc].filter(Boolean).join(' · ');
 }
 
-const esUSAMet = met => /stripe|wise|paypal|payoneer|cripto|crypto/i.test(met || '');
+const esUSAMet   = met => /stripe|wise|paypal|payoneer|cripto|crypto/i.test(met || '');
+const esDolarApp = met => /dolarapp|dólarapp/i.test(met || '');
+
+function mesLabel(yyyyMM) {
+  if (!yyyyMM) return '';
+  const [y, m] = yyyyMM.split('-');
+  const ns = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${ns[parseInt(m) - 1]} ${y}`;
+}
+
+// Clasifica un método de pago en: ar | usd | dolarapp | efectivo
+function clasiMet(met) {
+  const s = String(met || '').toUpperCase();
+  if (esDolarApp(met))                                          return 'dolarapp';
+  if (s.includes('EFECTIVO'))                                   return 'efectivo';
+  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO/.test(s))     return 'usd';
+  return 'ar';
+}
+
+const CHIP = {
+  ar:       'bg-blue-100 text-blue-700',
+  usd:      'bg-indigo-100 text-indigo-700',
+  dolarapp: 'bg-teal-100 text-teal-700',
+  efectivo: 'bg-amber-100 text-amber-700',
+};
+const CHIP_LABEL = { ar: 'AR', usd: 'USD', dolarapp: 'DA', efectivo: 'Cash' };
 
 // ── Resumen mensual ───────────────────────────────────────────────────────────
 
@@ -158,9 +183,9 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
                         <td className="px-4 py-3 text-gray-400 text-xs">{p.metodo || '—'}</td>
                         <td className="px-4 py-3">
                           {p.met1 ? (
-                            esUSAMet(p.met1)
-                              ? <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-semibold">USD</span>
-                              : <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold">AR</span>
+                            <span className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${CHIP[clasiMet(p.met1)]}`}>
+                              {CHIP_LABEL[clasiMet(p.met1)]}
+                            </span>
                           ) : null}
                         </td>
                         <td className="px-4 py-3">
@@ -650,6 +675,177 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
   );
 }
 
+// ── Pagos recibidos (reconciliación bancaria) ─────────────────────────────────
+
+const CUOTAS_FULL = [
+  { monto: 'Primer pago',  fecha: 'Fecha de ingreso(1er pago)', metodo: 'Met pago 1',  estado: 'Estado pago 1'   },
+  { monto: 'Segundo pago', fecha: 'Fecha 2do pago',             metodo: 'Met pago 2',  estado: 'Estado pago 2'   },
+  { monto: 'Tercer pago',  fecha: 'Fecha 3er pago',             metodo: 'Met pago 3',  estado: 'Estado pago 3'   },
+  { monto: 'Cuarto Pago',  fecha: 'Fecha 4to pago',             metodo: 'Met pago 4',  estado: 'Estado 4to pago' },
+];
+
+function normMes(val) {
+  const s = String(val ?? '').trim();
+  if (!s) return '';
+  const iso = s.match(/^(\d{4})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}`;
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}`;
+  return '';
+}
+
+function VistaPagos({ clientes = [] }) {
+  const pagosPorMes = useMemo(() => {
+    const pm = {};
+    for (const c of clientes) {
+      CUOTAS_FULL.forEach((q, i) => {
+        if (!isPaid(c[q.estado])) return;
+        const monto = parseM(c[q.monto]);
+        if (!monto) return;
+        const mes = normMes(c[q.fecha]);
+        if (!mes) return;
+        if (!pm[mes]) pm[mes] = [];
+        pm[mes].push({
+          nombre:   (c['Nombre']   || '').trim(),
+          programa: (c['Programa'] || '').trim(),
+          cuota:    i + 1,
+          monto,
+          fecha:    c[q.fecha] || '',
+          metodo:   c[q.metodo] || 'Sin especificar',
+        });
+      });
+    }
+    return pm;
+  }, [clientes]);
+
+  const mesesDisp = useMemo(() =>
+    Object.keys(pagosPorMes).sort().reverse().map(m => ({ mes: m, label: mesLabel(m) })),
+    [pagosPorMes]
+  );
+
+  const hoy = new Date();
+  const mesHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+  const [mesSel, setMesSel] = useState(() => {
+    const keys = Object.keys(pagosPorMes).sort();
+    return keys.includes(mesHoy) ? mesHoy : (keys[keys.length - 1] ?? '');
+  });
+  const [filtroMet, setFiltroMet] = useState('');
+
+  const pagos = useMemo(() =>
+    (pagosPorMes[mesSel] || []).slice().sort((a,b) => String(a.fecha).localeCompare(String(b.fecha))),
+    [pagosPorMes, mesSel]
+  );
+
+  const totales = useMemo(() => {
+    const t = { ar:0, usd:0, dolarapp:0, efectivo:0, total:0 };
+    for (const p of pagos) { const c = clasiMet(p.metodo); t[c] += p.monto; t.total += p.monto; }
+    return t;
+  }, [pagos]);
+
+  const metodos     = useMemo(() => [...new Set(pagos.map(p => p.metodo))].sort(), [pagos]);
+  const pagosFilt   = filtroMet ? pagos.filter(p => p.metodo === filtroMet) : pagos;
+  const totalFilt   = pagosFilt.reduce((a,p) => a+p.monto, 0);
+
+  if (mesesDisp.length === 0) return <div className="text-gray-400 text-sm py-10 text-center">No hay pagos registrados.</div>;
+
+  return (
+    <div className="space-y-4 max-w-5xl">
+      {/* Selector de mes */}
+      <div className="flex gap-1 flex-wrap">
+        {mesesDisp.slice(0, 12).map(m => (
+          <button key={m.mes} onClick={() => { setMesSel(m.mes); setFiltroMet(''); }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>{m.label}</button>
+        ))}
+      </div>
+
+      {/* Cards resumen por categoría */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { key:'ar',       label:'AR',       sub:'Transferencias',   cls:'blue'   },
+          { key:'usd',      label:'USD',      sub:'Stripe / Wise',    cls:'indigo' },
+          { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',      cls:'teal'   },
+          { key:'efectivo', label:'Efectivo', sub:'Cash',             cls:'amber'  },
+        ].map(({ key, label, sub, cls }) => (
+          <div key={key} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4`}>
+            <p className="text-xs font-semibold uppercase text-gray-500 mb-1">{label}</p>
+            <p className={`text-xl font-bold text-${cls}-700`}>{fmt(totales[key])}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla de pagos */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-gray-800">Pagos recibidos — {mesLabel(mesSel)}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{pagosFilt.length} pagos · {fmt(totalFilt)}</p>
+          </div>
+          <p className="text-xl font-bold text-emerald-700">{fmt(totales.total)}</p>
+        </div>
+
+        {/* Filtro por método */}
+        {metodos.length > 1 && (
+          <div className="px-5 py-3 border-b border-gray-50 flex gap-2 flex-wrap">
+            <button onClick={() => setFiltroMet('')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!filtroMet ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              Todos
+            </button>
+            {metodos.map(m => (
+              <button key={m} onClick={() => setFiltroMet(f => f === m ? '' : m)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filtroMet === m ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {m}
+                <span className="ml-1 opacity-60">{fmt(pagos.filter(p=>p.metodo===m).reduce((a,p)=>a+p.monto,0))}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pagosFilt.length === 0 ? (
+          <div className="px-5 py-12 text-center text-gray-400 text-sm">No hay pagos para este mes.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Fecha','Cliente','Programa','Cuota','Método','Monto'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pagosFilt.map((p, i) => {
+                  const cat = clasiMet(p.metodo);
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{p.nombre}</td>
+                      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
+                      <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[cat]}`}>{p.metodo}</span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.monto)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="border-t-2 border-gray-200 bg-gray-50">
+                <tr>
+                  <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
+                  <td className="px-4 py-3 font-bold text-emerald-700">{fmt(totalFilt)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Deudores ──────────────────────────────────────────────────────────────────
 
 function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
@@ -1071,7 +1267,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex gap-2 items-center flex-wrap border-b border-gray-200 pb-0">
-        {[['mensual','Resumen mensual'],['semanal','Pagos semanales'],['deudores','Deudores']].map(([v, l]) => (
+        {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['deudores','Deudores']].map(([v, l]) => (
           <button key={v} onClick={() => setSubTab(v)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               subTab === v ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -1086,6 +1282,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
 
       <div>
         {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccionAnual={proyeccionAnual} />}
+        {subTab === 'pagos'    && <VistaPagos clientes={clientes} />}
         {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
         {subTab === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
       </div>

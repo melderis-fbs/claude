@@ -5,7 +5,7 @@ const CATEGORIAS = [
   'Sueldos', 'Publicidad', 'APPS', 'Gastos Administrativos',
   'Formación', 'Impuestos', 'Extras', 'Retiros Personales',
 ];
-const MEDIOS_PAGO = ['Transferencia', 'Efectivo', 'Tarjeta', 'Wise', 'Stripe', 'Cripto', 'Otro'];
+const MEDIOS_PAGO = ['Transferencia', 'Efectivo', 'Tarjeta', 'Wise', 'Stripe', 'DolarApp', 'Cripto', 'Otro'];
 const MES_LABELS = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre',
