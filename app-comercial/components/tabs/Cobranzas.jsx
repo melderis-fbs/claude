@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 // ── Helpers compartidos ───────────────────────────────────────────────────────
@@ -694,7 +694,28 @@ function normMes(val) {
   return '';
 }
 
+const VERF_KEY = 'pagos_verificados_v1';
+
 function VistaPagos({ clientes = [] }) {
+  const [verificados, setVerificados] = useState(new Set());
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(VERF_KEY) || '[]');
+      setVerificados(new Set(saved));
+    } catch {}
+  }, []);
+
+  function toggleVerif(mes, p) {
+    const key = `${mes}|${p.nombre}|${p.cuota}`;
+    setVerificados(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem(VERF_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
   const pagosPorMes = useMemo(() => {
     const pm = {};
     for (const c of clientes) {
@@ -781,7 +802,15 @@ function VistaPagos({ clientes = [] }) {
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold text-gray-800">Pagos recibidos — {mesLabel(mesSel)}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{pagosFilt.length} pagos · {fmt(totalFilt)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {pagosFilt.length} pagos · {fmt(totalFilt)}
+              {(() => {
+                const vCount = pagosFilt.filter(p => verificados.has(`${mesSel}|${p.nombre}|${p.cuota}`)).length;
+                return vCount > 0
+                  ? <span className="ml-2 text-emerald-600 font-medium">· {vCount}/{pagosFilt.length} verificados</span>
+                  : null;
+              })()}
+            </p>
           </div>
           <p className="text-xl font-bold text-emerald-700">{fmt(totales.total)}</p>
         </div>
@@ -810,31 +839,46 @@ function VistaPagos({ clientes = [] }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Fecha','Cliente','Programa','Cuota','Método','Monto'].map(h => (
+                  {['Fecha','Cliente','Programa','Cuota','Método','Monto',''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pagosFilt.map((p, i) => {
-                  const cat = clasiMet(p.metodo);
+                  const cat    = clasiMet(p.metodo);
+                  const vKey   = `${mesSel}|${p.nombre}|${p.cuota}`;
+                  const verf   = verificados.has(vKey);
                   return (
-                    <tr key={i} className="hover:bg-gray-50">
+                    <tr key={i} className={`transition-colors ${verf ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{p.nombre}</td>
+                      <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>{p.nombre}</td>
                       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
                       <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[cat]}`}>{p.metodo}</span>
                       </td>
                       <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.monto)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleVerif(mesSel, p)}
+                          title={verf ? 'Quitar verificación' : 'Marcar como verificado en banco'}
+                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
+                            verf
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'border-gray-300 text-transparent hover:border-emerald-400 hover:text-emerald-300'
+                          }`}
+                        >
+                          ✓
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                 <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
+                  <td colSpan={6} className="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
                   <td className="px-4 py-3 font-bold text-emerald-700">{fmt(totalFilt)}</td>
                 </tr>
               </tfoot>
