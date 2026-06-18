@@ -694,16 +694,19 @@ function normMes(val) {
   return '';
 }
 
-const VERF_KEY = 'pagos_verificados_v1';
+const VERF_KEY   = 'pagos_verificados_v1';
+const SPLITS_KEY = 'pagos_splits_v1';
+const METODOS_SPLIT = ['Transferencia', 'Efectivo', 'Wise', 'Stripe', 'DolarApp', 'Cripto', 'Otro'];
 
 function VistaPagos({ clientes = [] }) {
   const [verificados, setVerificados] = useState(new Set());
+  const [splits, setSplits]           = useState({});
+  const [splitModal, setSplitModal]   = useState(null); // null | { mes, p }
+  const [splitDraft, setSplitDraft]   = useState([]);   // [{monto, metodo}]
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(VERF_KEY) || '[]');
-      setVerificados(new Set(saved));
-    } catch {}
+    try { setVerificados(new Set(JSON.parse(localStorage.getItem(VERF_KEY) || '[]'))); } catch {}
+    try { setSplits(JSON.parse(localStorage.getItem(SPLITS_KEY) || '{}')); } catch {}
   }, []);
 
   function toggleVerif(mes, p) {
@@ -714,6 +717,45 @@ function VistaPagos({ clientes = [] }) {
       try { localStorage.setItem(VERF_KEY, JSON.stringify([...next])); } catch {}
       return next;
     });
+  }
+
+  function abrirSplit(mes, p) {
+    const key = `${mes}|${p.nombre}|${p.cuota}`;
+    const existente = splits[key];
+    setSplitDraft(existente ? existente.map(pt => ({ ...pt })) : [
+      { monto: p.monto, metodo: p.metodo || 'Transferencia' },
+    ]);
+    setSplitModal({ mes, p });
+  }
+
+  function saveSplit() {
+    const { mes, p } = splitModal;
+    const key   = `${mes}|${p.nombre}|${p.cuota}`;
+    const partes = splitDraft.filter(pt => pt.monto > 0);
+    setSplits(prev => {
+      const next = { ...prev, [key]: partes };
+      try { localStorage.setItem(SPLITS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setSplitModal(null);
+  }
+
+  function removeSplit() {
+    const { mes, p } = splitModal;
+    const key = `${mes}|${p.nombre}|${p.cuota}`;
+    setSplits(prev => {
+      const next = { ...prev };
+      delete next[key];
+      try { localStorage.setItem(SPLITS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setSplitModal(null);
+  }
+
+  function updateParte(i, field, val) {
+    setSplitDraft(prev => prev.map((pt, idx) =>
+      idx === i ? { ...pt, [field]: field === 'monto' ? (parseFloat(val) || 0) : val } : pt
+    ));
   }
 
   const pagosPorMes = useMemo(() => {
@@ -744,7 +786,7 @@ function VistaPagos({ clientes = [] }) {
     [pagosPorMes]
   );
 
-  const hoy = new Date();
+  const hoy    = new Date();
   const mesHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
   const [mesSel, setMesSel] = useState(() => {
     const keys = Object.keys(pagosPorMes).sort();
@@ -757,17 +799,30 @@ function VistaPagos({ clientes = [] }) {
     [pagosPorMes, mesSel]
   );
 
+  // Totales usan desglose cuando existe
   const totales = useMemo(() => {
     const t = { ar:0, usd:0, dolarapp:0, efectivo:0, total:0 };
-    for (const p of pagos) { const c = clasiMet(p.metodo); t[c] += p.monto; t.total += p.monto; }
+    for (const p of pagos) {
+      const partes = splits[`${mesSel}|${p.nombre}|${p.cuota}`];
+      if (partes?.length) {
+        for (const pt of partes) { const c = clasiMet(pt.metodo); t[c] += pt.monto; t.total += pt.monto; }
+      } else {
+        const c = clasiMet(p.metodo); t[c] += p.monto; t.total += p.monto;
+      }
+    }
     return t;
-  }, [pagos]);
+  }, [pagos, splits, mesSel]);
 
-  const metodos     = useMemo(() => [...new Set(pagos.map(p => p.metodo))].sort(), [pagos]);
-  const pagosFilt   = filtroMet ? pagos.filter(p => p.metodo === filtroMet) : pagos;
-  const totalFilt   = pagosFilt.reduce((a,p) => a+p.monto, 0);
+  const metodos   = useMemo(() => [...new Set(pagos.map(p => p.metodo))].sort(), [pagos]);
+  const pagosFilt = filtroMet ? pagos.filter(p => p.metodo === filtroMet) : pagos;
+  const totalFilt = pagosFilt.reduce((a,p) => a+p.monto, 0);
 
   if (mesesDisp.length === 0) return <div className="text-gray-400 text-sm py-10 text-center">No hay pagos registrados.</div>;
+
+  // Cálculo para el modal de desglose
+  const splitTotal     = splitDraft.reduce((a, pt) => a + (pt.monto || 0), 0);
+  const splitRestante  = splitModal ? Math.round((splitModal.p.monto - splitTotal) * 100) / 100 : 0;
+  const splitOk        = Math.abs(splitRestante) < 0.01;
 
   return (
     <div className="space-y-4 max-w-5xl">
@@ -784,10 +839,10 @@ function VistaPagos({ clientes = [] }) {
       {/* Cards resumen por categoría */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { key:'ar',       label:'AR',       sub:'Transferencias',   cls:'blue'   },
-          { key:'usd',      label:'USD',      sub:'Stripe / Wise',    cls:'indigo' },
-          { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',      cls:'teal'   },
-          { key:'efectivo', label:'Efectivo', sub:'Cash',             cls:'amber'  },
+          { key:'ar',       label:'AR',       sub:'Transferencias', cls:'blue'   },
+          { key:'usd',      label:'USD',      sub:'Stripe / Wise',  cls:'indigo' },
+          { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',    cls:'teal'   },
+          { key:'efectivo', label:'Efectivo', sub:'Cash',           cls:'amber'  },
         ].map(({ key, label, sub, cls }) => (
           <div key={key} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4`}>
             <p className="text-xs font-semibold uppercase text-gray-500 mb-1">{label}</p>
@@ -844,35 +899,73 @@ function VistaPagos({ clientes = [] }) {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {pagosFilt.map((p, i) => {
-                  const cat    = clasiMet(p.metodo);
-                  const vKey   = `${mesSel}|${p.nombre}|${p.cuota}`;
-                  const verf   = verificados.has(vKey);
+                  const pKey   = `${mesSel}|${p.nombre}|${p.cuota}`;
+                  const partes = splits[pKey];
+                  const hasSplit = partes?.length > 0;
+                  const cat    = hasSplit ? null : clasiMet(p.metodo);
+                  const verf   = verificados.has(pKey);
+                  const rowBg  = verf ? 'bg-emerald-50' : hasSplit ? 'bg-violet-50' : '';
                   return (
-                    <tr key={i} className={`transition-colors ${verf ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-gray-50'}`}>
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
-                      <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>{p.nombre}</td>
-                      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
-                      <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[cat]}`}>{p.metodo}</span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.monto)}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleVerif(mesSel, p)}
-                          title={verf ? 'Quitar verificación' : 'Marcar como verificado en banco'}
-                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
-                            verf
-                              ? 'bg-emerald-500 border-emerald-500 text-white'
-                              : 'border-gray-300 text-transparent hover:border-emerald-400 hover:text-emerald-300'
-                          }`}
-                        >
-                          ✓
-                        </button>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={i} className={`border-t border-gray-100 transition-colors ${rowBg} hover:brightness-95`}>
+                        <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
+                        <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>{p.nombre}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
+                        <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
+                        <td className="px-4 py-3">
+                          {hasSplit
+                            ? <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-700 text-xs font-semibold">Desglosado</span>
+                            : <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[cat]}`}>{p.metodo}</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.monto)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {/* Botón desglosar */}
+                            <button
+                              onClick={() => abrirSplit(mesSel, p)}
+                              title="Desglosar por método de pago"
+                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
+                                hasSplit
+                                  ? 'bg-violet-500 border-violet-500 text-white'
+                                  : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'
+                              }`}
+                            >
+                              ÷
+                            </button>
+                            {/* Botón verificar */}
+                            <button
+                              onClick={() => toggleVerif(mesSel, p)}
+                              title={verf ? 'Quitar verificación' : 'Marcar como verificado en banco'}
+                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
+                                verf
+                                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                                  : 'border-gray-300 text-transparent hover:border-emerald-400 hover:text-emerald-300'
+                              }`}
+                            >
+                              ✓
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Fila de desglose */}
+                      {hasSplit && (
+                        <tr className={`${rowBg}`}>
+                          <td />
+                          <td colSpan={6} className="px-4 pb-3 pt-0">
+                            <div className="flex gap-2 flex-wrap">
+                              {partes.map((pt, pi) => (
+                                <span key={pi} className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${CHIP[clasiMet(pt.metodo)]}`}>
+                                  {pt.metodo}: {fmt(pt.monto)}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>
@@ -886,6 +979,83 @@ function VistaPagos({ clientes = [] }) {
           </div>
         )}
       </div>
+
+      {/* Modal de desglose */}
+      {splitModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSplitModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Desglosar pago</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{splitModal.p.nombre} · C{splitModal.p.cuota} · {fmt(splitModal.p.monto)}</p>
+              </div>
+              <button onClick={() => setSplitModal(null)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {splitDraft.map((pt, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    value={pt.monto || ''}
+                    onChange={e => updateParte(i, 'monto', e.target.value)}
+                    placeholder="Monto"
+                    className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                  />
+                  <select
+                    value={pt.metodo}
+                    onChange={e => updateParte(i, 'metodo', e.target.value)}
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                  >
+                    {METODOS_SPLIT.map(m => <option key={m}>{m}</option>)}
+                  </select>
+                  {splitDraft.length > 1 && (
+                    <button onClick={() => setSplitDraft(prev => prev.filter((_,idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-500 text-lg px-1 transition-colors">×</button>
+                  )}
+                </div>
+              ))}
+
+              <button onClick={() => setSplitDraft(prev => [...prev, { monto: Math.max(0, splitRestante), metodo: 'Transferencia' }])}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                + Agregar parte
+              </button>
+
+              {/* Indicador de restante */}
+              <div className={`text-xs font-medium px-3 py-2 rounded-lg ${
+                splitOk ? 'bg-emerald-50 text-emerald-700' :
+                splitRestante < 0 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'
+              }`}>
+                {splitOk
+                  ? '✓ El total coincide'
+                  : splitRestante > 0
+                    ? `Faltan ${fmt(splitRestante)} por asignar`
+                    : `Excede por ${fmt(Math.abs(splitRestante))}`
+                }
+              </div>
+            </div>
+
+            <div className="px-5 pb-5 flex gap-2">
+              {splits[`${splitModal.mes}|${splitModal.p.nombre}|${splitModal.p.cuota}`] && (
+                <button onClick={removeSplit}
+                  className="px-3 py-2 text-xs rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+                  Quitar desglose
+                </button>
+              )}
+              <div className="flex-1" />
+              <button onClick={() => setSplitModal(null)}
+                className="px-4 py-2 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={saveSplit} disabled={!splitOk}
+                className="px-4 py-2 text-xs rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors">
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
