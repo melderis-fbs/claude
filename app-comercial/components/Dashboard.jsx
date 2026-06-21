@@ -2,31 +2,90 @@
 import { useState } from 'react';
 
 function SlackReporteBtn() {
-  const [state, setState] = useState('idle');
-  async function send() {
-    setState('loading');
+  const [cargando, setCargando]   = useState(false);
+  const [modal, setModal]         = useState(false);
+  const [texto, setTexto]         = useState('');
+  const [enviando, setEnviando]   = useState(false);
+  const [enviado, setEnviado]     = useState(false);
+  const [error, setError]         = useState('');
+
+  async function verReporte() {
+    setCargando(true); setError('');
     try {
-      const res = await fetch('/api/cron/cobranzas-weekly', { method: 'POST' });
+      const res  = await fetch('/api/cron/cobranzas-weekly?preview=1');
       const data = await res.json();
-      setState(data.ok ? 'ok' : 'error');
-    } catch {
-      setState('error');
+      if (!res.ok) throw new Error(data.error || 'Error al generar preview');
+      setTexto(data.preview);
+      setEnviado(false);
+      setModal(true);
+    } catch (e) {
+      setError(e.message);
     } finally {
-      setTimeout(() => setState('idle'), 3000);
+      setCargando(false);
     }
   }
+
+  async function enviar() {
+    setEnviando(true); setError('');
+    try {
+      const res  = await fetch('/api/cron/cobranzas-weekly', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al enviar');
+      setEnviado(true);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   return (
-    <button
-      onClick={send}
-      disabled={state === 'loading'}
-      className={`text-xs px-3 py-1 rounded-full font-medium border transition-colors ${
-        state === 'ok'    ? 'bg-green-50 border-green-200 text-green-700' :
-        state === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
-        'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-      }`}
-    >
-      {state === 'loading' ? 'Enviando…' : state === 'ok' ? '✓ Enviado' : state === 'error' ? 'Error' : '📤 Enviar reporte Slack'}
-    </button>
+    <>
+      <button
+        onClick={verReporte}
+        disabled={cargando}
+        className="text-xs px-3 py-1 rounded-full font-medium border transition-colors bg-white border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+      >
+        {cargando ? 'Cargando…' : '📋 Ver reporte Slack'}
+      </button>
+
+      {modal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <h3 className="font-semibold text-gray-900">Reporte semanal</h3>
+              <button onClick={() => setModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-5 flex-1 overflow-auto">
+              <textarea
+                value={texto}
+                onChange={e => { setTexto(e.target.value); setEnviado(false); }}
+                rows={18}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-blue-300"
+              />
+            </div>
+            {error && <p className="px-5 pb-2 text-red-600 text-xs">{error}</p>}
+            <div className="px-5 pb-5 flex gap-2 justify-end flex-shrink-0">
+              <button onClick={() => navigator.clipboard.writeText(texto)}
+                className="px-4 py-2 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                Copiar
+              </button>
+              <button
+                onClick={enviar}
+                disabled={enviando || enviado}
+                className={`px-4 py-2 text-xs rounded-lg font-semibold transition-colors ${
+                  enviado ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60'
+                }`}
+              >
+                {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 import ResumenEconomico from './tabs/ResumenEconomico.jsx';

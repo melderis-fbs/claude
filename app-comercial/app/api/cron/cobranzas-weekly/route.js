@@ -176,8 +176,71 @@ async function runReporte() {
   return { deudores: deudores.length, cobros: cobrosSemanales.length };
 }
 
-// GET — llamado por el cron de Vercel (requiere CRON_SECRET)
+function buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel) {
+  let t = `📊 KPI ${mesLabel}\n`;
+  t += `${barraProgreso(kpi.pct)}  ${kpi.pct.toFixed(1)}% cobrado\n`;
+  t += `A cobrar: ${fmt(kpi.totalACobrar)} | Cobrado: ${fmt(kpi.totalCobrado)} | Pendiente: ${fmt(kpi.pendiente)}\n\n`;
+  t += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  if (deudores.length === 0) {
+    t += '✅ No hay deudores pendientes.\n\n';
+  } else {
+    const total = deudores.reduce((s, d) => s + d.monto, 0);
+    t += `📋 ${deudores.length} deudores pendientes — Total: ${fmt(total)} USD\n\n`;
+    for (const d of deudores) {
+      const dias     = d.diasMora != null ? (d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`) : '';
+      const estado   = d.estado ? `  •  ${d.estado}` : '';
+      const situacion = parseSituacionActual(d.comentario);
+      t += `• ${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}${dias ? `  •  ${dias}` : ''}${estado}\n`;
+      if (situacion) t += `  > ${situacion}\n`;
+    }
+    t += '\n';
+  }
+
+  t += '━━━━━━━━━━━━━━━━━━━━\n\n';
+  t += '📅 Cobros pendientes esta semana\n\n';
+
+  if (cobrosSemanales.length === 0) {
+    t += 'No hay cobros pendientes para esta semana.\n';
+  } else {
+    const totalPend = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
+    t += `Total pendiente: ${fmt(totalPend)}\n\n`;
+    for (const c of cobrosSemanales) {
+      const nota = String(clienteMap[c.rowIndex]?.['Notas'] || '').trim();
+      t += `⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}\n`;
+      if (nota) t += `  > ${nota}\n`;
+    }
+  }
+
+  return t.trim();
+}
+
+// GET — preview (sin Slack) o cron de Vercel (requiere CRON_SECRET)
 export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+
+  // Preview: genera el texto pero no envía a Slack
+  if (searchParams.get('preview') === '1') {
+    try {
+      const [clientes, deudoresRecords] = await Promise.all([getClientes(), getDeudores()]);
+      const saldadosKeys = new Set(
+        deudoresRecords.filter(r => r.estado === 'Saldado').map(r => `${r.rowIndex}-${r.cuotaNum}`)
+      );
+      const cobrosSemanales = calcularCobrosSemanales(clientes)
+        .filter(c => !c.pagado && !saldadosKeys.has(`${c.rowIndex}-${c.cuota}`));
+      const cobrosKeys = new Set(cobrosSemanales.map(c => `${c.rowIndex}-${c.cuota}`));
+      const deudores = buildDeudoresManuales(deudoresRecords, clientes)
+        .filter(d => !cobrosKeys.has(`${d.rowIndex}-${d.cuota}`));
+      const clienteMap = {};
+      for (const c of clientes) clienteMap[c._rowIndex] = c;
+      const kpi      = calcularKPIMes(clientes);
+      const mesLabel = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+      return Response.json({ preview: buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel) });
+    } catch (err) {
+      return Response.json({ error: err.message }, { status: 500 });
+    }
+  }
+
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const auth = request.headers.get('authorization');
