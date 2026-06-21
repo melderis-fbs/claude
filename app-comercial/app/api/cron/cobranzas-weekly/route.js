@@ -19,6 +19,44 @@ function parseSituacionActual(comentario) {
   }
 }
 
+function isPaid(val) {
+  if (val === true) return true;
+  const s = String(val || '').toUpperCase().trim();
+  return s === 'SI' || s === 'SÍ' || s === 'YES' || s === '1' || s === 'TRUE';
+}
+
+function barraProgreso(pct) {
+  const filled = Math.round(Math.min(100, Math.max(0, pct)) / 10);
+  return '🟩'.repeat(filled) + '⬜'.repeat(10 - filled);
+}
+
+function calcularKPIMes(clientes) {
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  let totalACobrar = 0;
+  let totalCobrado = 0;
+
+  for (const c of clientes) {
+    for (const q of CUOTAS_DEF) {
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) continue;
+      const fecha = parseFecha(c[q.fecha] || '');
+      if (!fecha) continue;
+      const mesFecha = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+      if (mesFecha !== mesActual) continue;
+      totalACobrar += monto;
+      if (isPaid(c[q.estado])) totalCobrado += monto;
+    }
+  }
+
+  return {
+    totalACobrar,
+    totalCobrado,
+    pendiente: totalACobrar - totalCobrado,
+    pct: totalACobrar > 0 ? (totalCobrado / totalACobrar) * 100 : 0,
+  };
+}
+
 function parseFecha(fechaStr) {
   const s = String(fechaStr || '').trim();
   const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
@@ -86,8 +124,19 @@ async function runReporte() {
   const clienteMap = {};
   for (const c of clientes) clienteMap[c._rowIndex] = c;
 
+  const kpi = calcularKPIMes(clientes);
+  const mesLabel = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true } },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `📊 *KPI ${mesLabel}*\n${barraProgreso(kpi.pct)}  *${kpi.pct.toFixed(1)}% cobrado*\nA cobrar: *${fmt(kpi.totalACobrar)}* | Cobrado: *${fmt(kpi.totalCobrado)}* | Pendiente: *${fmt(kpi.pendiente)}*`,
+      },
+    },
+    { type: 'divider' },
   ];
 
   if (deudores.length === 0) {
