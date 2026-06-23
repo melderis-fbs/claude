@@ -1631,16 +1631,301 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
   );
 }
 
+// ── Conciliación bancaria ─────────────────────────────────────────────────────
+
+const CONC_KEY = 'conciliacion_v1';
+
+function VistaConciliacion({ clientes = [], abonos = [] }) {
+  const [trackerPagos, setTrackerPagos]   = useState([]);
+  const [conciliaciones, setConciliaciones] = useState({});
+  const [asignarModal, setAsignarModal]   = useState(null);
+  const [busqueda, setBusqueda]           = useState('');
+  const [seleccion, setSeleccion]         = useState(null);
+  const [mesSel, setMesSel]               = useState('');
+  const [mounted, setMounted]             = useState(false);
+
+  useEffect(() => {
+    try { setConciliaciones(JSON.parse(localStorage.getItem(CONC_KEY) || '{}')); } catch {}
+    fetch('/api/tracker-pagos')
+      .then(r => r.json())
+      .then(d => {
+        const movs = d.movimientos || [];
+        setTrackerPagos(movs);
+        const hoy = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+        const meses = [...new Set(movs.map(m => normMes(m['Fecha'] || m['Fecha de ingreso'] || '')).filter(Boolean))].sort();
+        setMesSel(meses.includes(hoy) ? hoy : (meses[meses.length - 1] || ''));
+      })
+      .catch(() => {});
+    setMounted(true);
+  }, []);
+
+  const mesesDisp = useMemo(() => {
+    const s = new Set(trackerPagos.map(m => normMes(m['Fecha'] || m['Fecha de ingreso'] || '')).filter(Boolean));
+    return [...s].sort().reverse().map(m => ({ mes: m, label: mesLabel(m) }));
+  }, [trackerPagos]);
+
+  const movDelMes = useMemo(() =>
+    trackerPagos
+      .filter(m => normMes(m['Fecha'] || m['Fecha de ingreso'] || '') === mesSel)
+      .sort((a, b) => String(a['Fecha']).localeCompare(String(b['Fecha']))),
+    [trackerPagos, mesSel]
+  );
+
+  const totalMes  = movDelMes.reduce((s, m) => s + parseM(m['Monto']), 0);
+  const totalConc = movDelMes.filter(m => conciliaciones[m._rowIndex]).reduce((s, m) => s + parseM(m['Monto']), 0);
+  const nConc     = movDelMes.filter(m => conciliaciones[m._rowIndex]).length;
+
+  const señasIngresadas = useMemo(() =>
+    abonos.filter(a => {
+      const est = String(a['Estado'] || a['estado'] || '').trim();
+      return est === 'Ingresó' || est === 'Ingreso';
+    }),
+    [abonos]
+  );
+
+  const clientesFilt = busqueda.length > 1
+    ? clientes.filter(c => String(c['Nombre'] || '').toLowerCase().includes(busqueda.toLowerCase())).slice(0, 6)
+    : [];
+
+  const señasFilt = busqueda.length > 1
+    ? señasIngresadas.filter(a =>
+        String(a['Nombre'] || a['nombre'] || '').toLowerCase().includes(busqueda.toLowerCase())
+      ).slice(0, 5)
+    : [];
+
+  function abrirAsignar(mov) { setAsignarModal(mov); setBusqueda(''); setSeleccion(null); }
+
+  function cerrarModal() { setAsignarModal(null); setSeleccion(null); setBusqueda(''); }
+
+  function guardar() {
+    if (!seleccion || !asignarModal) return;
+    setConciliaciones(prev => {
+      const next = { ...prev, [asignarModal._rowIndex]: seleccion };
+      try { localStorage.setItem(CONC_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    cerrarModal();
+  }
+
+  function quitar(mov) {
+    setConciliaciones(prev => {
+      const next = { ...prev };
+      delete next[mov._rowIndex];
+      try { localStorage.setItem(CONC_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  if (!mounted) return null;
+
+  if (mesesDisp.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-16 text-center">
+        <p className="text-gray-400 text-sm">No hay movimientos en el Tracker pagos.</p>
+        <p className="text-gray-300 text-xs mt-1">Cargá movimientos en la hoja "Tracker pagos" del sheet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 max-w-5xl">
+      {/* Selector de mes */}
+      <div className="flex gap-1 flex-wrap">
+        {mesesDisp.map(m => (
+          <button key={m.mes} onClick={() => setMesSel(m.mes)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>{m.label}</button>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total del mes', value: totalMes, sub: `${movDelMes.length} movimientos`, cls: 'gray' },
+          { label: 'Conciliados',   value: totalConc, sub: `${nConc} movimientos`,            cls: 'emerald' },
+          { label: 'Sin conciliar', value: totalMes - totalConc, sub: `${movDelMes.length - nConc} movimientos`, cls: 'amber' },
+        ].map(({ label, value, sub, cls }) => (
+          <div key={label} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4 shadow-sm`}>
+            <p className="text-xs text-gray-500 mb-1">{label}</p>
+            <p className={`text-xl font-bold text-${cls}-700`}>{fmt(value)}</p>
+            <p className={`text-xs text-${cls}-500 mt-0.5`}>{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla de movimientos */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">Movimientos del banco — {mesLabel(mesSel)}</h3>
+        </div>
+        {movDelMes.length === 0 ? (
+          <div className="px-5 py-12 text-center text-gray-400 text-sm">No hay movimientos para este mes.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Fecha','Monto','Medio de Pago','Concepto','Cliente / Seña',''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {movDelMes.map((mov, i) => {
+                  const conc   = conciliaciones[mov._rowIndex];
+                  const metodo = mov['Medio de Pago'] || mov['Medio de pago'] || '';
+                  return (
+                    <tr key={i} className={`border-t border-gray-100 transition-colors ${conc ? 'bg-emerald-50/50' : 'hover:bg-gray-50'}`}>
+                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{mov['Fecha'] || '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(mov['Monto']))}</td>
+                      <td className="px-4 py-3">
+                        {metodo
+                          ? <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[clasiMet(metodo)]}`}>{metodo}</span>
+                          : <span className="text-gray-300">—</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{mov['Concepto'] || '—'}</td>
+                      <td className="px-4 py-3">
+                        {conc ? (
+                          <div>
+                            <p className="text-sm font-medium text-emerald-800">{conc.nombre}</p>
+                            <p className="text-xs text-emerald-600">
+                              {conc.tipo === 'seña' ? 'Seña' : `C${conc.cuota}`}
+                              {conc.fecha ? ` · ${formatFecha(conc.fecha)}` : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic">Sin asignar</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {conc ? (
+                          <button onClick={() => quitar(mov)}
+                            className="text-gray-300 hover:text-red-400 transition-colors text-lg px-1">×</button>
+                        ) : (
+                          <button onClick={() => abrirAsignar(mov)}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap">
+                            Asignar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal asignar */}
+      {asignarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={cerrarModal}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-semibold text-gray-900">Asignar ingreso</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {fmt(parseM(asignarModal['Monto']))} · {asignarModal['Fecha'] || '—'} · {asignarModal['Medio de Pago'] || asignarModal['Medio de pago'] || '—'}
+                </p>
+              </div>
+              <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+
+            <div className="p-4 flex-shrink-0">
+              <input autoFocus value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
+                placeholder="Buscar cliente o seña…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1">
+              {busqueda.length < 2 ? (
+                <p className="text-xs text-gray-400 text-center py-6">Escribí para buscar…</p>
+              ) : clientesFilt.length === 0 && señasFilt.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">Sin resultados</p>
+              ) : (
+                <>
+                  {/* Cuotas */}
+                  {clientesFilt.map(c => {
+                    const cuotas = CUOTAS_FULL
+                      .map((q, idx) => ({ cuota: idx+1, monto: parseM(c[q.monto]), fecha: c[q.fecha] }))
+                      .filter(x => x.monto > 0);
+                    if (!cuotas.length) return null;
+                    return (
+                      <div key={c._rowIndex} className="mb-2">
+                        <p className="text-xs font-semibold text-gray-500 px-2 py-1">{c['Nombre']}</p>
+                        {cuotas.map(x => {
+                          const sel = seleccion?.tipo === 'cuota' && seleccion?.rowIndex === c._rowIndex && seleccion?.cuota === x.cuota;
+                          return (
+                            <button key={x.cuota}
+                              onClick={() => setSeleccion({ tipo: 'cuota', nombre: (c['Nombre']||'').trim(), cuota: x.cuota, fecha: x.fecha, monto: x.monto, rowIndex: c._rowIndex })}
+                              className={`w-full text-left px-3 py-2 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-800">C{x.cuota} — {fmt(x.monto)}</span>
+                                <span className="text-xs text-gray-400">{formatFecha(x.fecha)}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  }).filter(Boolean)}
+
+                  {/* Señas */}
+                  {señasFilt.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-gray-500 px-2 py-1">Señas</p>
+                      {señasFilt.map((a, idx) => {
+                        const nombre = String(a['Nombre'] || a['nombre'] || '').trim();
+                        const monto  = parseM(a['Monto'] || a['monto']);
+                        const fecha  = a['Fecha'] || a['fecha'] || '';
+                        const sel    = seleccion?.tipo === 'seña' && seleccion?.rowIndex === a._rowIndex;
+                        return (
+                          <button key={idx}
+                            onClick={() => setSeleccion({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
+                            className={`w-full text-left px-3 py-2 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-800">{nombre} — Seña {fmt(monto)}</span>
+                              <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {seleccion && (
+              <div className="p-4 border-t border-gray-100 flex-shrink-0">
+                <div className="bg-blue-50 rounded-lg px-3 py-2 mb-3 text-xs text-blue-800">
+                  <strong>{seleccion.nombre}</strong> · {seleccion.tipo === 'seña' ? 'Seña' : `C${seleccion.cuota}`} · {formatFecha(seleccion.fecha)}
+                </div>
+                <button onClick={guardar}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                  Confirmar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = [], proyeccionAnual = [], deudores = [], clientes = [] }) {
+export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = [], proyeccionAnual = [], deudores = [], clientes = [], abonos = [] }) {
   const [subTab, setSubTab] = useState('mensual');
   const deudoresActivos = deudores.filter(d => d.estado !== 'Saldado');
 
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex gap-2 items-center flex-wrap border-b border-gray-200 pb-0">
-        {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['deudores','Deudores']].map(([v, l]) => (
+        {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['deudores','Deudores'],['conciliacion','Conciliación']].map(([v, l]) => (
           <button key={v} onClick={() => setSubTab(v)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               subTab === v ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -1654,10 +1939,11 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
       </div>
 
       <div>
-        {subTab === 'mensual'  && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccionAnual={proyeccionAnual} />}
-        {subTab === 'pagos'    && <VistaPagos clientes={clientes} />}
-        {subTab === 'semanal'  && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
-        {subTab === 'deudores' && <VistaDeudores deudores={deudores} clientes={clientes} />}
+        {subTab === 'mensual'      && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccionAnual={proyeccionAnual} />}
+        {subTab === 'pagos'        && <VistaPagos clientes={clientes} />}
+        {subTab === 'semanal'      && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
+        {subTab === 'deudores'     && <VistaDeudores deudores={deudores} clientes={clientes} />}
+        {subTab === 'conciliacion' && <VistaConciliacion clientes={clientes} abonos={abonos} />}
       </div>
     </div>
   );

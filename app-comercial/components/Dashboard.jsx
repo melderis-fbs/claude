@@ -151,7 +151,7 @@ export default function Dashboard({
       <main className="flex-1 overflow-auto p-6">
         {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} />}
         {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
-        {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} />}
+        {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
         {tab === 'abonos'     && <Abonos abonos={abonos} />}
         {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
         {tab === 'facturas'   && <Facturas facturas={facturas} />}
