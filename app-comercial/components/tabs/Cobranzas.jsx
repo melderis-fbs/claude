@@ -1002,9 +1002,7 @@ function VistaPagos({ clientes = [] }) {
                               className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
                                 matches[pKey]
                                   ? 'bg-blue-500 border-blue-500 text-white'
-                                  : trackerDelMes.length > 0
-                                    ? 'border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-400'
-                                    : 'border-gray-100 text-gray-200 cursor-default'
+                                  : 'border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-400'
                               }`}
                             >
                               ⇌
