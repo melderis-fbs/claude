@@ -10,6 +10,7 @@ const TAB_DEUDORES   = 'Deudores';
 const TAB_FACTURAS   = 'Facturas';
 const TAB_DOCUMENTOS = 'Documentos_Emitidos';
 const TAB_ANUNCIOS   = 'Anuncios';
+const TAB_TRACKER    = 'Tracker pagos';
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -22,6 +23,7 @@ function doGet(e) {
     if (action === 'getDocumentos')    return ok(getDocumentos());
     if (action === 'getUltimoNumero')  return ok(getUltimoNumero(e.parameter.tipo));
     if (action === 'getAnuncios')      return ok(getAnuncios());
+    if (action === 'getTrackerPagos')  return ok(getTrackerPagos());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -338,6 +340,37 @@ function getAnuncios() {
   });
 
   return { rows: rows };
+}
+
+// ── Tracker pagos ─────────────────────────────────────────────────────────────
+
+function getTrackerPagos() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_TRACKER);
+  if (!sheet) return { movimientos: [] };
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return { movimientos: [] };
+
+  var allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var headers = allValues[0].map(function(h) { return String(h).trim(); });
+  var tz = Session.getScriptTimeZone();
+
+  var movimientos = allValues.slice(1).map(function(row, i) {
+    var obj = { _rowIndex: i + 2 };
+    headers.forEach(function(h, j) {
+      if (!h) return;
+      var val = row[j];
+      obj[h] = val instanceof Date && val.getTime() > 0
+        ? Utilities.formatDate(val, tz, 'dd/MM/yyyy')
+        : (val !== null && val !== undefined ? val : '');
+    });
+    return obj;
+  }).filter(function(obj) {
+    var keys = Object.keys(obj).filter(function(k) { return k !== '_rowIndex'; });
+    return keys.some(function(k) { return obj[k] !== '' && obj[k] !== null; });
+  });
+
+  return { movimientos: movimientos };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
