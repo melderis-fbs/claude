@@ -169,3 +169,12 @@ export async function getAnuncios() {
   if (data.error) throw new Error(`GAS: ${data.error}`);
   return data.rows ?? [];
 }
+
+// ── TRACKER PAGOS (pestaña "Tracker pagos" en la planilla de clientes) ─────────
+
+export async function getTrackerPagos() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getTrackerPagos' });
+  if (data.error) throw new Error(`GAS: ${data.error}`);
+  return data.movimientos ?? [];
+}

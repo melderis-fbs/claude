@@ -694,8 +694,9 @@ function normMes(val) {
   return '';
 }
 
-const VERF_KEY   = 'pagos_verificados_v1';
-const SPLITS_KEY = 'pagos_splits_v1';
+const VERF_KEY    = 'pagos_verificados_v1';
+const SPLITS_KEY  = 'pagos_splits_v1';
+const MATCHES_KEY = 'pagos_matches_v1';
 const METODOS_SPLIT = ['Transferencia', 'Efectivo', 'Wise', 'Stripe', 'DolarApp', 'Cripto', 'Otro'];
 
 function VistaPagos({ clientes = [] }) {
@@ -703,10 +704,16 @@ function VistaPagos({ clientes = [] }) {
   const [splits, setSplits]           = useState({});
   const [splitModal, setSplitModal]   = useState(null); // null | { mes, p }
   const [splitDraft, setSplitDraft]   = useState([]);   // [{monto, metodo}]
+  const [matches, setMatches]         = useState({});
+  const [trackerPagos, setTrackerPagos] = useState([]);
+  const [matchModal, setMatchModal]   = useState(null); // null | { mes, p }
+  const [showExtracto, setShowExtracto] = useState(false);
 
   useEffect(() => {
     try { setVerificados(new Set(JSON.parse(localStorage.getItem(VERF_KEY) || '[]'))); } catch {}
     try { setSplits(JSON.parse(localStorage.getItem(SPLITS_KEY) || '{}')); } catch {}
+    try { setMatches(JSON.parse(localStorage.getItem(MATCHES_KEY) || '{}')); } catch {}
+    fetch('/api/tracker-pagos').then(r => r.json()).then(d => setTrackerPagos(d.movimientos || [])).catch(() => {});
   }, []);
 
   function toggleVerif(mes, p) {
@@ -750,6 +757,29 @@ function VistaPagos({ clientes = [] }) {
       return next;
     });
     setSplitModal(null);
+  }
+
+  function abrirMatch(mes, p) { setMatchModal({ mes, p }); }
+
+  function saveMatch(mov) {
+    const { mes, p } = matchModal;
+    const key = `${mes}|${p.nombre}|${p.cuota}`;
+    setMatches(prev => {
+      const next = { ...prev, [key]: mov };
+      try { localStorage.setItem(MATCHES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setMatchModal(null);
+  }
+
+  function removeMatch(mes, p) {
+    const key = `${mes}|${p.nombre}|${p.cuota}`;
+    setMatches(prev => {
+      const next = { ...prev };
+      delete next[key];
+      try { localStorage.setItem(MATCHES_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
   }
 
   function updateParte(i, field, val) {
@@ -816,6 +846,17 @@ function VistaPagos({ clientes = [] }) {
   const metodos   = useMemo(() => [...new Set(pagos.map(p => p.metodo))].sort(), [pagos]);
   const pagosFilt = filtroMet ? pagos.filter(p => p.metodo === filtroMet) : pagos;
   const totalFilt = pagosFilt.reduce((a,p) => a+p.monto, 0);
+
+  const trackerDelMes = useMemo(() =>
+    trackerPagos.filter(m => normMes(m['Fecha de ingreso'] ?? m['Fecha'] ?? '') === mesSel),
+    [trackerPagos, mesSel]
+  );
+
+  const matchedIdx = useMemo(() => {
+    const s = new Set();
+    for (const mov of Object.values(matches)) { if (mov?._rowIndex) s.add(mov._rowIndex); }
+    return s;
+  }, [matches]);
 
   if (mesesDisp.length === 0) return <div className="text-gray-400 text-sm py-10 text-center">No hay pagos registrados.</div>;
 
@@ -911,7 +952,14 @@ function VistaPagos({ clientes = [] }) {
                     <>
                       <tr key={i} className={`border-t border-gray-100 transition-colors ${rowBg} hover:brightness-95`}>
                         <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
-                        <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>{p.nombre}</td>
+                        <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>
+                          {p.nombre}
+                          {matches[pKey] && (
+                            <span className="block text-xs text-blue-500 font-normal mt-0.5">
+                              ⇌ {matches[pKey]['Concepto'] || matches[pKey]['Fecha de ingreso'] || 'Conciliado'}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
                         <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
                         <td className="px-4 py-3">
@@ -947,6 +995,20 @@ function VistaPagos({ clientes = [] }) {
                             >
                               ✓
                             </button>
+                            {/* Botón conciliar con banco */}
+                            <button
+                              onClick={() => matches[pKey] ? removeMatch(mesSel, p) : abrirMatch(mesSel, p)}
+                              title={matches[pKey] ? 'Quitar conciliación' : 'Conciliar con banco'}
+                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
+                                matches[pKey]
+                                  ? 'bg-blue-500 border-blue-500 text-white'
+                                  : trackerDelMes.length > 0
+                                    ? 'border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-400'
+                                    : 'border-gray-100 text-gray-200 cursor-default'
+                              }`}
+                            >
+                              ⇌
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -979,6 +1041,105 @@ function VistaPagos({ clientes = [] }) {
           </div>
         )}
       </div>
+
+      {/* Panel extracto bancario */}
+      {trackerDelMes.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <button
+            onClick={() => setShowExtracto(v => !v)}
+            className="w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div>
+              <span className="font-semibold text-gray-800 text-sm">Extracto del banco — {mesLabel(mesSel)}</span>
+              <span className="block text-xs text-gray-400 mt-0.5">
+                {trackerDelMes.length} movimientos
+                {trackerDelMes.filter(m => !matchedIdx.has(m._rowIndex)).length > 0 && (
+                  <span className="ml-2 text-amber-600 font-medium">
+                    · {trackerDelMes.filter(m => !matchedIdx.has(m._rowIndex)).length} sin conciliar
+                  </span>
+                )}
+                {trackerDelMes.filter(m => matchedIdx.has(m._rowIndex)).length > 0 && (
+                  <span className="ml-2 text-emerald-600 font-medium">
+                    · {trackerDelMes.filter(m => matchedIdx.has(m._rowIndex)).length} conciliados
+                  </span>
+                )}
+              </span>
+            </div>
+            <span className="text-gray-400 text-xs">{showExtracto ? '▲' : '▼'}</span>
+          </button>
+          {showExtracto && (
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
+              {trackerDelMes.map((mov, i) => {
+                const conciliado = matchedIdx.has(mov._rowIndex);
+                const matchEntry = Object.entries(matches).find(([, m]) => m._rowIndex === mov._rowIndex);
+                const pKey2 = matchEntry?.[0];
+                const clienteRef = pKey2 ? `${pKey2.split('|')[1]} · C${pKey2.split('|')[2]}` : null;
+                return (
+                  <div key={i} className={`px-5 py-3 flex items-center justify-between gap-3 ${conciliado ? 'bg-emerald-50/60' : ''}`}>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${conciliado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                        <span className="text-sm font-semibold text-gray-900">{fmt(parseM(mov['Monto']))}</span>
+                        <span className="text-xs text-gray-400">{mov['Fecha de ingreso'] || '—'}</span>
+                        {mov['Medio de pago'] && <span className="text-xs text-gray-500">{mov['Medio de pago']}</span>}
+                      </div>
+                      {mov['Concepto'] && <p className="text-xs text-gray-500 mt-0.5 pl-3.5">{mov['Concepto']}</p>}
+                      {mov['Nombre'] && <p className="text-xs text-gray-400 mt-0.5 pl-3.5">{mov['Nombre']}</p>}
+                      {clienteRef && <p className="text-xs text-blue-600 mt-0.5 pl-3.5">⇌ {clienteRef}</p>}
+                    </div>
+                    {!conciliado && <span className="text-xs text-amber-600 font-medium whitespace-nowrap flex-shrink-0">Sin conciliar</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal conciliar con banco */}
+      {matchModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setMatchModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Conciliar con banco</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {matchModal.p.nombre} · C{matchModal.p.cuota} · {fmt(matchModal.p.monto)}
+                </p>
+              </div>
+              <button onClick={() => setMatchModal(null)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-3 max-h-96 overflow-y-auto space-y-2">
+              {trackerDelMes.length === 0 ? (
+                <p className="text-center text-gray-400 text-sm py-8">No hay movimientos cargados para este mes.</p>
+              ) : (
+                trackerDelMes.map((mov, i) => {
+                  const yaUsado = matchedIdx.has(mov._rowIndex);
+                  return (
+                    <button key={i} onClick={() => !yaUsado && saveMatch(mov)} disabled={yaUsado}
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
+                        yaUsado
+                          ? 'border-gray-100 bg-gray-50 opacity-40 cursor-default'
+                          : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                      }`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-gray-900 text-sm">{fmt(parseM(mov['Monto']))}</span>
+                        <span className="text-xs text-gray-400">{mov['Fecha de ingreso'] || '—'}</span>
+                      </div>
+                      {mov['Concepto'] && <p className="text-xs text-gray-500 mt-0.5">{mov['Concepto']}</p>}
+                      <div className="flex gap-3 mt-0.5">
+                        {mov['Nombre'] && <span className="text-xs text-gray-400">{mov['Nombre']}</span>}
+                        {mov['Medio de pago'] && <span className="text-xs text-gray-400">{mov['Medio de pago']}</span>}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de desglose */}
       {splitModal && (
