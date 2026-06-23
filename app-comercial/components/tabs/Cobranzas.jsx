@@ -78,9 +78,9 @@ function mesLabel(yyyyMM) {
 // Clasifica un método de pago en: ar | usd | dolarapp | efectivo
 function clasiMet(met) {
   const s = String(met || '').toUpperCase();
-  if (esDolarApp(met))                                          return 'dolarapp';
-  if (s.includes('EFECTIVO'))                                   return 'efectivo';
-  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO/.test(s))     return 'usd';
+  if (esDolarApp(met))                                                  return 'dolarapp';
+  if (s.includes('EFECTIVO'))                                           return 'efectivo';
+  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO|USD/.test(s))         return 'usd';
   return 'ar';
 }
 
@@ -1905,13 +1905,31 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                   {[...clientes]
                     .filter(c => !busqueda || String(c['Nombre']||'').toLowerCase().includes(busqueda.toLowerCase()))
                     .sort((a,b) => String(a['Nombre']).localeCompare(String(b['Nombre'])))
-                    .map(c => (
-                      <button key={c._rowIndex} onClick={() => { setClienteModal(c); setBusqueda(''); }}
-                        className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-800">{c['Nombre']}</span>
-                        <span className="text-xs text-gray-400">{c['Programa'] || ''} ›</span>
-                      </button>
-                    ))
+                    .map(c => {
+                      const cuotas = CUOTAS_FULL.map((q, idx) => {
+                        const monto = parseM(c[q.monto]);
+                        const fecha = c[q.fecha] || '';
+                        return monto > 0 ? { num: idx+1, monto, fecha } : null;
+                      }).filter(Boolean);
+                      return (
+                        <button key={c._rowIndex} onClick={() => { setClienteModal(c); setBusqueda(''); }}
+                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-800">{c['Nombre']}</span>
+                            <span className="text-xs text-gray-400">{c['Programa'] || ''} ›</span>
+                          </div>
+                          {cuotas.length > 0 && (
+                            <div className="flex gap-2 flex-wrap mt-0.5">
+                              {cuotas.map(q => (
+                                <span key={q.num} className="text-xs text-gray-400">
+                                  C{q.num} {fmt(q.monto)}{q.fecha ? ` · ${formatFecha(q.fecha)}` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
                   }
                   {señasIngresadas.filter(a => !busqueda || String(a['Nombre']||a['nombre']||'').toLowerCase().includes(busqueda.toLowerCase())).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-100">
