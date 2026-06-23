@@ -1639,6 +1639,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
   const [trackerPagos, setTrackerPagos]   = useState([]);
   const [conciliaciones, setConciliaciones] = useState({});
   const [asignarModal, setAsignarModal]   = useState(null);
+  const [clienteModal, setClienteModal]   = useState(null);
   const [busqueda, setBusqueda]           = useState('');
   const [seleccion, setSeleccion]         = useState(null);
   const [mesSel, setMesSel]               = useState('');
@@ -1660,9 +1661,13 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
   }, []);
 
   const mesesDisp = useMemo(() => {
-    const s = new Set(trackerPagos.map(m => normMes(m['Fecha'] || m['Fecha de ingreso'] || '')).filter(Boolean));
-    return [...s].sort().reverse().map(m => ({ mes: m, label: mesLabel(m) }));
-  }, [trackerPagos]);
+    const hoy = new Date();
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      return { mes: m, label: mesLabel(m) };
+    });
+  }, []);
 
   const movDelMes = useMemo(() =>
     trackerPagos
@@ -1674,6 +1679,15 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
   const totalMes  = movDelMes.reduce((s, m) => s + parseM(m['Monto']), 0);
   const totalConc = movDelMes.filter(m => conciliaciones[m._rowIndex]).reduce((s, m) => s + parseM(m['Monto']), 0);
   const nConc     = movDelMes.filter(m => conciliaciones[m._rowIndex]).length;
+
+  const totalesMet = useMemo(() => {
+    const t = { ar: 0, usd: 0, dolarapp: 0, efectivo: 0 };
+    for (const m of movDelMes) {
+      const c = clasiMet(m['Medio de Pago'] || m['Medio de pago'] || '');
+      t[c] += parseM(m['Monto']);
+    }
+    return t;
+  }, [movDelMes]);
 
   const señasIngresadas = useMemo(() =>
     abonos.filter(a => {
@@ -1693,9 +1707,9 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
       ).slice(0, 5)
     : [];
 
-  function abrirAsignar(mov) { setAsignarModal(mov); setBusqueda(''); setSeleccion(null); }
+  function abrirAsignar(mov) { setAsignarModal(mov); setBusqueda(''); setSeleccion(null); setClienteModal(null); }
 
-  function cerrarModal() { setAsignarModal(null); setSeleccion(null); setBusqueda(''); }
+  function cerrarModal() { setAsignarModal(null); setSeleccion(null); setBusqueda(''); setClienteModal(null); }
 
   function guardar() {
     if (!seleccion || !asignarModal) return;
@@ -1753,6 +1767,24 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
           </div>
         ))}
       </div>
+
+      {/* Cards por método */}
+      {movDelMes.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { key:'ar',       label:'AR',       sub:'Transferencias', cls:'blue'   },
+            { key:'usd',      label:'USD',      sub:'Stripe / Wise',  cls:'indigo' },
+            { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',    cls:'teal'   },
+            { key:'efectivo', label:'Efectivo', sub:'Cash',           cls:'amber'  },
+          ].map(({ key, label, sub, cls }) => (
+            <div key={key} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4`}>
+              <p className="text-xs font-semibold uppercase text-gray-500 mb-1">{label}</p>
+              <p className={`text-xl font-bold text-${cls}-700`}>{fmt(totalesMet[key])}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabla de movimientos */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -1833,65 +1865,75 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
               <button onClick={cerrarModal} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
             </div>
 
-            <div className="p-4 flex-shrink-0">
-              <input autoFocus value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
-                placeholder="Buscar cliente o seña…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+            <div className="p-4 flex-shrink-0 border-b border-gray-100">
+              {clienteModal ? (
+                <button onClick={() => { setClienteModal(null); setSeleccion(null); }}
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
+                  ‹ <span className="font-medium">{clienteModal['Nombre']}</span>
+                </button>
+              ) : (
+                <input autoFocus value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
+                  placeholder="Filtrar por nombre…"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+              )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1">
-              {busqueda.length < 2 ? (
-                <p className="text-xs text-gray-400 text-center py-6">Escribí para buscar…</p>
-              ) : clientesFilt.length === 0 && señasFilt.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6">Sin resultados</p>
-              ) : (
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+              {clienteModal ? (
+                /* Paso 2: cuotas del cliente seleccionado */
                 <>
-                  {/* Cuotas */}
-                  {clientesFilt.map(c => {
-                    const cuotas = CUOTAS_FULL
-                      .map((q, idx) => ({ cuota: idx+1, monto: parseM(c[q.monto]), fecha: c[q.fecha] }))
-                      .filter(x => x.monto > 0);
-                    if (!cuotas.length) return null;
+                  {CUOTAS_FULL.map((q, idx) => {
+                    const monto = parseM(clienteModal[q.monto]);
+                    if (!monto) return null;
+                    const fecha = clienteModal[q.fecha] || '';
+                    const sel   = seleccion?.tipo === 'cuota' && seleccion?.rowIndex === clienteModal._rowIndex && seleccion?.cuota === idx+1;
                     return (
-                      <div key={c._rowIndex} className="mb-2">
-                        <p className="text-xs font-semibold text-gray-500 px-2 py-1">{c['Nombre']}</p>
-                        {cuotas.map(x => {
-                          const sel = seleccion?.tipo === 'cuota' && seleccion?.rowIndex === c._rowIndex && seleccion?.cuota === x.cuota;
+                      <button key={idx}
+                        onClick={() => setSeleccion({ tipo: 'cuota', nombre: (clienteModal['Nombre']||'').trim(), cuota: idx+1, fecha, monto, rowIndex: clienteModal._rowIndex })}
+                        className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-800">Cuota {idx+1} — {fmt(monto)}</span>
+                          <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                /* Paso 1: lista de todos los clientes + señas */
+                <>
+                  {[...clientes]
+                    .filter(c => !busqueda || String(c['Nombre']||'').toLowerCase().includes(busqueda.toLowerCase()))
+                    .sort((a,b) => String(a['Nombre']).localeCompare(String(b['Nombre'])))
+                    .map(c => (
+                      <button key={c._rowIndex} onClick={() => { setClienteModal(c); setBusqueda(''); }}
+                        className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-800">{c['Nombre']}</span>
+                        <span className="text-xs text-gray-400">{c['Programa'] || ''} ›</span>
+                      </button>
+                    ))
+                  }
+                  {señasIngresadas.filter(a => !busqueda || String(a['Nombre']||a['nombre']||'').toLowerCase().includes(busqueda.toLowerCase())).length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-xs font-semibold text-gray-400 px-2 pb-1 uppercase tracking-wide">Señas ingresadas</p>
+                      {señasIngresadas
+                        .filter(a => !busqueda || String(a['Nombre']||a['nombre']||'').toLowerCase().includes(busqueda.toLowerCase()))
+                        .map((a, idx) => {
+                          const nombre = String(a['Nombre'] || a['nombre'] || '').trim();
+                          const monto  = parseM(a['Monto'] || a['monto']);
+                          const fecha  = a['Fecha'] || a['fecha'] || '';
+                          const sel    = seleccion?.tipo === 'seña' && seleccion?.rowIndex === a._rowIndex;
                           return (
-                            <button key={x.cuota}
-                              onClick={() => setSeleccion({ tipo: 'cuota', nombre: (c['Nombre']||'').trim(), cuota: x.cuota, fecha: x.fecha, monto: x.monto, rowIndex: c._rowIndex })}
-                              className={`w-full text-left px-3 py-2 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                            <button key={idx}
+                              onClick={() => setSeleccion({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
+                              className={`w-full text-left px-3 py-2.5 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-800">C{x.cuota} — {fmt(x.monto)}</span>
-                                <span className="text-xs text-gray-400">{formatFecha(x.fecha)}</span>
+                                <span className="text-sm text-gray-800">{nombre} — {fmt(monto)}</span>
+                                <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
                               </div>
                             </button>
                           );
                         })}
-                      </div>
-                    );
-                  }).filter(Boolean)}
-
-                  {/* Señas */}
-                  {señasFilt.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold text-gray-500 px-2 py-1">Señas</p>
-                      {señasFilt.map((a, idx) => {
-                        const nombre = String(a['Nombre'] || a['nombre'] || '').trim();
-                        const monto  = parseM(a['Monto'] || a['monto']);
-                        const fecha  = a['Fecha'] || a['fecha'] || '';
-                        const sel    = seleccion?.tipo === 'seña' && seleccion?.rowIndex === a._rowIndex;
-                        return (
-                          <button key={idx}
-                            onClick={() => setSeleccion({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
-                            className={`w-full text-left px-3 py-2 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-800">{nombre} — Seña {fmt(monto)}</span>
-                              <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
                     </div>
                   )}
                 </>
