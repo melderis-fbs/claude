@@ -424,6 +424,7 @@ export function calcularProyeccion(clientes, semanasAtras = 2, semanasAdelante =
           fecha: c[q.fecha] || '',
           pagado:      esPagado(c[q.estado]),
           metodo:      c[q.metodo] || '',
+          met1:        c['Met pago 1'] || '',
           rowIndex:    c._rowIndex,
           campoEstado: q.estado,
         });

@@ -562,7 +562,14 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                         <div className="flex items-center gap-3 min-w-0">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
+                              {co.met1 && (
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-semibold flex-shrink-0 ${CHIP[clasiMet(co.met1)]}`}>
+                                  {CHIP_LABEL[clasiMet(co.met1)]}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-400">
                               {co.programa} · {co.esSeña ? 'Seña' : `Cuota ${co.cuota}`} · {co.closer || '—'}
                               {co.metodo ? ` · ${co.metodo}` : ''}
