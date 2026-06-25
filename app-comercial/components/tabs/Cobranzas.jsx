@@ -80,7 +80,7 @@ function clasiMet(met) {
   const s = String(met || '').toUpperCase();
   if (esDolarApp(met))                                                  return 'dolarapp';
   if (s.includes('EFECTIVO'))                                           return 'efectivo';
-  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO|USD/.test(s))         return 'usd';
+  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO/.test(s))             return 'usd';
   return 'ar';
 }
 
