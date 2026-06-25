@@ -1650,6 +1650,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
   const [busqueda, setBusqueda]           = useState('');
   const [seleccion, setSeleccion]         = useState(null);
   const [mesSel, setMesSel]               = useState('');
+  const [filtroMet, setFiltroMet]         = useState('');
   const [mounted, setMounted]             = useState(false);
 
   useEffect(() => {
@@ -1683,9 +1684,32 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
     [trackerPagos, mesSel]
   );
 
-  const totalMes  = movDelMes.reduce((s, m) => s + parseM(m['Monto']), 0);
-  const totalConc = movDelMes.filter(m => conciliaciones[m._rowIndex]).reduce((s, m) => s + parseM(m['Monto']), 0);
-  const nConc     = movDelMes.filter(m => conciliaciones[m._rowIndex]).length;
+  const nConc = movDelMes.filter(m => conciliaciones[m._rowIndex]).length;
+
+  const totalesMet = useMemo(() => {
+    const t = { ar: 0, usd: 0, dolarapp: 0, efectivo: 0 };
+    for (const m of movDelMes) {
+      const c = clasiMet(m['Medio de Pago'] || m['Medio de pago'] || '');
+      t[c] += parseM(m['Monto']);
+    }
+    return t;
+  }, [movDelMes]);
+
+  const metodoStats = useMemo(() => {
+    const acc = {};
+    for (const m of movDelMes) {
+      const met = m['Medio de Pago'] || m['Medio de pago'] || 'Sin especificar';
+      if (!acc[met]) acc[met] = { count: 0, total: 0 };
+      acc[met].count++;
+      acc[met].total += parseM(m['Monto']);
+    }
+    return acc;
+  }, [movDelMes]);
+
+  const movFilt = useMemo(() =>
+    filtroMet ? movDelMes.filter(m => (m['Medio de Pago'] || m['Medio de pago'] || '') === filtroMet) : movDelMes,
+    [movDelMes, filtroMet]
+  );
 
   const señasIngresadas = useMemo(() =>
     abonos.filter(a => {
@@ -1744,14 +1768,14 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
       {/* Selector de mes */}
       <div className="flex gap-1 flex-wrap">
         {mesesDisp.map(m => (
-          <button key={m.mes} onClick={() => setMesSel(m.mes)}
+          <button key={m.mes} onClick={() => { setMesSel(m.mes); setFiltroMet(''); }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>{m.label}</button>
         ))}
       </div>
 
-      {/* Stats — solo cantidad, sin montos (mezcla ARS/USD) */}
+      {/* Stats — conteo de movimientos */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total del mes',  value: movDelMes.length,          sub: 'movimientos',  cls: 'gray'    },
@@ -1766,31 +1790,50 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
         ))}
       </div>
 
-      {/* Desglose por medio de pago */}
-      {movDelMes.length > 0 && (() => {
-        const porMet = movDelMes.reduce((acc, m) => {
-          const met = m['Medio de Pago'] || m['Medio de pago'] || 'Sin especificar';
-          acc[met] = (acc[met] || 0) + 1;
-          return acc;
-        }, {});
-        return (
-          <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Desglose por medio de pago</p>
-            <div className="flex gap-2 flex-wrap">
-              {Object.entries(porMet).sort((a, b) => b[1] - a[1]).map(([met, count]) => (
-                <span key={met} className={`px-3 py-1.5 rounded-full text-xs font-medium ${CHIP[clasiMet(met)]}`}>
-                  {met} <span className="font-bold ml-1">{count}</span>
-                </span>
-              ))}
+      {/* Cards por categoría */}
+      {movDelMes.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { key:'ar',       label:'AR',       sub:'Transferencias', cls:'blue'   },
+            { key:'usd',      label:'USD',      sub:'Stripe / Wise',  cls:'indigo' },
+            { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',    cls:'teal'   },
+            { key:'efectivo', label:'Efectivo', sub:'Cash',           cls:'amber'  },
+          ].map(({ key, label, sub, cls }) => (
+            <div key={key} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4`}>
+              <p className="text-xs font-semibold uppercase text-gray-500 mb-1">{label}</p>
+              <p className={`text-xl font-bold text-${cls}-700`}>{fmt(totalesMet[key])}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pills filtrables por medio de pago */}
+      {Object.keys(metodoStats).length > 1 && (
+        <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 shadow-sm">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setFiltroMet('')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${!filtroMet ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              Todos
+            </button>
+            {Object.entries(metodoStats).sort((a, b) => b[1].total - a[1].total).map(([met, stats]) => (
+              <button key={met} onClick={() => setFiltroMet(f => f === met ? '' : met)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filtroMet === met ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {met}
+                <span className="ml-1.5 opacity-60">{stats.count} · {fmt(stats.total)}</span>
+              </button>
+            ))}
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* Tabla de movimientos */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="px-5 py-3.5 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800">Movimientos del banco — {mesLabel(mesSel)}</h3>
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-800">Movimientos del banco — {mesLabel(mesSel)}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{movFilt.length} movimientos{filtroMet ? ` · ${filtroMet}` : ''}</p>
+          </div>
         </div>
         {movDelMes.length === 0 ? (
           <div className="px-5 py-12 text-center text-gray-400 text-sm">No hay movimientos para este mes.</div>
@@ -1805,7 +1848,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                 </tr>
               </thead>
               <tbody>
-                {movDelMes.map((mov, i) => {
+                {movFilt.map((mov, i) => {
                   const conc   = conciliaciones[mov._rowIndex];
                   const metodo = mov['Medio de Pago'] || mov['Medio de pago'] || '';
                   return (
