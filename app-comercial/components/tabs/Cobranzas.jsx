@@ -1687,15 +1687,6 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
   const totalConc = movDelMes.filter(m => conciliaciones[m._rowIndex]).reduce((s, m) => s + parseM(m['Monto']), 0);
   const nConc     = movDelMes.filter(m => conciliaciones[m._rowIndex]).length;
 
-  const totalesMet = useMemo(() => {
-    const t = { ar: 0, usd: 0, dolarapp: 0, efectivo: 0 };
-    for (const m of movDelMes) {
-      const c = clasiMet(m['Medio de Pago'] || m['Medio de pago'] || '');
-      t[c] += parseM(m['Monto']);
-    }
-    return t;
-  }, [movDelMes]);
-
   const señasIngresadas = useMemo(() =>
     abonos.filter(a => {
       const est = String(a['Estado'] || a['estado'] || '').trim();
@@ -1760,38 +1751,41 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
         ))}
       </div>
 
-      {/* Stats */}
+      {/* Stats — solo cantidad, sin montos (mezcla ARS/USD) */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total del mes', value: totalMes, sub: `${movDelMes.length} movimientos`, cls: 'gray' },
-          { label: 'Conciliados',   value: totalConc, sub: `${nConc} movimientos`,            cls: 'emerald' },
-          { label: 'Sin conciliar', value: totalMes - totalConc, sub: `${movDelMes.length - nConc} movimientos`, cls: 'amber' },
+          { label: 'Total del mes',  value: movDelMes.length,          sub: 'movimientos',  cls: 'gray'    },
+          { label: 'Conciliados',    value: nConc,                      sub: 'movimientos',  cls: 'emerald' },
+          { label: 'Sin conciliar',  value: movDelMes.length - nConc,   sub: 'movimientos',  cls: 'amber'   },
         ].map(({ label, value, sub, cls }) => (
           <div key={label} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4 shadow-sm`}>
             <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className={`text-xl font-bold text-${cls}-700`}>{fmt(value)}</p>
+            <p className={`text-2xl font-bold text-${cls}-700`}>{value}</p>
             <p className={`text-xs text-${cls}-500 mt-0.5`}>{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Cards por método */}
-      {movDelMes.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { key:'ar',       label:'AR',       sub:'Transferencias', cls:'blue'   },
-            { key:'usd',      label:'USD',      sub:'Stripe / Wise',  cls:'indigo' },
-            { key:'dolarapp', label:'DolarApp', sub:'USD → Pesos',    cls:'teal'   },
-            { key:'efectivo', label:'Efectivo', sub:'Cash',           cls:'amber'  },
-          ].map(({ key, label, sub, cls }) => (
-            <div key={key} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-4`}>
-              <p className="text-xs font-semibold uppercase text-gray-500 mb-1">{label}</p>
-              <p className={`text-xl font-bold text-${cls}-700`}>{fmt(totalesMet[key])}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+      {/* Desglose por medio de pago */}
+      {movDelMes.length > 0 && (() => {
+        const porMet = movDelMes.reduce((acc, m) => {
+          const met = m['Medio de Pago'] || m['Medio de pago'] || 'Sin especificar';
+          acc[met] = (acc[met] || 0) + 1;
+          return acc;
+        }, {});
+        return (
+          <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Desglose por medio de pago</p>
+            <div className="flex gap-2 flex-wrap">
+              {Object.entries(porMet).sort((a, b) => b[1] - a[1]).map(([met, count]) => (
+                <span key={met} className={`px-3 py-1.5 rounded-full text-xs font-medium ${CHIP[clasiMet(met)]}`}>
+                  {met} <span className="font-bold ml-1">{count}</span>
+                </span>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {/* Tabla de movimientos */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
