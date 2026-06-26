@@ -40,13 +40,18 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
       </td>
       <td className="px-4 py-3 text-gray-700">${pagado.toLocaleString('es-AR')}</td>
       <td className="px-4 py-3">
-        {c['Estatus'] ? (
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-            String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
-            String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
-            'bg-gray-100 text-gray-500'
-          }`}>{c['Estatus']}</span>
-        ) : <span className="text-gray-300">—</span>}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {c['Estatus'] ? (
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+              String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+              String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
+              'bg-gray-100 text-gray-500'
+            }`}>{c['Estatus']}</span>
+          ) : <span className="text-gray-300">—</span>}
+          {String(c['Reembolso'] || '').toUpperCase() === 'SI' && (
+            <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">↩ Reembolso</span>
+          )}
+        </div>
       </td>
       <td className="px-4 py-3 text-gray-400 text-xs text-right">
         <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300'}`}>›</span>

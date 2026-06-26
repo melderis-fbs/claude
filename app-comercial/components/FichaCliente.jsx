@@ -96,6 +96,56 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
     }
   };
 
+  // ── Baja toggle ──────────────────────────────────────────────────────────────
+  const [baja, setBaja] = useState(String(c['Estatus'] || '').toLowerCase() === 'baja');
+  const [togglingBaja, setTogglingBaja] = useState(false);
+
+  const toggleBaja = async () => {
+    const newVal = !baja;
+    setBaja(newVal);
+    setTogglingBaja(true);
+    setError('');
+    try {
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: 'Estatus', value: newVal ? 'Baja' : 'Activo' }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      onPagadoUpdated();
+    } catch (err) {
+      setBaja(!newVal);
+      setError(err.message);
+    } finally {
+      setTogglingBaja(false);
+    }
+  };
+
+  // ── Reembolso toggle ─────────────────────────────────────────────────────────
+  const [reembolso, setReembolso] = useState(esPagadoLocal(c['Reembolso']));
+  const [togglingReembolso, setTogglingReembolso] = useState(false);
+
+  const toggleReembolso = async () => {
+    const newVal = !reembolso;
+    setReembolso(newVal);
+    setTogglingReembolso(true);
+    setError('');
+    try {
+      const res = await fetch('/api/update-pago', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: c._rowIndex, headerName: 'Reembolso', value: newVal ? 'SI' : 'NO' }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error');
+      onPagadoUpdated();
+    } catch (err) {
+      setReembolso(!newVal);
+      setError(err.message);
+    } finally {
+      setTogglingReembolso(false);
+    }
+  };
+
   // ── Edit mode ────────────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false);
   const [editValues, setEditValues] = useState(() =>
@@ -187,7 +237,31 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             <h2 className="text-xl font-bold text-gray-900">{c['Nombre']}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{c['Email'] || '—'} · {c['Teléfono'] || '—'}</p>
           </div>
-          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0 flex-wrap justify-end">
+            {/* Baja toggle */}
+            <button
+              onClick={toggleBaja}
+              disabled={togglingBaja}
+              title={baja ? 'Quitar Baja' : 'Marcar como Baja'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
+                baja
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}>
+              {baja ? '✕ Baja' : '○ Baja'}
+            </button>
+            {/* Reembolso toggle */}
+            <button
+              onClick={toggleReembolso}
+              disabled={togglingReembolso}
+              title={reembolso ? 'Quitar Reembolso' : 'Marcar como Reembolso'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
+                reembolso
+                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}>
+              {reembolso ? '↩ Reembolso' : '○ Reembolso'}
+            </button>
             {/* Terminado toggle */}
             <button
               onClick={toggleTerminado}

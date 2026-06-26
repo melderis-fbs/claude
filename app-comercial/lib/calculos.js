@@ -134,10 +134,16 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
   const cashPorMes   = {};
 
   for (const c of clientes) {
+    const esReembolso = esPagado(c['Reembolso']);
     const mesIngreso = normalizarIngreso(c['Ingreso'], c);
     if (mesIngreso) {
-      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0, efectivo:0, efectivoMonto:0 };
+      if (!ventasPorMes[mesIngreso]) ventasPorMes[mesIngreso] = { nuevas:0, back:0, front:0, montoBack:0, ar:0, arMonto:0, ext:0, extMonto:0, efectivo:0, efectivoMonto:0, reembolsos:0, montoReembolso:0 };
       const monto = parseMonto(c['Monto total']);
+      if (esReembolso) {
+        ventasPorMes[mesIngreso].reembolsos++;
+        ventasPorMes[mesIngreso].montoReembolso += monto;
+        continue; // no suma como venta
+      }
       if (esBack(c)) { ventasPorMes[mesIngreso].back++;   ventasPorMes[mesIngreso].montoBack += monto; }
       else {
         ventasPorMes[mesIngreso].nuevas++; ventasPorMes[mesIngreso].front += monto;
@@ -147,6 +153,7 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
         else                       { ventasPorMes[mesIngreso].ar++;       ventasPorMes[mesIngreso].arMonto       += monto; }
       }
     }
+    if (esReembolso) continue; // no suma cash recibido
     CUOTAS_DEF.forEach((q, qi) => {
       if (!esPagado(c[q.estado])) return;
       const monto = parseMonto(c[q.monto]);
@@ -254,23 +261,26 @@ export function calcularVentasPorMes(clientes) {
     if (!mes || mes.startsWith('__')) continue;
     if (!porMes[mes]) porMes[mes] = [];
     porMes[mes].push({
-      nombre:   (c['Nombre']   || '').trim(),
-      programa: (c['Programa'] || '').trim(),
-      fuente:   (c['Fuente']   || '').trim(),
-      closer:   (c['CLOSER']   || '').trim(),
-      setter:   (c['SETTER']   || '').trim(),
-      monto:    parseMonto(c['Monto total']),
-      esBack:   esBack(c),
-      cuotas:   Number(c['Cuotas'] || 1),
-      estatus:  (c['Estatus']  || '').trim(),
-      rowIndex: c._rowIndex,
+      nombre:      (c['Nombre']   || '').trim(),
+      programa:    (c['Programa'] || '').trim(),
+      fuente:      (c['Fuente']   || '').trim(),
+      closer:      (c['CLOSER']   || '').trim(),
+      setter:      (c['SETTER']   || '').trim(),
+      monto:       parseMonto(c['Monto total']),
+      esBack:      esBack(c),
+      cuotas:      Number(c['Cuotas'] || 1),
+      estatus:     (c['Estatus']  || '').trim(),
+      esReembolso: esPagado(c['Reembolso']),
+      rowIndex:    c._rowIndex,
     });
   }
 
   return Object.keys(porMes).sort().map(mes => {
-    const ventas  = porMes[mes];
-    const nuevas  = ventas.filter(v => !v.esBack);
-    const backs   = ventas.filter(v =>  v.esBack);
+    const ventas       = porMes[mes];
+    const reembolsos   = ventas.filter(v =>  v.esReembolso);
+    const activas      = ventas.filter(v => !v.esReembolso);
+    const nuevas       = activas.filter(v => !v.esBack);
+    const backs        = activas.filter(v =>  v.esBack);
 
     const porFuente = {};
     const porCloser = {};
@@ -286,11 +296,13 @@ export function calcularVentasPorMes(clientes) {
     return {
       mes, label: mesLabel(mes),
       ventas,
-      totalNuevas:  nuevas.length,
-      totalBack:    backs.length,
-      montoFront:   nuevas.reduce((a,v) => a+v.monto, 0),
-      montoBack:    backs.reduce((a,v)  => a+v.monto, 0),
-      montoTotal:   ventas.reduce((a,v) => a+v.monto, 0),
+      totalNuevas:       nuevas.length,
+      totalBack:         backs.length,
+      totalReembolsos:   reembolsos.length,
+      montoFront:        nuevas.reduce((a,v)      => a+v.monto, 0),
+      montoBack:         backs.reduce((a,v)       => a+v.monto, 0),
+      montoTotal:        activas.reduce((a,v)     => a+v.monto, 0),
+      montoReembolso:    reembolsos.reduce((a,v)  => a+v.monto, 0),
       porFuente,
       porCloser,
     };
