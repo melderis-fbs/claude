@@ -80,7 +80,7 @@ function clasiMet(met) {
   const s = String(met || '').toUpperCase();
   if (esDolarApp(met))                                                  return 'dolarapp';
   if (s.includes('EFECTIVO'))                                           return 'efectivo';
-  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO/.test(s))             return 'usd';
+  if (/STRIPE|WISE|PAYPAL|PAYONEER|CRIPTO|CRYPTO|\bUSA\b/.test(s))     return 'usd';
   return 'ar';
 }
 
@@ -704,22 +704,25 @@ function normMes(val) {
 const VERF_KEY    = 'pagos_verificados_v1';
 const SPLITS_KEY  = 'pagos_splits_v1';
 const MATCHES_KEY = 'pagos_matches_v1';
+const CONC_KEY    = 'conciliacion_v1';
 const METODOS_SPLIT = ['Transferencia', 'Efectivo', 'Wise', 'Stripe', 'DolarApp', 'Cripto', 'Otro'];
 
 function VistaPagos({ clientes = [] }) {
-  const [verificados, setVerificados] = useState(new Set());
-  const [splits, setSplits]           = useState({});
-  const [splitModal, setSplitModal]   = useState(null); // null | { mes, p }
-  const [splitDraft, setSplitDraft]   = useState([]);   // [{monto, metodo}]
-  const [matches, setMatches]         = useState({});
-  const [trackerPagos, setTrackerPagos] = useState([]);
-  const [matchModal, setMatchModal]   = useState(null); // null | { mes, p }
-  const [showExtracto, setShowExtracto] = useState(false);
+  const [verificados, setVerificados]     = useState(new Set());
+  const [splits, setSplits]               = useState({});
+  const [splitModal, setSplitModal]       = useState(null); // null | { mes, p }
+  const [splitDraft, setSplitDraft]       = useState([]);   // [{monto, metodo}]
+  const [matches, setMatches]             = useState({});
+  const [conciliaciones, setConciliaciones] = useState({});
+  const [trackerPagos, setTrackerPagos]   = useState([]);
+  const [matchModal, setMatchModal]       = useState(null); // null | { mes, p }
+  const [showExtracto, setShowExtracto]   = useState(false);
 
   useEffect(() => {
     try { setVerificados(new Set(JSON.parse(localStorage.getItem(VERF_KEY) || '[]'))); } catch {}
     try { setSplits(JSON.parse(localStorage.getItem(SPLITS_KEY) || '{}')); } catch {}
     try { setMatches(JSON.parse(localStorage.getItem(MATCHES_KEY) || '{}')); } catch {}
+    try { setConciliaciones(JSON.parse(localStorage.getItem(CONC_KEY) || '{}')); } catch {}
     fetch('/api/tracker-pagos').then(r => r.json()).then(d => setTrackerPagos(d.movimientos || [])).catch(() => {});
   }, []);
 
@@ -865,6 +868,14 @@ function VistaPagos({ clientes = [] }) {
     return s;
   }, [matches]);
 
+  const conciliadosSet = useMemo(() => {
+    const s = new Set();
+    for (const conc of Object.values(conciliaciones)) {
+      if (conc?.nombre && conc?.cuota) s.add(`${conc.nombre}|${conc.cuota}`);
+    }
+    return s;
+  }, [conciliaciones]);
+
   if (mesesDisp.length === 0) return <div className="text-gray-400 text-sm py-10 text-center">No hay pagos registrados.</div>;
 
   // Cálculo para el modal de desglose
@@ -965,6 +976,9 @@ function VistaPagos({ clientes = [] }) {
                             <span className="block text-xs text-blue-500 font-normal mt-0.5">
                               ⇌ {matches[pKey]['Concepto'] || matches[pKey]['Fecha de ingreso'] || 'Conciliado'}
                             </span>
+                          )}
+                          {conciliadosSet.has(`${p.nombre}|${p.cuota}`) && (
+                            <span className="block text-xs text-teal-600 font-normal mt-0.5">✓ Conciliado</span>
                           )}
                         </td>
                         <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
@@ -1640,13 +1654,12 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
 
 // ── Conciliación bancaria ─────────────────────────────────────────────────────
 
-const CONC_KEY = 'conciliacion_v1';
-
 function VistaConciliacion({ clientes = [], abonos = [] }) {
   const [trackerPagos, setTrackerPagos]   = useState([]);
   const [conciliaciones, setConciliaciones] = useState({});
   const [asignarModal, setAsignarModal]   = useState(null);
   const [clienteModal, setClienteModal]   = useState(null);
+  const [verTodos, setVerTodos]           = useState(false);
   const [busqueda, setBusqueda]           = useState('');
   const [seleccion, setSeleccion]         = useState(null);
   const [mesSel, setMesSel]               = useState('');
@@ -1719,28 +1732,44 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
     [abonos]
   );
 
-  const clientesFilt = busqueda.length > 1
-    ? clientes.filter(c => String(c['Nombre'] || '').toLowerCase().includes(busqueda.toLowerCase())).slice(0, 6)
-    : [];
+  const cuotasDelMes = useMemo(() => {
+    const resultado = [];
+    for (const c of clientes) {
+      CUOTAS_FULL.forEach((q, idx) => {
+        const monto = parseM(c[q.monto]);
+        if (!monto) return;
+        const fecha = c[q.fecha] || '';
+        if (normMes(fecha) !== mesSel) return;
+        resultado.push({
+          nombre:   (c['Nombre'] || '').trim(),
+          programa: c['Programa'] || '',
+          cuota:    idx + 1,
+          monto,
+          fecha,
+          rowIndex: c._rowIndex,
+        });
+      });
+    }
+    return resultado.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [clientes, mesSel]);
 
-  const señasFilt = busqueda.length > 1
-    ? señasIngresadas.filter(a =>
-        String(a['Nombre'] || a['nombre'] || '').toLowerCase().includes(busqueda.toLowerCase())
-      ).slice(0, 5)
-    : [];
+  function abrirAsignar(mov) { setAsignarModal(mov); setBusqueda(''); setSeleccion(null); setClienteModal(null); setVerTodos(false); }
 
-  function abrirAsignar(mov) { setAsignarModal(mov); setBusqueda(''); setSeleccion(null); setClienteModal(null); }
+  function cerrarModal() { setAsignarModal(null); setSeleccion(null); setBusqueda(''); setClienteModal(null); setVerTodos(false); }
 
-  function cerrarModal() { setAsignarModal(null); setSeleccion(null); setBusqueda(''); setClienteModal(null); }
-
-  function guardar() {
-    if (!seleccion || !asignarModal) return;
+  function guardarDirecto(sel) {
+    if (!asignarModal) return;
     setConciliaciones(prev => {
-      const next = { ...prev, [asignarModal._rowIndex]: seleccion };
+      const next = { ...prev, [asignarModal._rowIndex]: sel };
       try { localStorage.setItem(CONC_KEY, JSON.stringify(next)); } catch {}
       return next;
     });
     cerrarModal();
+  }
+
+  function guardar() {
+    if (!seleccion || !asignarModal) return;
+    guardarDirecto(seleccion);
   }
 
   function quitar(mov) {
@@ -1856,10 +1885,13 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{mov['Fecha'] || '—'}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(mov['Monto']))}</td>
                       <td className="px-4 py-3">
-                        {metodo
-                          ? <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[clasiMet(metodo)]}`}>{metodo}</span>
-                          : <span className="text-gray-300">—</span>
-                        }
+                        <div className="flex flex-col gap-0.5">
+                          {metodo
+                            ? <span className={`px-2 py-0.5 rounded text-xs font-semibold self-start ${CHIP[clasiMet(metodo)]}`}>{metodo}</span>
+                            : <span className="text-gray-300">—</span>
+                          }
+                          {mov['Nombre'] && <span className="text-xs text-gray-400 pl-0.5">{mov['Nombre']}</span>}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{mov['Concepto'] || '—'}</td>
                       <td className="px-4 py-3">
@@ -1915,6 +1947,14 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                   className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
                   ‹ <span className="font-medium">{clienteModal['Nombre']}</span>
                 </button>
+              ) : verTodos ? (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setVerTodos(false); setSeleccion(null); setBusqueda(''); }}
+                    className="text-xs text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0">‹ Volver</button>
+                  <input value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
+                    placeholder="Filtrar por nombre…"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                </div>
               ) : (
                 <input autoFocus value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
                   placeholder="Filtrar por nombre…"
@@ -1924,7 +1964,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
               {clienteModal ? (
-                /* Paso 2: cuotas del cliente seleccionado */
+                /* Cuotas del cliente seleccionado (flujo "Ver todos") */
                 <>
                   {CUOTAS_FULL.map((q, idx) => {
                     const monto = parseM(clienteModal[q.monto]);
@@ -1943,8 +1983,8 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                     );
                   })}
                 </>
-              ) : (
-                /* Paso 1: lista de todos los clientes + señas */
+              ) : verTodos ? (
+                /* Todos los clientes con navegación a cuotas */
                 <>
                   {[...clientes]
                     .filter(c => !busqueda || String(c['Nombre']||'').toLowerCase().includes(busqueda.toLowerCase()))
@@ -1975,6 +2015,27 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                       );
                     })
                   }
+                </>
+              ) : (
+                /* Vista principal: cuotas del mes seleccionado + señas */
+                <>
+                  {cuotasDelMes
+                    .filter(item => !busqueda || item.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+                    .map((item, idx) => (
+                      <button key={idx}
+                        onClick={() => guardarDirecto({ tipo: 'cuota', nombre: item.nombre, cuota: item.cuota, fecha: item.fecha, monto: item.monto, rowIndex: item.rowIndex })}
+                        className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-gray-800">{item.nombre}</span>
+                          <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">{fmt(item.monto)}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">Cuota {item.cuota} · {formatFecha(item.fecha)}</p>
+                      </button>
+                    ))
+                  }
+                  {cuotasDelMes.length === 0 && !busqueda && (
+                    <p className="text-xs text-gray-400 text-center py-4">No hay cuotas registradas en {mesLabel(mesSel)}</p>
+                  )}
                   {señasIngresadas.filter(a => !busqueda || String(a['Nombre']||a['nombre']||'').toLowerCase().includes(busqueda.toLowerCase())).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-100">
                       <p className="text-xs font-semibold text-gray-400 px-2 pb-1 uppercase tracking-wide">Señas ingresadas</p>
@@ -1984,11 +2045,10 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                           const nombre = String(a['Nombre'] || a['nombre'] || '').trim();
                           const monto  = parseM(a['Monto'] || a['monto']);
                           const fecha  = a['Fecha'] || a['fecha'] || '';
-                          const sel    = seleccion?.tipo === 'seña' && seleccion?.rowIndex === a._rowIndex;
                           return (
                             <button key={idx}
-                              onClick={() => setSeleccion({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
-                              className={`w-full text-left px-3 py-2.5 rounded-lg mb-0.5 border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                              onClick={() => guardarDirecto({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
+                              className="w-full text-left px-3 py-2.5 rounded-lg mb-0.5 border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-800">{nombre} — {fmt(monto)}</span>
                                 <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
@@ -1998,6 +2058,12 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                         })}
                     </div>
                   )}
+                  <div className="mt-3 pt-2 border-t border-gray-100">
+                    <button onClick={() => { setVerTodos(true); setBusqueda(''); }}
+                      className="w-full text-xs text-gray-400 hover:text-blue-600 py-2 text-center transition-colors">
+                      Ver todos los clientes →
+                    </button>
+                  </div>
                 </>
               )}
             </div>
