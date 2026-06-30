@@ -6,21 +6,45 @@
 export const MOCK_MODE =
   !process.env.APPS_SCRIPT_CLIENTES_URL && !process.env.APPS_SCRIPT_EGRESOS_URL;
 
-async function fetchScript(url, params = {}) {
+const READ_TIMEOUT  = 20000;
+const WRITE_TIMEOUT = 20000;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// GET (lecturas) — idempotente, así que reintentamos ante timeout / error de red.
+// Apps Script suele tardar más de lo normal en arranque en frío.
+async function fetchScript(url, params = {}, { retries = 2 } = {}) {
   const qs = new URLSearchParams(params).toString();
   const fullUrl = qs ? `${url}?${qs}` : url;
-  const res = await fetch(fullUrl, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
-  if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
-  return res.json();
+  let lastErr;
+  for (let intento = 0; intento <= retries; intento++) {
+    try {
+      const res = await fetch(fullUrl, { cache: 'no-store', signal: AbortSignal.timeout(READ_TIMEOUT) });
+      if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
+      return res.json();
+    } catch (err) {
+      lastErr = err;
+      // Sólo reintentamos ante timeout o problemas de red transitorios.
+      const transitorio = err?.name === 'TimeoutError' || err?.name === 'AbortError' ||
+        /timeout|aborted|network|fetch failed|ECONN/i.test(err?.message || '');
+      if (intento < retries && transitorio) {
+        await sleep(800 * (intento + 1));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
 }
 
+// POST (escrituras) — NO reintentamos para no duplicar filas; sólo subimos el timeout.
 async function postScript(url, body) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(WRITE_TIMEOUT),
   });
   if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
   const data = await res.json();
