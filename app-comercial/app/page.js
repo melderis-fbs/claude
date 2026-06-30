@@ -14,15 +14,21 @@ export const maxDuration = 60;
 
 export default async function Home() {
   try {
-    const [clientes, headers, egresosRows, abonos, deudoresRecords, facturas, anunciosRows] = await Promise.all([
-      getClientes(),
-      getClientesHeaders(),
-      getEgresosTab('Consolidado').catch(() => []),
-      getAbonos().catch(() => []),
-      getDeudores().catch(() => []),
-      getFacturas().catch(() => []),
-      getAnuncios().catch(() => []),
-    ]);
+    // getEgresosTab usa otra Web App de Apps Script → puede ir en paralelo sin
+    // competir por la cola de ejecuciones de la planilla de clientes.
+    const egresosP = getEgresosTab('Consolidado').catch(() => []);
+
+    // El resto comparten la MISMA Web App de Apps Script, que serializa las
+    // ejecuciones concurrentes: pedir las 6 a la vez satura la cola y provoca
+    // timeouts. Las pedimos en secuencia para no saturarla. Primero las dos
+    // críticas (sin las cuales no hay app); el resto degrada con .catch.
+    const clientes        = await getClientes();
+    const headers         = await getClientesHeaders();
+    const abonos          = await getAbonos().catch(() => []);
+    const deudoresRecords = await getDeudores().catch(() => []);
+    const facturas        = await getFacturas().catch(() => []);
+    const anunciosRows    = await getAnuncios().catch(() => []);
+    const egresosRows     = await egresosP;
 
     const resumen              = calcularResumenMensual(clientes, egresosRows);
     const ventasPorMes         = calcularVentasPorMes(clientes);

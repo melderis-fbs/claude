@@ -13,7 +13,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // GET (lecturas) — idempotente, así que reintentamos ante timeout / error de red.
 // Apps Script suele tardar más de lo normal en arranque en frío.
-async function fetchScript(url, params = {}, { retries = 2 } = {}) {
+async function fetchScript(url, params = {}, { retries = 1 } = {}) {
   const qs = new URLSearchParams(params).toString();
   const fullUrl = qs ? `${url}?${qs}` : url;
   let lastErr;
