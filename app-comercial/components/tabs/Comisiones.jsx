@@ -1,10 +1,19 @@
 'use client';
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 
+const fmtFecha = val => {
+  if (!val) return '—';
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return s;
+};
+
 export default function Comisiones({ comisiones }) {
   const [mesSel, setMesSel] = useState(comisiones[comisiones.length - 1]?.mes ?? '');
+  const [expandido, setExpandido] = useState(null); // closer expandido
   const mes = comisiones.find(m => m.mes === mesSel);
 
   if (!comisiones.length) return <p className="text-gray-400 text-sm">Sin datos de comisiones.</p>;
@@ -55,26 +64,84 @@ export default function Comisiones({ comisiones }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {mes.detalle.map(d => (
-                  <tr key={d.closer} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4 font-semibold text-gray-900">{d.closer}</td>
-                    <td className="px-5 py-4 text-gray-600">{fmt(d.cash)}</td>
-                    <td className="px-5 py-4">
-                      <span className="text-blue-700 font-bold text-base">{fmt(d.comision)}</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-1.5 max-w-24">
-                          <div className="bg-blue-500 h-1.5 rounded-full"
-                            style={{ width: `${mes.totalCash > 0 ? (d.cash/mes.totalCash)*100 : 0}%` }} />
+                {mes.detalle.map(d => {
+                  const abierto = expandido === d.closer;
+                  return (
+                  <Fragment key={d.closer}>
+                    <tr onClick={() => setExpandido(abierto ? null : d.closer)}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer">
+                      <td className="px-5 py-4 font-semibold text-gray-900">
+                        <span className="text-gray-400 mr-1.5 inline-block w-3">{abierto ? '▾' : '▸'}</span>
+                        {d.closer}
+                        {d.items?.length > 0 && (
+                          <span className="ml-2 text-xs font-normal text-gray-400">{d.items.length} cobros</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-gray-600">{fmt(d.cash)}</td>
+                      <td className="px-5 py-4">
+                        <span className="text-blue-700 font-bold text-base">{fmt(d.comision)}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-1.5 max-w-24">
+                            <div className="bg-blue-500 h-1.5 rounded-full"
+                              style={{ width: `${mes.totalCash > 0 ? (d.cash/mes.totalCash)*100 : 0}%` }} />
+                          </div>
+                          <span className="text-gray-500 text-xs font-medium">
+                            {mes.totalCash > 0 ? ((d.cash/mes.totalCash)*100).toFixed(1) : 0}%
+                          </span>
                         </div>
-                        <span className="text-gray-500 text-xs font-medium">
-                          {mes.totalCash > 0 ? ((d.cash/mes.totalCash)*100).toFixed(1) : 0}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                    {abierto && d.items?.length > 0 && (
+                      <tr className="bg-gray-50/60">
+                        <td colSpan={4} className="px-5 py-3">
+                          <div className="text-xs text-gray-400 mb-2">Cobros que suman a la comisión de {d.closer} — {mes.label}:</div>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-gray-400">
+                                <th className="text-left font-medium pb-1">Cliente</th>
+                                <th className="text-left font-medium pb-1">Cuota</th>
+                                <th className="text-left font-medium pb-1">Método</th>
+                                <th className="text-left font-medium pb-1">Fecha</th>
+                                <th className="text-right font-medium pb-1">Monto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {d.items.map((it, idx) => (
+                                <tr key={idx} className={`border-t border-gray-200 ${it.cuota > 1 ? 'text-amber-700' : 'text-gray-600'}`}>
+                                  <td className="py-1.5">{it.nombre}</td>
+                                  <td className="py-1.5">
+                                    C{it.cuota}
+                                    {it.cuota > 1 && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">no-front</span>}
+                                  </td>
+                                  <td className="py-1.5">{it.metodo || '—'}</td>
+                                  <td className="py-1.5">{fmtFecha(it.fecha)}</td>
+                                  <td className="py-1.5 text-right font-semibold">{fmt(it.monto)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-gray-300 font-bold text-gray-800">
+                                <td className="pt-1.5" colSpan={4}>Total {d.closer}</td>
+                                <td className="pt-1.5 text-right">{fmt(d.cash)}</td>
+                              </tr>
+                              {d.items.some(it => it.cuota > 1) && (
+                                <tr className="text-gray-500">
+                                  <td className="pt-1" colSpan={4}>Solo front (Cuota 1)</td>
+                                  <td className="pt-1 text-right font-semibold text-emerald-700">
+                                    {fmt(d.items.filter(it => it.cuota === 1).reduce((a, it) => a + it.monto, 0))}
+                                  </td>
+                                </tr>
+                              )}
+                            </tfoot>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

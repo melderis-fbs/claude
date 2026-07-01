@@ -313,24 +313,41 @@ export function calcularVentasPorMes(clientes) {
 
 export function calcularComisiones(clientes) {
   const PCT = 0.08;
-  const porMes = {};
+  const porMes = {}; // mes -> closer -> { cash, items: [] }
   for (const c of clientes) {
     if (esBack(c)) continue;
     const closer = (c['CLOSER'] || '').trim();
     if (!closer) continue;
-    for (const p of getPagosCliente(c)) {
-      if (!p.pagado || !p.mes || p.esBack) continue;
-      if (!porMes[p.mes]) porMes[p.mes] = {};
-      porMes[p.mes][closer] = (porMes[p.mes][closer] || 0) + p.monto;
-    }
+    // Recorremos las 4 cuotas para poder anexar el detalle (cliente/cuota/monto)
+    // sin cambiar el filtro original: pagada, monto>0, mes válido.
+    CUOTAS_DEF.forEach((q, i) => {
+      if (!esPagado(c[q.estado])) return;
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const mes = normalizarMes(c[q.fecha]);
+      if (!mes) return;
+      if (!porMes[mes]) porMes[mes] = {};
+      if (!porMes[mes][closer]) porMes[mes][closer] = { cash: 0, items: [] };
+      porMes[mes][closer].cash += monto;
+      porMes[mes][closer].items.push({
+        nombre: (c['Nombre'] || '').trim(),
+        cuota:  i + 1,
+        monto,
+        metodo: c[q.metodo] || '',
+        fecha:  c[q.fecha]  || '',
+      });
+    });
   }
   return Object.keys(porMes).sort().map(mes => ({
     mes, label: mesLabel(mes),
     detalle: Object.entries(porMes[mes])
-      .map(([closer, cash]) => ({ closer, cash, comision: cash * PCT }))
+      .map(([closer, d]) => ({
+        closer, cash: d.cash, comision: d.cash * PCT,
+        items: d.items.slice().sort((a, b) => a.cuota - b.cuota || b.monto - a.monto),
+      }))
       .sort((a,b) => b.cash - a.cash),
-    totalCash:       Object.values(porMes[mes]).reduce((a,b)=>a+b,0),
-    totalComisiones: Object.values(porMes[mes]).reduce((a,b)=>a+b,0) * PCT,
+    totalCash:       Object.values(porMes[mes]).reduce((a,b)=>a+b.cash,0),
+    totalComisiones: Object.values(porMes[mes]).reduce((a,b)=>a+b.cash,0) * PCT,
   }));
 }
 
