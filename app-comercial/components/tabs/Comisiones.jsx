@@ -23,8 +23,6 @@ export default function Comisiones({ comisiones }) {
   const [mesSel, setMesSel] = useState(comisiones[comisiones.length - 1]?.mes ?? '');
   const [expandido, setExpandido] = useState(null); // closer expandido
   const [ajustes, setAjustes] = useState({});       // { "mes|closer": {fijo, items} }
-  const [editando, setEditando] = useState(null);   // closer en edición
-  const [draft, setDraft]       = useState(adjVacio);
   const mes = comisiones.find(m => m.mes === mesSel);
 
   useEffect(() => {
@@ -39,28 +37,16 @@ export default function Comisiones({ comisiones }) {
   const totalPagarCloser = d => d.comision + totalAjuste(getAdj(d.closer));
   const totalPagarMes = mes ? mes.detalle.reduce((a, d) => a + totalPagarCloser(d), 0) : 0;
 
-  function abrirEditor(closer) {
-    const adj = getAdj(closer);
-    setDraft({ fijo: adj.fijo || 0, items: (adj.items || []).map(i => ({ ...i })) });
-    setEditando(closer);
-  }
-
-  function guardarEditor() {
-    const key = `${mesSel}|${editando}`;
-    const limpio = {
-      fijo: Number(draft.fijo) || 0,
-      items: (draft.items || [])
-        .filter(i => (i.concepto || '').trim() || Number(i.monto))
-        .map(i => ({ concepto: (i.concepto || '').trim(), monto: Number(i.monto) || 0 })),
-    };
+  // Guarda el ajuste del closer del mes actual, directo a estado + localStorage.
+  function setAdj(closer, updater) {
+    const key = `${mesSel}|${closer}`;
     setAjustes(prev => {
-      const next = { ...prev };
-      if (!limpio.fijo && limpio.items.length === 0) delete next[key];
-      else next[key] = limpio;
+      const cur = prev[key] || adjVacio;
+      const nextAdj = updater({ fijo: cur.fijo ?? '', items: (cur.items || []).map(i => ({ ...i })) });
+      const next = { ...prev, [key]: nextAdj };
       try { localStorage.setItem(COM_ADJ_KEY, JSON.stringify(next)); } catch {}
       return next;
     });
-    setEditando(null);
   }
 
   return (
@@ -101,12 +87,12 @@ export default function Comisiones({ comisiones }) {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
             <div className="px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800">Comisiones — {mes.label}</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Base: cash collected front del mes · Tasa: 8% · Fijos y ajustes por persona</p>
+              <p className="text-xs text-gray-400 mt-0.5">Base: cash collected front del mes · Tasa: 8% · Tocá una persona para ver detalle y cargar fijos/ajustes</p>
             </div>
-            <table className="w-full text-sm min-w-max">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Closer','Cash Front Cobrado','Comisión (8%)','% del total','Fijos + ajustes','Total a pagar',''].map((h, hi) => (
+                  {['Closer','Cash Front Cobrado','Comisión (8%)','% del total'].map((h, hi) => (
                     <th key={hi} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -124,6 +110,11 @@ export default function Comisiones({ comisiones }) {
                         {d.items?.length > 0 && (
                           <span className="ml-2 text-xs font-normal text-gray-400">{d.items.length} cobros</span>
                         )}
+                        {totalAjuste(getAdj(d.closer)) !== 0 && (
+                          <span className="block text-xs font-normal text-emerald-600 mt-0.5">
+                            A pagar {fmt(totalPagarCloser(d))} <span className="text-gray-400">({fmtSigno(totalAjuste(getAdj(d.closer)))})</span>
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-4 text-gray-600">{fmt(d.cash)}</td>
                       <td className="px-5 py-4">
@@ -140,67 +131,99 @@ export default function Comisiones({ comisiones }) {
                           </span>
                         </div>
                       </td>
-                      {(() => {
-                        const aj = totalAjuste(getAdj(d.closer));
-                        return (
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            {aj !== 0
-                              ? <span className={aj < 0 ? 'text-red-600 font-medium' : 'text-emerald-600 font-medium'}>{fmtSigno(aj)}</span>
-                              : <span className="text-gray-300">—</span>}
-                          </td>
-                        );
-                      })()}
-                      <td className="px-5 py-4 font-bold text-emerald-700 whitespace-nowrap">{fmt(totalPagarCloser(d))}</td>
-                      <td className="px-5 py-4">
-                        <button onClick={e => { e.stopPropagation(); abrirEditor(d.closer); }}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap">
-                          Ajustar
-                        </button>
-                      </td>
                     </tr>
-                    {abierto && d.items?.length > 0 && (
+                    {abierto && (
                       <tr className="bg-gray-50/60">
-                        <td colSpan={7} className="px-5 py-3">
-                          <div className="text-xs text-gray-400 mb-2">Cobros que suman a la comisión de {d.closer} — {mes.label}:</div>
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-gray-400">
-                                <th className="text-left font-medium pb-1">Cliente</th>
-                                <th className="text-left font-medium pb-1">Cuota</th>
-                                <th className="text-left font-medium pb-1">Método</th>
-                                <th className="text-left font-medium pb-1">Fecha</th>
-                                <th className="text-right font-medium pb-1">Monto</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {d.items.map((it, idx) => (
-                                <tr key={idx} className={`border-t border-gray-200 ${it.cuota > 1 ? 'text-amber-700' : 'text-gray-600'}`}>
-                                  <td className="py-1.5">{it.nombre}</td>
-                                  <td className="py-1.5">
-                                    C{it.cuota}
-                                    {it.cuota > 1 && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">no-front</span>}
-                                  </td>
-                                  <td className="py-1.5">{it.metodo || '—'}</td>
-                                  <td className="py-1.5">{fmtFecha(it.fecha)}</td>
-                                  <td className="py-1.5 text-right font-semibold">{fmt(it.monto)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="border-t-2 border-gray-300 font-bold text-gray-800">
-                                <td className="pt-1.5" colSpan={4}>Total {d.closer}</td>
-                                <td className="pt-1.5 text-right">{fmt(d.cash)}</td>
-                              </tr>
-                              {d.items.some(it => it.cuota > 1) && (
-                                <tr className="text-gray-500">
-                                  <td className="pt-1" colSpan={4}>Solo front (Cuota 1)</td>
-                                  <td className="pt-1 text-right font-semibold text-emerald-700">
-                                    {fmt(d.items.filter(it => it.cuota === 1).reduce((a, it) => a + it.monto, 0))}
-                                  </td>
-                                </tr>
-                              )}
-                            </tfoot>
-                          </table>
+                        <td colSpan={4} className="px-5 py-4 space-y-4">
+                          {/* Detalle de cobros */}
+                          {d.items?.length > 0 && (
+                            <div>
+                              <div className="text-xs text-gray-400 mb-2">Cobros que suman a la comisión de {d.closer} — {mes.label}:</div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-xs min-w-max">
+                                  <thead>
+                                    <tr className="text-gray-400">
+                                      <th className="text-left font-medium pb-1 pr-4">Cliente</th>
+                                      <th className="text-left font-medium pb-1 pr-4">Cuota</th>
+                                      <th className="text-left font-medium pb-1 pr-4">Método</th>
+                                      <th className="text-left font-medium pb-1 pr-4">Fecha</th>
+                                      <th className="text-right font-medium pb-1">Monto</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {d.items.map((it, idx) => (
+                                      <tr key={idx} className={`border-t border-gray-200 ${it.cuota > 1 ? 'text-amber-700' : 'text-gray-600'}`}>
+                                        <td className="py-1.5 pr-4">{it.nombre}</td>
+                                        <td className="py-1.5 pr-4">
+                                          C{it.cuota}
+                                          {it.cuota > 1 && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">no-front</span>}
+                                        </td>
+                                        <td className="py-1.5 pr-4">{it.metodo || '—'}</td>
+                                        <td className="py-1.5 pr-4">{fmtFecha(it.fecha)}</td>
+                                        <td className="py-1.5 text-right font-semibold">{fmt(it.monto)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr className="border-t-2 border-gray-300 font-bold text-gray-800">
+                                      <td className="pt-1.5" colSpan={4}>Total {d.closer}</td>
+                                      <td className="pt-1.5 text-right">{fmt(d.cash)}</td>
+                                    </tr>
+                                    {d.items.some(it => it.cuota > 1) && (
+                                      <tr className="text-gray-500">
+                                        <td className="pt-1" colSpan={4}>Solo front (Cuota 1)</td>
+                                        <td className="pt-1 text-right font-semibold text-emerald-700">
+                                          {fmt(d.items.filter(it => it.cuota === 1).reduce((a, it) => a + it.monto, 0))}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Editor de fijos y variables (inline, sin modal) */}
+                          {(() => {
+                            const adj = getAdj(d.closer);
+                            return (
+                              <div className="bg-white border border-gray-200 rounded-xl p-4 max-w-md">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Fijos y ajustes</p>
+
+                                <div className="flex items-center gap-2 mb-3">
+                                  <label className="text-sm text-gray-600 w-16 flex-shrink-0">Fijo</label>
+                                  <span className="text-gray-400">$</span>
+                                  <input type="number" inputMode="numeric" value={adj.fijo || ''} placeholder="0"
+                                    onChange={e => setAdj(d.closer, a => ({ ...a, fijo: e.target.value }))}
+                                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                                </div>
+
+                                <div className="space-y-2">
+                                  {(adj.items || []).map((it, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <input value={it.concepto || ''} placeholder="Concepto"
+                                        onChange={e => setAdj(d.closer, a => ({ ...a, items: a.items.map((x, xi) => xi === i ? { ...x, concepto: e.target.value } : x) }))}
+                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                                      <input type="number" inputMode="numeric" value={it.monto || ''} placeholder="0"
+                                        onChange={e => setAdj(d.closer, a => ({ ...a, items: a.items.map((x, xi) => xi === i ? { ...x, monto: e.target.value } : x) }))}
+                                        className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                                      <button onClick={() => setAdj(d.closer, a => ({ ...a, items: a.items.filter((_, xi) => xi !== i) }))}
+                                        className="text-gray-300 hover:text-red-400 text-lg px-1 flex-shrink-0">×</button>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button onClick={() => setAdj(d.closer, a => ({ ...a, items: [...(a.items || []), { concepto: '', monto: '' }] }))}
+                                  className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">+ Agregar variable</button>
+                                <p className="text-[11px] text-gray-400 mt-1">Montos negativos para descuentos/adelantos (ej. -5000). Se guarda solo.</p>
+
+                                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Total a pagar</span>
+                                  <span className="text-lg font-bold text-emerald-700">{fmt(totalPagarCloser(d))}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     )}
@@ -243,79 +266,6 @@ export default function Comisiones({ comisiones }) {
           </tbody>
         </table>
       </div>
-
-      {/* Modal ajustar fijos + variables */}
-      {editando && (() => {
-        const base = mes?.detalle.find(x => x.closer === editando)?.comision || 0;
-        const totalDraft = base + (Number(draft.fijo) || 0) + sumaItems(draft.items);
-        return (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setEditando(null)}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Ajustar — {editando}</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">{mes?.label} · Comisión base {fmt(base)}</p>
-                </div>
-                <button onClick={() => setEditando(null)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
-              </div>
-
-              <div className="p-5 space-y-4 overflow-y-auto">
-                {/* Fijo */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fijo</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-gray-400">$</span>
-                    <input type="number" value={draft.fijo || ''} placeholder="0"
-                      onChange={e => setDraft(d => ({ ...d, fijo: e.target.value }))}
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Monto fijo del mes (ej. base / bono fijo).</p>
-                </div>
-
-                {/* Ajustes variables */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Otras variables</label>
-                  <div className="space-y-2 mt-1">
-                    {(draft.items || []).map((it, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input value={it.concepto} placeholder="Concepto"
-                          onChange={e => setDraft(d => ({ ...d, items: d.items.map((x, xi) => xi === i ? { ...x, concepto: e.target.value } : x) }))}
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                        <input type="number" value={it.monto || ''} placeholder="0"
-                          onChange={e => setDraft(d => ({ ...d, items: d.items.map((x, xi) => xi === i ? { ...x, monto: e.target.value } : x) }))}
-                          className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                        <button onClick={() => setDraft(d => ({ ...d, items: d.items.filter((_, xi) => xi !== i) }))}
-                          className="text-gray-300 hover:text-red-400 text-lg px-1">×</button>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => setDraft(d => ({ ...d, items: [...(d.items || []), { concepto: '', monto: '' }] }))}
-                    className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">+ Agregar variable</button>
-                  <p className="text-xs text-gray-400 mt-1">Usá montos negativos para descuentos o adelantos (ej. -5000).</p>
-                </div>
-
-                {/* Total */}
-                <div className="bg-emerald-50 rounded-lg px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total a pagar</span>
-                  <span className="text-lg font-bold text-emerald-700">{fmt(totalDraft)}</span>
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
-                <button onClick={() => setEditando(null)}
-                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                  Cancelar
-                </button>
-                <button onClick={guardarEditor}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                  Guardar
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
