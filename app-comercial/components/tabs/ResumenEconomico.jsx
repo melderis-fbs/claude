@@ -308,7 +308,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
             <table className="w-full text-sm">
               <tbody className="divide-y divide-gray-100">
                 {Object.entries(m.costos).map(([cat, val]) => {
-                  const pctVal = m.montoFront > 0 ? (val / m.montoFront) * 100 : 0;
+                  const pctVal = m.montoTotal > 0 ? (val / m.montoTotal) * 100 : 0;
                   return (
                     <tr key={cat}>
                       <td className="py-2 text-gray-500">{cat}</td>
@@ -320,7 +320,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
                 <tr className="border-t-2 border-gray-300 font-semibold">
                   <td className="py-2 text-gray-900">TOTAL COSTOS</td>
                   <td className="py-2 text-right text-gray-900">{fmt(m.totalCostos)}</td>
-                  <td className="py-2 text-right text-gray-500">{m.montoFront > 0 ? pct((m.totalCostos / m.montoFront) * 100) : '—'}</td>
+                  <td className="py-2 text-right text-gray-500">{m.montoTotal > 0 ? pct((m.totalCostos / m.montoTotal) * 100) : '—'}</td>
                 </tr>
               </tbody>
             </table>
@@ -334,7 +334,7 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Resultado — {m.label}</h3>
           <div className="space-y-3">
             <div className={`rounded-lg p-4 ${m.ganancia >= 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-              <p className="text-xs text-gray-500 mb-1">Ganancia venta nueva</p>
+              <p className="text-xs text-gray-500 mb-1">Ganancia (todas las ventas)</p>
               <p className={`text-3xl font-bold ${m.ganancia >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{fmt(m.ganancia)}</p>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

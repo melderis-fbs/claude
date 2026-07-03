@@ -229,9 +229,10 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     const c = cashPorMes[mes]   || { total:0, front:0, back:0, porMetodo:{}, nuevoFull:0, nuevoFinanciado:0, nuevoAR:0, nuevoExt:0, nuevoEfectivo:0, cuotaTotal:0, cuotaAR:0, cuotaExt:0, cuotaEfectivo:0 };
     const costos = egresosPorMes[mes] || {};
     const totalCostos = Object.values(costos).reduce((a,b) => a+b, 0);
-    // Ganancia = venta nueva (monto contratado front) - costos
-    // Rentabilidad = % costos sobre venta nueva
-    const ganancia = v.front - totalCostos;
+    // Ganancia = TODAS las ventas del mes (monto contratado: nuevas + back) - costos
+    // Rentabilidad = ganancia sobre el total de ventas
+    const ventaTotal = v.front + v.montoBack;
+    const ganancia = ventaTotal - totalCostos;
     const pctCC = v.front > 0 ? (c.front / v.front) * 100 : 0;
     return {
       mes, label: mesLabel(mes),
@@ -247,7 +248,7 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
       cashCuotaTotal: c.cuotaTotal, cashCuotaAR: c.cuotaAR, cashCuotaExt: c.cuotaExt, cashCuotaEfectivo: c.cuotaEfectivo,
       cashTotalAR: c.nuevoAR + c.cuotaAR, cashTotalExt: c.nuevoExt + c.cuotaExt, cashTotalEfectivo: c.nuevoEfectivo + c.cuotaEfectivo,
       costos, totalCostos, ganancia,
-      rentabilidad: v.front > 0 ? (ganancia / v.front) * 100 : 0,
+      rentabilidad: ventaTotal > 0 ? (ganancia / ventaTotal) * 100 : 0,
     };
   });
 }
