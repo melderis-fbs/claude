@@ -119,9 +119,10 @@ function esEfectivo(metodo) {
 }
 
 function esExterior(metodo) {
-  const s = String(metodo || '').toUpperCase();
+  const s = String(metodo || '').toUpperCase().replace(/\s+/g, '');
   return s.includes('STRIPE') || s.includes('WISE') || s.includes('PAYPAL')
-      || s.includes('PAYONEER') || s.includes('CRIPTO') || s.includes('CRYPTO');
+      || s.includes('PAYONEER') || s.includes('CRIPTO') || s.includes('CRYPTO')
+      || s.includes('DOLARAPP') || s.includes('MERCURY');
 }
 
 // Argentina = todo lo que no sea Efectivo ni plataforma internacional explícita
