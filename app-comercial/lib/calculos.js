@@ -494,6 +494,25 @@ export function calcularCobrosAutomaticaPorMes(clientes) {
   return porMes;
 }
 
+// Ventas (monto contratado) de clientes "Automática" por mes.
+// Misma cohorte que cobros (auto + primer pago cobrado), pero suma el
+// Monto total contratado en vez del cash del primer pago. Sirve para el
+// ROAS sobre venta, mientras que cobros sirve para el ROAS Cash.
+export function calcularVentasAutomaticaPorMes(clientes) {
+  const porMes = {};
+  const q = CUOTAS_DEF[0];
+  for (const c of clientes) {
+    if (!(c['Fuente'] || '').toLowerCase().includes('autom')) continue;
+    if (!esPagado(c[q.estado])) continue;
+    const monto = parseMonto(c['Monto total']);
+    if (!monto) continue;
+    const mes = normalizarMes(c[q.fecha]);
+    if (!mes || mes.startsWith('__')) continue;
+    porMes[mes] = (porMes[mes] || 0) + monto;
+  }
+  return porMes;
+}
+
 // ── Señas por mes (solo primer pago = seña/depósito) ─────────────────────────
 
 export function calcularSeñasPorMes(clientes) {

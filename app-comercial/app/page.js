@@ -4,7 +4,8 @@ import {
   calcularCobranzas, calcularCobrosSemanales,
   calcularPendientesPorMes, calcularVentasPorMes,
   calcularProyeccion, calcularDeudores,
-  calcularCobrosAutomaticaPorMes, calcularProyeccionAnual,
+  calcularCobrosAutomaticaPorMes, calcularVentasAutomaticaPorMes,
+  calcularProyeccionAnual,
   parseAnunciosTab,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
@@ -33,6 +34,7 @@ export default async function Home() {
     const resumen              = calcularResumenMensual(clientes, egresosRows);
     const ventasPorMes         = calcularVentasPorMes(clientes);
     const cobrosAutomatica     = calcularCobrosAutomaticaPorMes(clientes);
+    const ventasAutomatica     = calcularVentasAutomaticaPorMes(clientes);
     const comisiones           = calcularComisiones(clientes);
     const cobranzas        = calcularCobranzas(clientes);
     const cobrosSemanales  = calcularCobrosSemanales(clientes);
@@ -50,6 +52,19 @@ export default async function Home() {
     const comisionesFiltradas   = comisiones.filter(m => m.mes.startsWith(anoActual));
     const proyeccionAnual = calcularProyeccionAnual(clientes, resumenFiltrado, ventasPorMesFiltradas);
     const anunciosPorMes  = parseAnunciosTab(anunciosRows);
+    // ROAS y ROAS Cash se CALCULAN acá (ventas/cobros de clientes automática /
+    // inversión Meta), no se leen del sheet. La inversión, costo por lead y por
+    // agenda siguen viniendo de la pestaña Anuncios.
+    for (const [mes, d] of Object.entries(anunciosPorMes)) {
+      const inv = Number(d.inversion);
+      if (inv > 0) {
+        d.roas     = (ventasAutomatica[mes] || 0) / inv;
+        d.roasCash = (cobrosAutomatica[mes] || 0) / inv;
+      } else {
+        d.roas = null;
+        d.roasCash = null;
+      }
+    }
 
     return (
       <Dashboard
