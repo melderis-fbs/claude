@@ -254,7 +254,7 @@ function appendFactura(rowValues) {
   let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_FACTURAS);
   if (!sheet) {
     sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(TAB_FACTURAS);
-    sheet.appendRow(['Fecha','FechaPago','Numero','Tipo','ClienteProveedor','Concepto','Monto','Estado']);
+    sheet.appendRow(['Tipo de factura','Fecha','Monto','Nombre','CUIT','Estado']);
   }
   sheet.appendRow(rowValues);
   return { ok: true };

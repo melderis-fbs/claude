@@ -1,9 +1,15 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const fmt   = n => isNaN(n) ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
+
+// Campos del sheet (pestaña Facturas): Tipo de factura · Fecha · Monto · Nombre · CUIT · Estado
+const TIPOS   = ['Emitida', 'Recibida'];
+const ESTADOS = ['Pendiente', 'Estudio', 'Enviada', 'Pagada'];
+
+const PEND_KEY = 'facturas_pend_prev_v1'; // pendientes del mes anterior, por mes (localStorage)
 
 function mesKey(fechaStr) {
   if (!fechaStr) return null;
@@ -27,22 +33,22 @@ function parseM(val) {
 
 const ESTADO_STYLE = {
   Pendiente: 'bg-red-100 text-red-700',
-  Cobrada:   'bg-emerald-100 text-emerald-700',
+  Estudio:   'bg-amber-100 text-amber-700',
+  Enviada:   'bg-blue-100 text-blue-700',
   Pagada:    'bg-emerald-100 text-emerald-700',
 };
 
-const EMPTY_FORM = { fecha:'', fechaPago:'', numero:'', tipo:'Emitida', clienteProveedor:'', concepto:'', monto:'', estado:'Pendiente' };
+const EMPTY_FORM = { tipo:'Emitida', fecha:'', monto:'', nombre:'', cuit:'', estado:'Pendiente' };
 
 function FacturasTable({ rows, titulo, color }) {
   const total = rows.reduce((s, f) => s + parseM(f['Monto']), 0);
   const headerColor = color === 'blue' ? 'text-blue-700' : 'text-amber-700';
-  const totalColor  = color === 'blue' ? 'text-blue-700' : 'text-amber-700';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className={`font-semibold text-sm uppercase tracking-wider ${headerColor}`}>{titulo}</h3>
-        <span className={`text-lg font-bold ${totalColor}`}>{fmt(total)}</span>
+        <span className={`text-lg font-bold ${headerColor}`}>{fmt(total)}</span>
       </div>
       {rows.length === 0 ? (
         <div className="flex-1 flex items-center justify-center py-12 text-gray-400 text-sm">Sin registros</div>
@@ -51,7 +57,7 @@ function FacturasTable({ rows, titulo, color }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['Número','Cliente / Proveedor','Fecha','Fecha pago','Monto','Estado'].map(h => (
+                {['Nombre','CUIT','Fecha','Monto','Estado'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -61,10 +67,9 @@ function FacturasTable({ rows, titulo, color }) {
                 const estado = String(f['Estado'] || '').trim();
                 return (
                   <tr key={f._rowIndex ?? i} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 text-gray-500 text-xs font-mono">{f['Numero'] || '—'}</td>
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{f['ClienteProveedor'] || '—'}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{f['Nombre'] || '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs font-mono whitespace-nowrap">{f['CUIT'] || '—'}</td>
                     <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{f['Fecha'] || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{f['FechaPago'] || '—'}</td>
                     <td className="px-4 py-2.5 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(f['Monto']))}</td>
                     <td className="px-4 py-2.5">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[estado] || 'bg-gray-100 text-gray-500'}`}>
@@ -85,6 +90,8 @@ function FacturasTable({ rows, titulo, color }) {
 export default function Facturas({ facturas = [] }) {
   const router = useRouter();
 
+  const tipoDe = f => String(f['Tipo de factura'] || '').trim();
+
   const months = useMemo(() => {
     const keys = new Set(facturas.map(f => mesKey(f['Fecha'])).filter(Boolean));
     return Array.from(keys).sort().reverse();
@@ -96,28 +103,47 @@ export default function Facturas({ facturas = [] }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Pendientes del mes anterior — valor manual por mes, guardado en el navegador.
+  const [pendPrev, setPendPrev] = useState({});
+  useEffect(() => {
+    try { setPendPrev(JSON.parse(localStorage.getItem(PEND_KEY) || '{}')); } catch {}
+  }, []);
+  const setPend = v => setPendPrev(prev => {
+    const next = { ...prev, [mesSel]: v };
+    try { localStorage.setItem(PEND_KEY, JSON.stringify(next)); } catch {}
+    return next;
+  });
+  const pendVal = pendPrev[mesSel] ?? '';
+
   const filtered = useMemo(() =>
     mesSel === 'all' ? facturas : facturas.filter(f => mesKey(f['Fecha']) === mesSel),
     [facturas, mesSel]
   );
 
-  const emitidas  = filtered.filter(f => String(f['Tipo']).trim() === 'Emitida');
-  const recibidas = filtered.filter(f => String(f['Tipo']).trim() === 'Recibida');
+  const emitidas  = filtered.filter(f => tipoDe(f) === 'Emitida');
+  const recibidas = filtered.filter(f => tipoDe(f) === 'Recibida');
 
-  const totalEmitidas  = emitidas.reduce((s, f) => s + parseM(f['Monto']), 0);
-  const totalRecibidas = recibidas.reduce((s, f) => s + parseM(f['Monto']), 0);
-  const balance = totalEmitidas - totalRecibidas;
+  const totalEmitido  = emitidas.reduce((s, f) => s + parseM(f['Monto']), 0);
+  const totalRecibido = recibidas.reduce((s, f) => s + parseM(f['Monto']), 0);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const guardar = async () => {
-    if (!form.fecha || !form.tipo) { setFormError('Fecha y tipo son obligatorios.'); return; }
+    if (!form.fecha || !form.tipo) { setFormError('Tipo y fecha son obligatorios.'); return; }
     setSubmitting(true); setFormError('');
     try {
+      // Orden de columnas del sheet: Tipo de factura · Fecha · Monto · Nombre · CUIT · Estado
       const res = await fetch('/api/facturas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowValues: [form.fecha, form.fechaPago, form.numero, form.tipo, form.clienteProveedor, form.concepto, form.monto ? parseFloat(String(form.monto).replace(/[$,\s]/g,'')) : '', form.estado] }),
+        body: JSON.stringify({ rowValues: [
+          form.tipo,
+          form.fecha,
+          form.monto ? parseFloat(String(form.monto).replace(/[$,\s]/g,'')) : '',
+          form.nombre,
+          form.cuit,
+          form.estado,
+        ] }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Error al guardar');
@@ -133,7 +159,7 @@ export default function Facturas({ facturas = [] }) {
   return (
     <div className="space-y-5 max-w-7xl">
 
-      {/* Top bar */}
+      {/* Top bar: selector de meses + nueva factura */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 flex-wrap">
           <button onClick={() => setMesSel('all')}
@@ -153,32 +179,37 @@ export default function Facturas({ facturas = [] }) {
         </button>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Cards: Emitido · Recibido · Pendientes mes anterior (editable) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Emitidas</p>
-          <p className="text-2xl font-bold text-blue-700">{fmt(totalEmitidas)}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Emitido</p>
+          <p className="text-2xl font-bold text-blue-700">{fmt(totalEmitido)}</p>
           <p className="text-xs text-blue-500 mt-1">{emitidas.length} facturas</p>
         </div>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recibidas</p>
-          <p className="text-2xl font-bold text-amber-700">{fmt(totalRecibidas)}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recibido</p>
+          <p className="text-2xl font-bold text-amber-700">{fmt(totalRecibido)}</p>
           <p className="text-xs text-amber-500 mt-1">{recibidas.length} facturas</p>
         </div>
-        <div className={`border rounded-xl p-4 ${balance >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Balance</p>
-          <p className={`text-2xl font-bold ${balance >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(balance)}</p>
-          <p className="text-xs text-gray-400 mt-1">emitidas − recibidas</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pendientes mes anterior</p>
+          <div className="flex items-center gap-1">
+            <span className="text-2xl font-bold text-gray-700">$</span>
+            <input type="number" inputMode="numeric" placeholder="0" value={pendVal}
+              onChange={e => setPend(e.target.value)}
+              className="w-full bg-transparent text-2xl font-bold text-gray-700 focus:outline-none placeholder-gray-300" />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">lo completás vos {mesSel !== 'all' ? `· ${mesLabel(mesSel)}` : '· por mes'}</p>
         </div>
       </div>
 
-      {/* Dos columnas */}
+      {/* Dos tablas: Emitidas / Recibidas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <FacturasTable rows={emitidas}  titulo="Emitidas"  color="blue" />
         <FacturasTable rows={recibidas} titulo="Recibidas" color="amber" />
       </div>
 
-      {/* Modal */}
+      {/* Modal nueva factura */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
@@ -189,9 +220,9 @@ export default function Facturas({ facturas = [] }) {
             <div className="p-6 space-y-4">
               {formError && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>}
 
-              {/* Tipo — prominente */}
+              {/* Tipo de factura */}
               <div className="flex gap-2">
-                {['Emitida','Recibida'].map(t => (
+                {TIPOS.map(t => (
                   <button key={t} type="button" onClick={() => set('tipo', t)}
                     className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
                       form.tipo === t ? (t === 'Emitida' ? 'bg-blue-600 text-white border-blue-600' : 'bg-amber-500 text-white border-amber-500')
@@ -207,40 +238,31 @@ export default function Facturas({ facturas = [] }) {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de pago</label>
-                  <input type="text" placeholder="DD/MM/YYYY" value={form.fechaPago} onChange={e => set('fechaPago', e.target.value)}
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+                  <input type="number" placeholder="0" value={form.monto} onChange={e => set('monto', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Número</label>
-                  <input type="text" placeholder="0001-00000123" value={form.numero} onChange={e => set('numero', e.target.value)}
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                  <input type="text" placeholder="Nombre / razón social" value={form.nombre} onChange={e => set('nombre', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
-                  <select value={form.estado} onChange={e => set('estado', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white">
-                    {['Pendiente','Cobrada','Pagada'].map(o => <option key={o}>{o}</option>)}
-                  </select>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">CUIT</label>
+                  <input type="text" placeholder="20-12345678-9" value={form.cuit} onChange={e => set('cuit', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Cliente / Proveedor</label>
-                <input type="text" placeholder="Nombre del cliente o proveedor" value={form.clienteProveedor} onChange={e => set('clienteProveedor', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Concepto</label>
-                  <input type="text" placeholder="Descripción del servicio" value={form.concepto} onChange={e => set('concepto', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
-                  <input type="number" placeholder="0" value={form.monto} onChange={e => set('monto', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                <div className="flex gap-2 flex-wrap">
+                  {ESTADOS.map(e => (
+                    <button key={e} type="button" onClick={() => set('estado', e)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                        form.estado === e ? `${ESTADO_STYLE[e]} border-transparent ring-2 ring-offset-1 ring-gray-300` : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}>{e}</button>
+                  ))}
                 </div>
               </div>
 
