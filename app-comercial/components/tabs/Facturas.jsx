@@ -40,53 +40,6 @@ const ESTADO_STYLE = {
 
 const EMPTY_FORM = { tipo:'Emitida', fecha:'', monto:'', nombre:'', cuit:'', estado:'Pendiente' };
 
-function FacturasTable({ rows, titulo, color }) {
-  const total = rows.reduce((s, f) => s + parseM(f['Monto']), 0);
-  const headerColor = color === 'blue' ? 'text-blue-700' : 'text-amber-700';
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 className={`font-semibold text-sm uppercase tracking-wider ${headerColor}`}>{titulo}</h3>
-        <span className={`text-lg font-bold ${headerColor}`}>{fmt(total)}</span>
-      </div>
-      {rows.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center py-12 text-gray-400 text-sm">Sin registros</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Nombre','CUIT','Fecha','Monto','Estado'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rows.map((f, i) => {
-                const estado = String(f['Estado'] || '').trim();
-                return (
-                  <tr key={f._rowIndex ?? i} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{f['Nombre'] || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs font-mono whitespace-nowrap">{f['CUIT'] || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{f['Fecha'] || '—'}</td>
-                    <td className="px-4 py-2.5 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(f['Monto']))}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[estado] || 'bg-gray-100 text-gray-500'}`}>
-                        {estado || '—'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Facturas({ facturas = [] }) {
   const router = useRouter();
 
@@ -203,10 +156,47 @@ export default function Facturas({ facturas = [] }) {
         </div>
       </div>
 
-      {/* Dos tablas: Emitidas / Recibidas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <FacturasTable rows={emitidas}  titulo="Emitidas"  color="blue" />
-        <FacturasTable rows={recibidas} titulo="Recibidas" color="amber" />
+      {/* Tabla única (como la planilla): columnas en horizontal */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center text-gray-400 text-sm">Sin facturas{mesSel !== 'all' ? ` en ${mesLabel(mesSel)}` : ''}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Tipo de factura','Fecha','Monto','Nombre','CUIT','Estado'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((f, i) => {
+                  const tipo   = tipoDe(f);
+                  const estado = String(f['Estado'] || '').trim();
+                  return (
+                    <tr key={f._rowIndex ?? i} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${tipo === 'Emitida' ? 'bg-blue-100 text-blue-700' : tipo === 'Recibida' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {tipo || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{f['Fecha'] || '—'}</td>
+                      <td className="px-4 py-2.5 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(f['Monto']))}</td>
+                      <td className="px-4 py-2.5 font-medium text-gray-900">{f['Nombre'] || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-500 text-xs font-mono whitespace-nowrap">{f['CUIT'] || '—'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[estado] || 'bg-gray-100 text-gray-500'}`}>
+                          {estado || '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modal nueva factura */}
