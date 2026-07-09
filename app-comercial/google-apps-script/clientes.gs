@@ -41,6 +41,7 @@ function doPost(e) {
     if (action === 'updateAbonoField') return ok(updateAbonoField(body.rowIndex, body.headerName, body.value));
     if (action === 'upsertDeudor')     return ok(upsertDeudor(body.rowIndex, body.cuotaNum, body.estado, body.comentario));
     if (action === 'appendFactura')    return ok(appendFactura(body.rowValues));
+    if (action === 'updateFactura')    return ok(updateFacturaRow(body.rowIndex, body.rowValues));
     if (action === 'appendDocumento')  return ok(appendDocumento(body.rowValues));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
@@ -257,6 +258,13 @@ function appendFactura(rowValues) {
     sheet.appendRow(['Tipo de factura','Fecha','Monto','Nombre','CUIT','Estado']);
   }
   sheet.appendRow(rowValues);
+  return { ok: true };
+}
+
+function updateFacturaRow(rowIndex, rowValues) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB_FACTURAS);
+  if (!sheet) throw new Error('Pestaña Facturas no encontrada');
+  sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
   return { ok: true };
 }
 

@@ -118,6 +118,11 @@ export async function appendFactura(rowValues) {
   return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'appendFactura', rowValues });
 }
 
+export async function updateFacturaRow(rowIndex, rowValues) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'updateFactura', rowIndex, rowValues });
+}
+
 // ── DEUDORES ──────────────────────────────────────────────────────────────────
 
 export async function getDeudores() {

@@ -56,6 +56,12 @@ export default function Facturas({ facturas = [] }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Edición inline de una fila
+  const [editRow, setEditRow]     = useState(null);   // _rowIndex en edición
+  const [edit, setEdit]           = useState(EMPTY_FORM);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+
   // Pendientes del mes anterior — valor manual por mes, guardado en el navegador.
   const [pendPrev, setPendPrev] = useState({});
   useEffect(() => {
@@ -80,6 +86,46 @@ export default function Facturas({ facturas = [] }) {
   const totalRecibido = recibidas.reduce((s, f) => s + parseM(f['Monto']), 0);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setE = (k, v) => setEdit(f => ({ ...f, [k]: v }));
+
+  const startEdit = f => {
+    setEditError('');
+    setEditRow(f._rowIndex);
+    setEdit({
+      tipo:   tipoDe(f) || 'Emitida',
+      fecha:  f['Fecha'] || '',
+      monto:  f['Monto'] ?? '',
+      nombre: f['Nombre'] || '',
+      cuit:   f['CUIT'] || '',
+      estado: String(f['Estado'] || '').trim() || 'Pendiente',
+    });
+  };
+
+  const guardarEdit = async () => {
+    setSavingEdit(true); setEditError('');
+    try {
+      const res = await fetch('/api/facturas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: editRow, rowValues: [
+          edit.tipo,
+          edit.fecha,
+          edit.monto === '' || edit.monto == null ? '' : parseFloat(String(edit.monto).replace(/[$,\s]/g,'')),
+          edit.nombre,
+          edit.cuit,
+          edit.estado,
+        ] }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Error al guardar');
+      setEditRow(null);
+      router.refresh();
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const guardar = async () => {
     if (!form.fecha || !form.tipo) { setFormError('Tipo y fecha son obligatorios.'); return; }
@@ -156,8 +202,9 @@ export default function Facturas({ facturas = [] }) {
         </div>
       </div>
 
-      {/* Tabla única (como la planilla): columnas en horizontal */}
+      {/* Tabla única (como la planilla), editable por fila */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {editError && <p className="m-4 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editError}</p>}
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-gray-400 text-sm">Sin facturas{mesSel !== 'all' ? ` en ${mesLabel(mesSel)}` : ''}</div>
         ) : (
@@ -165,17 +212,51 @@ export default function Facturas({ facturas = [] }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Tipo de factura','Fecha','Monto','Nombre','CUIT','Estado'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  {['Tipo de factura','Fecha','Monto','Nombre','CUIT','Estado',''].map((h, hi) => (
+                    <th key={hi} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((f, i) => {
+                  const enEdicion = editRow === f._rowIndex;
+                  if (enEdicion) {
+                    const inputCls = 'w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-500';
+                    return (
+                      <tr key={f._rowIndex ?? i} className="bg-blue-50/40">
+                        <td className="px-3 py-2">
+                          <select value={edit.tipo} onChange={e => setE('tipo', e.target.value)} className={`${inputCls} bg-white`}>
+                            {TIPOS.map(t => <option key={t}>{t}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2"><input value={edit.fecha} onChange={e => setE('fecha', e.target.value)} placeholder="DD/MM/YYYY" className={`${inputCls} w-28`} /></td>
+                        <td className="px-3 py-2"><input type="number" value={edit.monto} onChange={e => setE('monto', e.target.value)} placeholder="0" className={`${inputCls} w-28`} /></td>
+                        <td className="px-3 py-2"><input value={edit.nombre} onChange={e => setE('nombre', e.target.value)} placeholder="Nombre" className={inputCls} /></td>
+                        <td className="px-3 py-2"><input value={edit.cuit} onChange={e => setE('cuit', e.target.value)} placeholder="CUIT" className={`${inputCls} w-36`} /></td>
+                        <td className="px-3 py-2">
+                          <select value={edit.estado} onChange={e => setE('estado', e.target.value)} className={`${inputCls} bg-white`}>
+                            {ESTADOS.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <div className="flex gap-1">
+                            <button onClick={guardarEdit} disabled={savingEdit}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white">
+                              {savingEdit ? '…' : 'Guardar'}
+                            </button>
+                            <button onClick={() => setEditRow(null)} disabled={savingEdit}
+                              className="px-2 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">
+                              ×
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
                   const tipo   = tipoDe(f);
                   const estado = String(f['Estado'] || '').trim();
                   return (
-                    <tr key={f._rowIndex ?? i} className="hover:bg-gray-50">
+                    <tr key={f._rowIndex ?? i} className="hover:bg-gray-50 group">
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${tipo === 'Emitida' ? 'bg-blue-100 text-blue-700' : tipo === 'Recibida' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
                           {tipo || '—'}
@@ -189,6 +270,12 @@ export default function Facturas({ facturas = [] }) {
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[estado] || 'bg-gray-100 text-gray-500'}`}>
                           {estado || '—'}
                         </span>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                        <button onClick={() => startEdit(f)} disabled={f._rowIndex == null}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden">
+                          Editar
+                        </button>
                       </td>
                     </tr>
                   );
