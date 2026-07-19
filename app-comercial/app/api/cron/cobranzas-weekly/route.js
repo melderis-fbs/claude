@@ -104,6 +104,13 @@ function buildDeudoresManuales(deudoresRecords, clientes) {
 }
 
 async function runReporte() {
+  // Kill switch: el envío del reporte a Slack está DESACTIVADO.
+  // No manda nada salvo que se setee REPORTE_COBRANZAS_ENABLED=true en las env
+  // vars. Aplica a cualquier disparador (cron de Vercel, Zapier, POST manual).
+  if (process.env.REPORTE_COBRANZAS_ENABLED !== 'true') {
+    return { ok: true, skipped: true, reason: 'Reporte de cobranzas desactivado' };
+  }
+
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) throw new Error('SLACK_WEBHOOK_URL no configurada');
 
