@@ -405,6 +405,13 @@ export function calcularPendientesPorMes(clientes) {
 
 // ── Proyección semanal ────────────────────────────────────────────────────────
 
+// "Ahora" en horario de Argentina (UTC-3). El servidor corre en UTC, así que
+// de noche (después de las 21 ART) el día ya cambió allá y se contaban pagos y
+// deudores del día siguiente. Esto ancla "hoy" a la zona horaria argentina.
+function ahoraArg() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+}
+
 function parseFechaToDate(fechaStr) {
   if (!fechaStr) return null;
   const s = String(fechaStr).trim();
@@ -423,7 +430,7 @@ function semanaLabel(lunes, domingo) {
 }
 
 export function calcularProyeccion(clientes, semanasAtras = 2, semanasAdelante = 10) {
-  const hoy = new Date();
+  const hoy = ahoraArg();
   const lunesHoy = new Date(hoy);
   lunesHoy.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
   lunesHoy.setHours(0,0,0,0);
@@ -541,7 +548,7 @@ export function calcularSeñasPorMes(clientes) {
 // ── Cobros esta semana ────────────────────────────────────────────────────────
 
 export function calcularCobrosSemanales(clientes) {
-  const hoy    = new Date();
+  const hoy    = ahoraArg();
   const lunes  = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
   const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
   lunes.setHours(0,0,0,0); domingo.setHours(23,59,59,999);
@@ -586,7 +593,7 @@ export function calcularCobrosSemanales(clientes) {
 // ── Deudores ──────────────────────────────────────────────────────────────────
 
 export function calcularDeudores(clientes, deudoresRecords = []) {
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const hoy = ahoraArg(); hoy.setHours(0,0,0,0);
   const lunesEstaSemana = new Date(hoy);
   lunesEstaSemana.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
   lunesEstaSemana.setHours(0,0,0,0);

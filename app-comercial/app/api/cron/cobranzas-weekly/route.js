@@ -3,6 +3,13 @@ import { CUOTAS_DEF, parseMonto, calcularCobrosSemanales } from '../../../../lib
 
 export const dynamic = 'force-dynamic';
 
+// "Ahora" en horario de Argentina (UTC-3). El servidor corre en UTC; sin esto,
+// de noche el día ya cambió allá y el reporte tomaba la semana/día siguiente.
+const TZ_AR = 'America/Argentina/Buenos_Aires';
+function ahoraArg() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: TZ_AR }));
+}
+
 function fmt(amount) {
   const num = Number(amount) || 0;
   const [int, dec] = num.toFixed(2).split('.');
@@ -31,7 +38,7 @@ function barraProgreso(pct) {
 }
 
 function calcularKPIMes(clientes) {
-  const hoy = new Date();
+  const hoy = ahoraArg();
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
   let totalACobrar = 0;
   let totalCobrado = 0;
@@ -67,7 +74,7 @@ function parseFecha(fechaStr) {
 }
 
 function buildDeudoresManuales(deudoresRecords, clientes) {
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const hoy = ahoraArg(); hoy.setHours(0, 0, 0, 0);
   const clienteMap = {};
   for (const c of clientes) clienteMap[String(c._rowIndex)] = c;
 
@@ -125,7 +132,7 @@ async function runReporte() {
   for (const c of clientes) clienteMap[c._rowIndex] = c;
 
   const kpi = calcularKPIMes(clientes);
-  const mesLabel = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const mesLabel = ahoraArg().toLocaleDateString('es-AR', { month: 'long', year: 'numeric', timeZone: TZ_AR });
 
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true } },
@@ -170,7 +177,7 @@ async function runReporte() {
   }
 
   blocks.push({ type: 'divider' });
-  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Generado el ${new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}` }] });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Generado el ${ahoraArg().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ_AR })}` }] });
 
   await postSlack(webhookUrl, { blocks });
   return { deudores: deudores.length, cobros: cobrosSemanales.length };
@@ -234,7 +241,7 @@ export async function GET(request) {
       const clienteMap = {};
       for (const c of clientes) clienteMap[c._rowIndex] = c;
       const kpi      = calcularKPIMes(clientes);
-      const mesLabel = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+      const mesLabel = ahoraArg().toLocaleDateString('es-AR', { month: 'long', year: 'numeric', timeZone: TZ_AR });
       return Response.json({ preview: buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel) });
     } catch (err) {
       return Response.json({ error: err.message }, { status: 500 });
