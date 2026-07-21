@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { LayoutDashboard, TrendingUp, Wallet, AlertTriangle, Coins, PieChart, Receipt, Users, FileText, CreditCard, LineChart } from 'lucide-react';
 
 function SlackReporteBtn() {
   const [cargando, setCargando]   = useState(false);
@@ -28,9 +29,15 @@ function SlackReporteBtn() {
   async function enviar() {
     setEnviando(true); setError('');
     try {
-      const res  = await fetch('/api/cron/cobranzas-weekly', { method: 'POST' });
+      // Enviamos EXACTAMENTE el texto que se está mostrando/editando en el
+      // preview, para que "Enviar a Slack" == "Generar reporte".
+      const res  = await fetch('/api/slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: texto }),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al enviar');
+      if (!res.ok || data.error) throw new Error(data.error || 'Error al enviar');
       setEnviado(true);
     } catch (e) {
       setError(e.message);
@@ -95,21 +102,23 @@ import Abonos          from './tabs/Abonos.jsx';
 import Comisiones      from './tabs/Comisiones.jsx';
 import Facturas        from './tabs/Facturas.jsx';
 import Clientes        from './tabs/Clientes.jsx';
+import { Deudores }     from './tabs/Cobranzas.jsx';
 import Documentos      from './tabs/Documentos.jsx';
 import Egresos         from './tabs/Egresos.jsx';
 import Cashflow        from './tabs/Cashflow.jsx';
 
 const TABS = [
-  { id: 'resumen',    label: 'Resumen' },
-  { id: 'ventas',     label: 'Ventas' },
-  { id: 'cobranzas',  label: 'Cobranzas' },
-  { id: 'abonos',     label: 'Abonos' },
-  { id: 'comisiones', label: 'Comisiones' },
-  { id: 'facturas',   label: 'Facturas' },
-  { id: 'clientes',   label: 'Clientes' },
-  { id: 'documentos', label: 'Documentos' },
-  { id: 'egresos',    label: 'Egresos' },
-  { id: 'cashflow',   label: 'Cashflow' },
+  { id: 'resumen',    label: 'Resumen',    icon: LayoutDashboard },
+  { id: 'ventas',     label: 'Ventas',     icon: TrendingUp },
+  { id: 'cobranzas',  label: 'Cobranzas',  icon: Wallet },
+  { id: 'deudores',   label: 'Deudores',   icon: AlertTriangle },
+  { id: 'abonos',     label: 'Abonos',     icon: Coins },
+  { id: 'comisiones', label: 'Comisiones', icon: PieChart },
+  { id: 'facturas',   label: 'Facturas',   icon: Receipt },
+  { id: 'clientes',   label: 'Clientes',   icon: Users },
+  { id: 'documentos', label: 'Documentos', icon: FileText },
+  { id: 'egresos',    label: 'Egresos',    icon: CreditCard },
+  { id: 'cashflow',   label: 'Cashflow',   icon: LineChart },
 ];
 
 export default function Dashboard({
@@ -119,47 +128,62 @@ export default function Dashboard({
   anunciosPorMes = {},
 }) {
   const [tab, setTab] = useState('resumen');
+  const tabActual = TABS.find(t => t.id === tab);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm select-none">F</div>
-          <span className="font-semibold text-gray-900">Founders BS — Comercial</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar lateral */}
+      <aside className="w-56 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">
+        <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold select-none">F</div>
+          <div className="leading-tight">
+            <p className="font-semibold text-gray-900 text-sm">Founders BS</p>
+            <p className="text-xs text-gray-400">Comercial</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SlackReporteBtn />
-          <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-medium">
-            ● {clientes.length} clientes
-          </span>
-        </div>
-      </header>
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+          {TABS.map(t => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}>
+                <Icon size={18} strokeWidth={2} className="flex-shrink-0" />
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
 
-      <nav className="bg-white border-b border-gray-200 px-6 flex gap-0 overflow-x-auto">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              tab === t.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-            }`}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      {/* Contenido */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+          <span className="font-semibold text-gray-900">{tabActual?.label}</span>
+          <div className="flex items-center gap-2">
+            <SlackReporteBtn />
+            <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-medium">
+              ● {clientes.length} clientes
+            </span>
+          </div>
+        </header>
 
-      <main className="flex-1 overflow-auto p-6">
-        {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} />}
-        {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
-        {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
-        {tab === 'abonos'     && <Abonos abonos={abonos} />}
-        {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
-        {tab === 'facturas'   && <Facturas facturas={facturas} />}
-        {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
-        {tab === 'documentos' && <Documentos clientes={clientes} />}
-        {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} />}
-        {tab === 'cashflow'   && <Cashflow />}
-      </main>
+        <main className="flex-1 overflow-auto p-6">
+          {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} />}
+          {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
+          {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
+          {tab === 'deudores'   && <Deudores deudores={deudores} clientes={clientes} />}
+          {tab === 'abonos'     && <Abonos abonos={abonos} />}
+          {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
+          {tab === 'facturas'   && <Facturas facturas={facturas} />}
+          {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
+          {tab === 'documentos' && <Documentos clientes={clientes} />}
+          {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} />}
+          {tab === 'cashflow'   && <Cashflow />}
+        </main>
+      </div>
     </div>
   );
 }

@@ -680,6 +680,54 @@ export function calcularDeudores(clientes, deudoresRecords = []) {
   });
 }
 
+// ── Estado de deuda por cliente ───────────────────────────────────────────────
+// Regla (confirmada con la usuaria):
+//   1) Si la columna "Estado deuda" del sheet tiene algo cargado, ESO manda
+//      (override manual: Moroso / Deudor / En trámite).
+//   2) Si está vacía, se clasifica sola por los días de mora de la cuota vencida
+//      impaga más atrasada: al día (<3) · Moroso (3–15) · Deudor (16+).
+function normEstadoDeuda(v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  const u = s.toUpperCase();
+  if (u === 'DEUDOR') return 'Deudor';
+  if (u === 'MOROSO') return 'Moroso';
+  if (u.includes('TRÁMITE') || u.includes('TRAMITE')) return 'En trámite';
+  if (u.includes('GESTIÓN') || u.includes('GESTION')) return 'En gestión';
+  if (u.includes('SALDAD')) return 'Saldado';
+  return s; // valor desconocido: se muestra tal cual
+}
+
+export function estadoDeudaCliente(cliente) {
+  const manual = normEstadoDeuda(cliente['Estado deuda']);
+  if (manual) return manual;                 // override manual
+  const hoy = ahoraArg(); hoy.setHours(0, 0, 0, 0);
+  let maxMora = -Infinity;
+  for (const q of CUOTAS_DEF) {
+    if (esPagado(cliente[q.estado])) continue;
+    if (!parseMonto(cliente[q.monto])) continue;
+    const fecha = parseFechaToDate(cliente[q.fecha]);
+    if (!fecha) continue;
+    const dias = Math.floor((hoy - fecha) / 86400000);
+    if (dias > maxMora) maxMora = dias;
+  }
+  if (maxMora >= 16) return 'Deudor';
+  if (maxMora >= 3)  return 'Moroso';
+  return '';                                  // al día
+}
+
+// Estilos (Tailwind) por estado de deuda. row = tinte de fila; badge = etiqueta.
+export const ESTADO_DEUDA_STYLE = {
+  'Deudor':     { row: 'bg-red-50',    badge: 'bg-red-100 text-red-700',       label: 'Deudor'      },
+  'Moroso':     { row: 'bg-amber-50',  badge: 'bg-amber-100 text-amber-700',   label: 'Moroso'      },
+  'En trámite': { row: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700', label: 'En trámite'  },
+  'En gestión': { row: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700', label: 'En gestión'  },
+  'Saldado':    { row: '',             badge: 'bg-emerald-100 text-emerald-700', label: 'Saldado'   },
+};
+export function estadoDeudaStyle(estado) {
+  return ESTADO_DEUDA_STYLE[estado] || { row: '', badge: 'bg-gray-100 text-gray-500', label: estado || 'Al día' };
+}
+
 // ── Proyección anual ──────────────────────────────────────────────────────────
 
 export function calcularProyeccionAnual(clientes, resumen, ventasPorMes) {

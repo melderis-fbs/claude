@@ -442,47 +442,6 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
     }
   }, [router]);
 
-  const generarReporteCompleto = () => {
-    const activos = deudores.filter(d => d.estado !== 'Saldado');
-    const totalMora = activos.reduce((s, d) => s + d.monto, 0);
-    const CATS = [
-      { estado: 'Incobrable', emoji: '🔴', titulo: 'INCOBRABLES' },
-      { estado: 'Moroso',     emoji: '🟡', titulo: 'MOROSOS' },
-      { estado: 'En gestión', emoji: '🔵', titulo: 'EN GESTIÓN' },
-      { estado: '',           emoji: '⚪', titulo: 'SIN CLASIFICAR' },
-    ];
-    let texto = `📋 *Reporte semanal de cobranzas*\n`;
-    texto += `${activos.length} deudores pendientes — Total: ${fmt(totalMora)} USD\n`;
-    for (const cat of CATS) {
-      const lista = activos.filter(d => d.estado === cat.estado)
-        .sort((a, b) => (b.diasMora ?? -1) - (a.diasMora ?? -1));
-      if (!lista.length) continue;
-      const totalCat = lista.reduce((s, d) => s + d.monto, 0);
-      texto += `\n${cat.emoji} *${cat.titulo}* (${lista.length}) — ${fmt(totalCat)}\n`;
-      for (const d of lista) {
-        const mora = d.diasMora !== null ? `${d.diasMora}d de mora` : 'sin fecha';
-        texto += `${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${mora}\n`;
-        const sa = parseCom(d.comentario).sa;
-        if (sa) texto += `${sa}\n`;
-      }
-    }
-    if (semana) {
-      const pendientes = Object.values(semana.dias).flat().filter(c => !c.pagado);
-      if (pendientes.length > 0) {
-        const totalPend = pendientes.reduce((s, c) => s + c.monto, 0);
-        const label = semana.esActual ? 'esta semana' : semana.label;
-        texto += `\n📅 *Cobros pendientes ${label}*\nTotal pendiente: ${fmt(totalPend)}\n\n`;
-        for (const c of pendientes) {
-          texto += `⏳ ${c.nombre}  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha || '—'}\n`;
-          const d = activos.find(x => x.rowIndex === c.rowIndex && x.cuota === c.cuota);
-          const sa = d ? parseCom(d.comentario).sa : '';
-          if (sa) texto += `${sa}\n`;
-        }
-      }
-    }
-    return texto.trim();
-  };
-
   if (!semana) return <p className="text-gray-400 text-sm">Sin datos de proyección.</p>;
 
   const diasEntries = Object.entries(semana.dias);
@@ -504,7 +463,17 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
         <button onClick={() => setOffset(o => o + 1)} disabled={idx === proyeccion.length - 1}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">›</button>
         <button
-          onClick={() => { setTextoReporte(generarReporteCompleto()); setReporteModal(true); setEnviado(false); setErrorSlack(''); }}
+          onClick={async () => {
+            setReporteModal(true); setEnviado(false); setErrorSlack(''); setTextoReporte('Cargando…');
+            try {
+              const res  = await fetch('/api/cron/cobranzas-weekly?preview=1');
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Error al generar el reporte');
+              setTextoReporte(data.preview);
+            } catch (e) {
+              setErrorSlack(e.message); setTextoReporte('');
+            }
+          }}
           title="Generar reporte Slack"
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
           📤
@@ -2090,31 +2059,33 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
 
 export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = [], proyeccionAnual = [], deudores = [], clientes = [], abonos = [] }) {
   const [subTab, setSubTab] = useState('mensual');
-  const deudoresActivos = deudores.filter(d => d.estado !== 'Saldado');
 
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex gap-2 items-center flex-wrap border-b border-gray-200 pb-0">
-        {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['deudores','Deudores'],['conciliacion','Conciliación']].map(([v, l]) => (
+        {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['conciliacion','Conciliación']].map(([v, l]) => (
           <button key={v} onClick={() => setSubTab(v)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               subTab === v ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}>{l}</button>
         ))}
-        {deudoresActivos.length > 0 && (
-          <span className="ml-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full -mt-1">
-            {deudoresActivos.length}
-          </span>
-        )}
       </div>
 
       <div>
         {subTab === 'mensual'      && <VistaResumenMensual cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccionAnual={proyeccionAnual} />}
         {subTab === 'pagos'        && <VistaPagos clientes={clientes} />}
         {subTab === 'semanal'      && <VistaSemanal proyeccion={proyeccion} deudores={deudores} clientes={clientes} />}
-        {subTab === 'deudores'     && <VistaDeudores deudores={deudores} clientes={clientes} />}
         {subTab === 'conciliacion' && <VistaConciliacion clientes={clientes} abonos={abonos} />}
       </div>
+    </div>
+  );
+}
+
+// Deudores se muestra como sección propia en el sidebar (ver Dashboard).
+export function Deudores({ deudores = [], clientes = [] }) {
+  return (
+    <div className="max-w-5xl">
+      <VistaDeudores deudores={deudores} clientes={clientes} />
     </div>
   );
 }

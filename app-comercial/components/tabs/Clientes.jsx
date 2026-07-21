@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import FichaCliente, { getCuotasInfo, esPagadoLocal, CUOTA_COLS, calcularMontos } from '../FichaCliente.jsx';
+import { estadoDeudaCliente, estadoDeudaStyle } from '../../lib/calculos.js';
 
 const PROGRAMAS = ['M1','M1+','M1.1','M2','Back','Starter'];
 const CLOSERS   = ['Kevin','Vicky','Braian','Fabricio'];
@@ -27,9 +28,11 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
   const completo   = cuotasInfo !== '—' && cuotasInfo.split('/')[0] === cuotasInfo.split('/')[1];
   const isSelected = clienteSel?._rowIndex === c._rowIndex;
   const { total, pagado } = calcularMontos(c);
+  const estadoDeuda = estadoDeudaCliente(c);
+  const stDeuda = estadoDeudaStyle(estadoDeuda);
   return (
     <tr onClick={() => setClienteSel(isSelected ? null : c)}
-      className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+      className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : (stDeuda.row || 'hover:bg-gray-50')}`}>
       <td className="px-4 py-3 font-medium text-gray-900">{c['Nombre'] || '—'}</td>
       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span></td>
       <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
@@ -52,6 +55,11 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
             <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">↩ Reembolso</span>
           )}
         </div>
+      </td>
+      <td className="px-4 py-3">
+        {estadoDeuda
+          ? <span className={`px-2 py-0.5 rounded text-xs font-medium ${stDeuda.badge}`}>{stDeuda.label}</span>
+          : <span className="text-gray-300 text-xs">Al día</span>}
       </td>
       <td className="px-4 py-3 text-gray-400 text-xs text-right">
         <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300'}`}>›</span>
@@ -77,7 +85,7 @@ function GrupoMes({ label, clientes, defaultOpen, clienteSel, setClienteSel }) {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-t border-gray-100">
               <tr>
-                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus',''].map(h => (
+                {['Nombre','Programa','Fuente','Closer','Monto total','Cuotas','Pagado','Estatus','Estado deuda',''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>

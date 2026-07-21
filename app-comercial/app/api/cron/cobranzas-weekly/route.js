@@ -134,52 +134,9 @@ async function runReporte() {
   const kpi = calcularKPIMes(clientes);
   const mesLabel = ahoraArg().toLocaleDateString('es-AR', { month: 'long', year: 'numeric', timeZone: TZ_AR });
 
-  const blocks = [
-    { type: 'header', text: { type: 'plain_text', text: '📋 Reporte semanal de cobranzas', emoji: true } },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `📊 *KPI ${mesLabel}*\n${barraProgreso(kpi.pct)}  *${kpi.pct.toFixed(1)}% cobrado*\nA cobrar: *${fmt(kpi.totalACobrar)}* | Cobrado: *${fmt(kpi.totalCobrado)}* | Pendiente: *${fmt(kpi.pendiente)}*`,
-      },
-    },
-    { type: 'divider' },
-  ];
-
-  if (deudores.length === 0) {
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '✅ No hay deudores pendientes.' } });
-  } else {
-    const totalMonto = deudores.reduce((s, d) => s + d.monto, 0);
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${deudores.length} deudores pendientes* — Total: *${fmt(totalMonto)} USD*` } });
-    blocks.push({ type: 'divider' });
-    for (const d of deudores) {
-      const diasLabel = d.diasMora != null ? (d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`) : '';
-      const estadoText = d.estado ? `  •  ${d.estado}` : '';
-      const situacion = parseSituacionActual(d.comentario);
-      const situacionText = situacion ? `\n> _${situacion}_` : '';
-      blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${d.nombre}*  •  ${fmt(d.monto)}  •  cuota ${d.cuota}${diasLabel ? `  •  ${diasLabel}` : ''}${estadoText}${situacionText}` } });
-    }
-  }
-
-  blocks.push({ type: 'divider' });
-  blocks.push({ type: 'header', text: { type: 'plain_text', text: '📅 Cobros pendientes esta semana', emoji: true } });
-
-  if (cobrosSemanales.length === 0) {
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '_No hay cobros pendientes para esta semana._' } });
-  } else {
-    const totalPendiente = cobrosSemanales.reduce((s, c) => s + c.monto, 0);
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `Total pendiente: *${fmt(totalPendiente)}*` } });
-    for (const c of cobrosSemanales) {
-      const nota = String(clienteMap[c.rowIndex]?.['Notas'] || '').trim();
-      const situacionText = nota ? `\n> _${nota}_` : '';
-      blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `⏳ *${c.nombre}*  •  ${fmt(c.monto)}  •  cuota ${c.cuota}  •  ${c.fecha}${situacionText}` } });
-    }
-  }
-
-  blocks.push({ type: 'divider' });
-  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Generado el ${ahoraArg().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ_AR })}` }] });
-
-  await postSlack(webhookUrl, { blocks });
+  // Mismo texto que muestra el preview / "Generar reporte" → un único formato.
+  const text = buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel);
+  await postSlack(webhookUrl, { text });
   return { deudores: deudores.length, cobros: cobrosSemanales.length };
 }
 
@@ -193,13 +150,26 @@ function buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel) 
     t += '✅ No hay deudores pendientes.\n\n';
   } else {
     const total = deudores.reduce((s, d) => s + d.monto, 0);
-    t += `📋 ${deudores.length} deudores pendientes — Total: ${fmt(total)} USD\n\n`;
-    for (const d of deudores) {
-      const dias     = d.diasMora != null ? (d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`) : '';
-      const estado   = d.estado ? `  •  ${d.estado}` : '';
-      const situacion = parseSituacionActual(d.comentario);
-      t += `• ${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}${dias ? `  •  ${dias}` : ''}${estado}\n`;
-      if (situacion) t += `  > ${situacion}\n`;
+    t += `📋 ${deudores.length} deudores pendientes — Total: ${fmt(total)} USD\n`;
+    // Agrupados por estado
+    const KNOWN = ['Incobrable', 'Moroso', 'En gestión'];
+    const CATS = [
+      { match: d => d.estado === 'Incobrable',        emoji: '🔴', titulo: 'INCOBRABLES'    },
+      { match: d => d.estado === 'Moroso',            emoji: '🟡', titulo: 'MOROSOS'        },
+      { match: d => d.estado === 'En gestión',        emoji: '🔵', titulo: 'EN GESTIÓN'     },
+      { match: d => !KNOWN.includes(d.estado),        emoji: '⚪', titulo: 'SIN CLASIFICAR' },
+    ];
+    for (const cat of CATS) {
+      const lista = deudores.filter(cat.match).sort((a, b) => (b.diasMora ?? -1) - (a.diasMora ?? -1));
+      if (!lista.length) continue;
+      const totalCat = lista.reduce((s, d) => s + d.monto, 0);
+      t += `\n${cat.emoji} ${cat.titulo} (${lista.length}) — ${fmt(totalCat)}\n`;
+      for (const d of lista) {
+        const dias      = d.diasMora != null ? (d.diasMora === 0 ? 'hoy' : `${d.diasMora}d de mora`) : 'sin fecha';
+        const situacion = parseSituacionActual(d.comentario);
+        t += `${d.nombre}  •  ${fmt(d.monto)}  •  cuota ${d.cuota}  •  ${dias}\n`;
+        if (situacion) t += `> ${situacion}\n`;
+      }
     }
     t += '\n';
   }
@@ -219,6 +189,7 @@ function buildPreviewText(kpi, deudores, cobrosSemanales, clienteMap, mesLabel) 
     }
   }
 
+  t += `\n\n_Generado el ${ahoraArg().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ_AR })}_`;
   return t.trim();
 }
 
