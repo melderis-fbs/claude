@@ -34,8 +34,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoImage: {
-    width: 120,
-    height: 52,
+    width: 64,
+    height: 64,
     objectFit: 'contain',
   },
   docTitle: {
@@ -224,9 +224,12 @@ export default function ReciboDocument({ data, logoSrc }) {
     items = [],
     vat = 0, subtotal = 0, vatAmount = 0, total = 0,
     moneda = 'USD',
+    titulo = 'RECIBO',
+    subtitulo = '',
   } = data;
 
   const monedaLabel = moneda === 'ARS' ? 'ARS' : 'USD';
+  const tituloSize = titulo.length > 8 ? 22 : 34;
 
   return (
     <Document>
@@ -243,7 +246,10 @@ export default function ReciboDocument({ data, logoSrc }) {
               </View>
             )
           }
-          <Text style={styles.docTitle}>RECIBO</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={[styles.docTitle, { fontSize: tituloSize }]}>{titulo}</Text>
+            {!!subtitulo && <Text style={{ fontSize: 8, color: GRAY, letterSpacing: 0.5, marginTop: 3 }}>{subtitulo}</Text>}
+          </View>
         </View>
 
         {/* Info card */}

@@ -28,14 +28,20 @@ export async function POST(request) {
   try {
     const { tipo, formData, moneda } = await request.json();
 
-    if (!['Invoice', 'Recibo'].includes(tipo)) {
+    if (!['Invoice', 'Recibo', 'Comprobante'].includes(tipo)) {
       return Response.json({ error: 'Tipo inválido' }, { status: 400 });
     }
 
-    const config = NUMERO_CONFIG[tipo];
-    const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
-    const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
-    const numero = config.format(lastN + 1);
+    // Comprobante = proforma (previo al pago): no consume número oficial ni se
+    // registra en la planilla. Recibo/Invoice sí llevan número correlativo.
+    const esComprobante = tipo === 'Comprobante';
+    let numero = 'PROFORMA';
+    if (!esComprobante) {
+      const config = NUMERO_CONFIG[tipo];
+      const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
+      const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
+      numero = config.format(lastN + 1);
+    }
 
     const firmaSrc = getAssetPath('firma-victoria.png');
     const logoSrc = getAssetPath('founders-logo.png');
@@ -48,7 +54,11 @@ export async function POST(request) {
             logoSrc,
           })
         : React.createElement(ReciboDocument, {
-            data: { ...formData, numero, moneda },
+            data: {
+              ...formData, numero, moneda,
+              titulo:    esComprobante ? 'COMPROBANTE' : 'RECIBO',
+              subtitulo: esComprobante ? 'Documento previo al pago — no acredita cobro' : '',
+            },
             logoSrc,
           });
 
@@ -61,21 +71,23 @@ export async function POST(request) {
       .filter(Boolean)
       .join(', ');
 
-    appendDocumento([
-      tipo,
-      numero,
-      formData.fecha ?? new Date().toLocaleDateString('es-AR'),
-      formData.nombre ?? '',
-      formData.email ?? '',
-      formData.telefono ?? '',
-      tipo === 'Invoice' ? (formData.dni ?? '') : '',
-      descripcion,
-      moneda,
-      Number(formData.subtotal ?? 0),
-      Number(formData.taxAmount ?? formData.vatAmount ?? 0),
-      Number(formData.total ?? 0),
-      formData.origen ?? 'Manual',
-    ]).catch((err) => console.error('[documentos] error al guardar en Sheet:', err));
+    if (!esComprobante) {
+      appendDocumento([
+        tipo,
+        numero,
+        formData.fecha ?? new Date().toLocaleDateString('es-AR'),
+        formData.nombre ?? '',
+        formData.email ?? '',
+        formData.telefono ?? '',
+        tipo === 'Invoice' ? (formData.dni ?? '') : '',
+        descripcion,
+        moneda,
+        Number(formData.subtotal ?? 0),
+        Number(formData.taxAmount ?? formData.vatAmount ?? 0),
+        Number(formData.total ?? 0),
+        formData.origen ?? 'Manual',
+      ]).catch((err) => console.error('[documentos] error al guardar en Sheet:', err));
+    }
 
     return new Response(buffer, {
       headers: {

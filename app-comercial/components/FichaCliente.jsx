@@ -64,6 +64,7 @@ const INFO_FIELDS = [
 
 export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   const [marcando, setMarcando] = useState(new Set());
+  const [generandoDoc, setGenerandoDoc] = useState(new Set());
   const [error, setError] = useState('');
 
   const commentField = COMMENT_COLS.find(col => col in c) || 'Notas';
@@ -210,6 +211,50 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
     }
   };
 
+  // Genera y descarga el PDF de una cuota. Si está pagada → RECIBO;
+  // si está pendiente/seña → COMPROBANTE (proforma, previo al pago).
+  const generarDoc = async (x) => {
+    const key = String(x.n);
+    setGenerandoDoc(prev => new Set([...prev, key]));
+    setError('');
+    try {
+      const pagado   = esPagadoLocal(x.estado);
+      const montoNum = Number(String(x.monto).replace(/[$,\s]/g, '')) || 0;
+      const met      = String(x.met || '');
+      const moneda   = /ars|peso/i.test(met) ? 'ARS' : 'USD';
+      const tipo     = pagado ? 'Recibo' : 'Comprobante';
+      const programa = String(c['Programa'] || 'Programa').trim();
+      const formData = {
+        nombre:   c['Nombre'] || '',
+        email:    c['Email'] || '',
+        telefono: c['Teléfono'] || '',
+        fecha:    (pagado ? formatFecha(x.fecha) : '') || new Date().toLocaleDateString('es-AR'),
+        items:    [{ description: `${programa} — Cuota ${x.n}`, quantity: 1, amount: montoNum }],
+        subtotal: montoNum,
+        vat: 0, vatAmount: 0,
+        total:    montoNum,
+        origen:   'Ficha cliente',
+      };
+      const res = await fetch('/api/documentos/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, formData, moneda }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Error al generar el PDF');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `${tipo}-${(c['Nombre'] || 'cliente').replace(/\s+/g, '')}-cuota${x.n}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerandoDoc(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
+
   const marcarPagado = async (cuota) => {
     const key = String(cuota.n);
     setMarcando(prev => new Set([...prev, key]));
@@ -349,13 +394,20 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                         <p className="text-xs text-gray-400">{formatFecha(x.fecha)} · {x.met || '—'}</p>
                       </div>
                     </div>
-                    {pagado || enProceso
-                      ? <span className="text-xs font-semibold text-emerald-600">✓ Pagado</span>
-                      : <button onClick={() => marcarPagado(x)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
-                          ✓ Marcar pagado
-                        </button>
-                    }
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => generarDoc(x)} disabled={generandoDoc.has(String(x.n))}
+                        title={pagado ? 'Descargar recibo (PDF)' : 'Descargar comprobante de pago (PDF)'}
+                        className="px-3 py-1.5 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap">
+                        {generandoDoc.has(String(x.n)) ? '…' : (pagado ? '📄 Recibo' : '📄 Comprobante')}
+                      </button>
+                      {pagado || enProceso
+                        ? <span className="text-xs font-semibold text-emerald-600">✓ Pagado</span>
+                        : <button onClick={() => marcarPagado(x)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                            ✓ Marcar pagado
+                          </button>
+                      }
+                    </div>
                   </div>
                 );
               })}
