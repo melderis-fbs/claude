@@ -26,18 +26,17 @@ function getAssetPath(filename) {
 
 export async function POST(request) {
   try {
-    const { tipo, formData, moneda } = await request.json();
+    const { tipo, formData, moneda, registrar = true } = await request.json();
 
-    if (!['Invoice', 'Recibo', 'Comprobante'].includes(tipo)) {
+    if (!['Invoice', 'Recibo'].includes(tipo)) {
       return Response.json({ error: 'Tipo inválido' }, { status: 400 });
     }
 
-    // Comprobante = proforma (previo al pago): no consume número oficial ni se
-    // registra en la planilla. Recibo/Invoice sí llevan número correlativo.
-    const esComprobante = tipo === 'Comprobante';
-    let numero = 'PROFORMA';
-    if (!esComprobante) {
-      const config = NUMERO_CONFIG[tipo];
+    // Número: si viene en el form se respeta (permite editarlo / continuar la
+    // numeración real); si no, se toma el siguiente correlativo del sheet.
+    const config = NUMERO_CONFIG[tipo];
+    let numero = String(formData?.numero || '').trim();
+    if (!numero) {
       const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
       const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
       numero = config.format(lastN + 1);
@@ -54,11 +53,7 @@ export async function POST(request) {
             logoSrc,
           })
         : React.createElement(ReciboDocument, {
-            data: {
-              ...formData, numero, moneda,
-              titulo:    esComprobante ? 'COMPROBANTE' : 'RECIBO',
-              subtitulo: esComprobante ? 'Documento previo al pago — no acredita cobro' : '',
-            },
+            data: { ...formData, numero, moneda },
             logoSrc,
           });
 
@@ -71,7 +66,7 @@ export async function POST(request) {
       .filter(Boolean)
       .join(', ');
 
-    if (!esComprobante) {
+    if (registrar) {
       appendDocumento([
         tipo,
         numero,
@@ -99,4 +94,15 @@ export async function POST(request) {
     console.error('[documentos/generate] error:', err);
     return Response.json({ error: err.message }, { status: 500 });
   }
+}
+
+// GET — devuelve el próximo número correlativo (para prefilear el form).
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const tipo = searchParams.get('tipo') || 'Recibo';
+  const config = NUMERO_CONFIG[tipo];
+  if (!config) return Response.json({ error: 'Tipo inválido' }, { status: 400 });
+  const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
+  const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
+  return Response.json({ numero: config.format(lastN + 1) });
 }

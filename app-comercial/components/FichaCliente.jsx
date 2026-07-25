@@ -64,8 +64,11 @@ const INFO_FIELDS = [
 
 export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   const [marcando, setMarcando] = useState(new Set());
-  const [generandoDoc, setGenerandoDoc] = useState(new Set());
   const [error, setError] = useState('');
+  // Modal de recibo (editable + preview)
+  const [reciboForm, setReciboForm] = useState(null); // null = cerrado
+  const [reciboBusy, setReciboBusy] = useState(null);  // 'preview' | 'download' | null
+  const [reciboPreview, setReciboPreview] = useState(null); // blob URL
 
   const commentField = COMMENT_COLS.find(col => col in c) || 'Notas';
   const [comentario, setComentario] = useState(c[commentField] || '');
@@ -211,48 +214,78 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
     }
   };
 
-  // Genera y descarga el PDF de una cuota. Si está pagada → RECIBO;
-  // si está pendiente/seña → COMPROBANTE (proforma, previo al pago).
-  const generarDoc = async (x) => {
-    const key = String(x.n);
-    setGenerandoDoc(prev => new Set([...prev, key]));
+  // Abre el modal de recibo para una cuota, con los datos precargados.
+  const abrirRecibo = async (x) => {
+    const montoNum = Number(String(x.monto).replace(/[$,\s]/g, '')) || 0;
+    const met      = String(x.met || '');
+    const programa = String(c['Programa'] || 'Programa').trim();
     setError('');
+    if (reciboPreview) { URL.revokeObjectURL(reciboPreview); setReciboPreview(null); }
+    setReciboForm({
+      n:           x.n,
+      numero:      '',
+      fecha:       formatFecha(x.fecha) || new Date().toLocaleDateString('es-AR'),
+      nombre:      c['Nombre'] || '',
+      email:       c['Email'] || '',
+      telefono:    c['Teléfono'] || '',
+      descripcion: `${programa} — Cuota ${x.n}`,
+      monto:       String(montoNum),
+      moneda:      /ars|peso/i.test(met) ? 'ARS' : 'USD',
+    });
+    // Prefill del próximo número correlativo
     try {
-      const pagado   = esPagadoLocal(x.estado);
-      const montoNum = Number(String(x.monto).replace(/[$,\s]/g, '')) || 0;
-      const met      = String(x.met || '');
-      const moneda   = /ars|peso/i.test(met) ? 'ARS' : 'USD';
-      const tipo     = pagado ? 'Recibo' : 'Comprobante';
-      const programa = String(c['Programa'] || 'Programa').trim();
+      const r = await fetch('/api/documentos/generate?tipo=Recibo');
+      const d = await r.json();
+      if (d?.numero) setReciboForm(f => (f ? { ...f, numero: d.numero } : f));
+    } catch {}
+  };
+
+  const setRF = (k, v) => setReciboForm(f => ({ ...f, [k]: v }));
+
+  // Genera el PDF. registrar=false → solo preview (no numera oficial ni guarda);
+  // registrar=true → descarga y registra en la planilla.
+  const genRecibo = async (registrar) => {
+    if (!reciboForm) return;
+    setReciboBusy(registrar ? 'download' : 'preview'); setError('');
+    try {
+      const montoNum = Number(String(reciboForm.monto).replace(/[$,\s]/g, '')) || 0;
       const formData = {
-        nombre:   c['Nombre'] || '',
-        email:    c['Email'] || '',
-        telefono: c['Teléfono'] || '',
-        fecha:    (pagado ? formatFecha(x.fecha) : '') || new Date().toLocaleDateString('es-AR'),
-        items:    [{ description: `${programa} — Cuota ${x.n}`, quantity: 1, amount: montoNum }],
-        subtotal: montoNum,
-        vat: 0, vatAmount: 0,
-        total:    montoNum,
+        numero:   reciboForm.numero,
+        nombre:   reciboForm.nombre,
+        email:    reciboForm.email,
+        telefono: reciboForm.telefono,
+        fecha:    reciboForm.fecha,
+        items:    [{ description: reciboForm.descripcion, quantity: 1, amount: montoNum }],
+        subtotal: montoNum, vat: 0, vatAmount: 0, total: montoNum,
         origen:   'Ficha cliente',
       };
       const res = await fetch('/api/documentos/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, formData, moneda }),
+        body: JSON.stringify({ tipo: 'Recibo', formData, moneda: reciboForm.moneda, registrar }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Error al generar el PDF');
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url;
-      a.download = `${tipo}-${(c['Nombre'] || 'cliente').replace(/\s+/g, '')}-cuota${x.n}.pdf`;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
+      if (registrar) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Recibo-${(reciboForm.nombre || 'cliente').replace(/\s+/g, '')}-${reciboForm.numero || 'recibo'}.pdf`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        setReciboPreview(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
-      setGenerandoDoc(prev => { const s = new Set(prev); s.delete(key); return s; });
+      setReciboBusy(null);
     }
+  };
+
+  const cerrarRecibo = () => {
+    if (reciboPreview) URL.revokeObjectURL(reciboPreview);
+    setReciboPreview(null); setReciboForm(null); setReciboBusy(null);
   };
 
   const marcarPagado = async (cuota) => {
@@ -274,6 +307,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -395,10 +429,10 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => generarDoc(x)} disabled={generandoDoc.has(String(x.n))}
-                        title={pagado ? 'Descargar recibo (PDF)' : 'Descargar comprobante de pago (PDF)'}
-                        className="px-3 py-1.5 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap">
-                        {generandoDoc.has(String(x.n)) ? '…' : (pagado ? '📄 Recibo' : '📄 Comprobante')}
+                      <button onClick={() => abrirRecibo(x)}
+                        title="Generar recibo (PDF)"
+                        className="px-3 py-1.5 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                        📄 Recibo
                       </button>
                       {pagado || enProceso
                         ? <span className="text-xs font-semibold text-emerald-600">✓ Pagado</span>
@@ -446,5 +480,96 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
         </div>
       </div>
     </div>
+
+    {/* Modal recibo: editar campos + vista previa + descargar */}
+    {reciboForm && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={cerrarRecibo}>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900">Recibo — Cuota {reciboForm.n}</h3>
+            <button onClick={cerrarRecibo} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
+
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Campos editables */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Recibo Nro</label>
+                  <input value={reciboForm.numero} onChange={e => setRF('numero', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de pago</label>
+                  <input value={reciboForm.fecha} onChange={e => setRF('fecha', e.target.value)} placeholder="DD/MM/YYYY"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">A nombre de</label>
+                <input value={reciboForm.nombre} onChange={e => setRF('nombre', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <input value={reciboForm.email} onChange={e => setRF('email', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
+                  <input value={reciboForm.telefono} onChange={e => setRF('telefono', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
+                <input value={reciboForm.descripcion} onChange={e => setRF('descripcion', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+                  <input type="number" value={reciboForm.monto} onChange={e => setRF('monto', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Moneda</label>
+                  <select value={reciboForm.moneda} onChange={e => setRF('moneda', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500">
+                    <option>USD</option>
+                    <option>ARS</option>
+                  </select>
+                </div>
+              </div>
+
+              {error && <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => genRecibo(false)} disabled={!!reciboBusy}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                  {reciboBusy === 'preview' ? 'Generando…' : '👁 Vista previa'}
+                </button>
+                <button onClick={() => genRecibo(true)} disabled={!!reciboBusy}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                  {reciboBusy === 'download' ? 'Generando…' : '⬇ Descargar PDF'}
+                </button>
+              </div>
+            </div>
+
+            {/* Vista previa */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[300px]">
+              {reciboPreview
+                ? <iframe title="preview" src={reciboPreview} className="w-full flex-1 min-h-[380px]" />
+                : <div className="flex-1 flex items-center justify-center text-gray-400 text-sm text-center px-6">
+                    Tocá <span className="font-semibold mx-1">Vista previa</span> para ver el recibo antes de descargar.
+                  </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
