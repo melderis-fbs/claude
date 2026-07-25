@@ -10,14 +10,26 @@ export const dynamic = 'force-dynamic';
 
 const NUMERO_CONFIG = {
   Invoice: {
+    base: 0,
     format: (n) => String(n).padStart(8, '0'),
     parse: (s) => parseInt(String(s).replace(/\D/g, ''), 10) || 0,
   },
   Recibo: {
+    // La numeración real ya va por 127; sembramos la base para continuar desde
+    // ahí aunque la planilla de Documentos todavía no tenga esos recibos.
+    base: Number(process.env.RECIBO_NUMERO_BASE) || 127,
     format: (n) => '000-' + String(n).padStart(3, '0'),
     parse: (s) => parseInt(String(s).split('-').pop(), 10) || 0,
   },
 };
+
+// Próximo número correlativo para un tipo, respetando la base sembrada.
+async function proximoNumero(tipo) {
+  const config = NUMERO_CONFIG[tipo];
+  const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
+  const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
+  return config.format(Math.max(lastN, config.base || 0) + 1);
+}
 
 function getAssetPath(filename) {
   const p = path.join(process.cwd(), 'public', filename);
@@ -32,15 +44,10 @@ export async function POST(request) {
       return Response.json({ error: 'Tipo inválido' }, { status: 400 });
     }
 
-    // Número: si viene en el form se respeta (permite editarlo / continuar la
-    // numeración real); si no, se toma el siguiente correlativo del sheet.
-    const config = NUMERO_CONFIG[tipo];
+    // Número: si viene en el form se respeta; si no, se toma automáticamente el
+    // siguiente correlativo (respetando la base sembrada).
     let numero = String(formData?.numero || '').trim();
-    if (!numero) {
-      const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
-      const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
-      numero = config.format(lastN + 1);
-    }
+    if (!numero) numero = await proximoNumero(tipo);
 
     const firmaSrc = getAssetPath('firma-victoria.png');
     const logoSrc = getAssetPath('founders-logo.png');
@@ -100,9 +107,6 @@ export async function POST(request) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const tipo = searchParams.get('tipo') || 'Recibo';
-  const config = NUMERO_CONFIG[tipo];
-  if (!config) return Response.json({ error: 'Tipo inválido' }, { status: 400 });
-  const ultimoNumero = await getUltimoNumero(tipo).catch(() => null);
-  const lastN = ultimoNumero ? config.parse(ultimoNumero) : 0;
-  return Response.json({ numero: config.format(lastN + 1) });
+  if (!NUMERO_CONFIG[tipo]) return Response.json({ error: 'Tipo inválido' }, { status: 400 });
+  return Response.json({ numero: await proximoNumero(tipo) });
 }
