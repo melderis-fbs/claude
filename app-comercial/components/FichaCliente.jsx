@@ -250,7 +250,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
     try {
       const montoNum = Number(String(reciboForm.monto).replace(/[$,\s]/g, '')) || 0;
       const formData = {
-        numero:   reciboForm.numero,
+        // Sin 'numero': la ruta asigna el correlativo automáticamente al generar.
         nombre:   reciboForm.nombre,
         email:    reciboForm.email,
         telefono: reciboForm.telefono,
@@ -495,9 +495,9 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Recibo Nro</label>
-                  <input value={reciboForm.numero} onChange={e => setRF('numero', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Recibo Nro <span className="text-gray-400 font-normal">(automático)</span></label>
+                  <input value={reciboForm.numero || '…'} readOnly tabIndex={-1}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de pago</label>
