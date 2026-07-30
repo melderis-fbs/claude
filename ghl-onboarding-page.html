@@ -22,10 +22,12 @@ html { scroll-behavior: smooth; }
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   background: var(--cream);
-  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.page-wrap {
   display: flex; flex-direction: column; align-items: center;
   padding: calc(var(--nav-h) + 56px) 20px 72px;
-  -webkit-font-smoothing: antialiased;
+  width: 100%;
 }
 .navbar {
   position: fixed; top: 0; left: 0; width: 100%; height: var(--nav-h);
@@ -230,7 +232,7 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 @media (max-width: 640px) {
-  body { padding: calc(var(--nav-h) + 32px) 16px 60px; }
+  .page-wrap { padding: calc(var(--nav-h) + 32px) 16px 60px; }
   .navbar { padding: 0 16px; grid-template-columns: 1fr auto; }
   .navbar-right { display: none; }
   .navbar-links { gap: 18px; }
@@ -245,6 +247,7 @@ body {
 </head>
 <body>
 
+<div class="page-wrap">
 <nav class="navbar">
   <div class="navbar-logo">
     <img src="https://assets.cdn.filesafe.space/x7nYndpXUc1dmpunATsZ/media/69b1f5947fc07c1663a685e2.png" alt="Founders">
@@ -399,6 +402,7 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
+</div><!-- end page-wrap -->
 
 <script>
 (function () {
