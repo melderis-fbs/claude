@@ -27,7 +27,7 @@ body {
 .page-wrap {
   display: flex; flex-direction: column; align-items: center;
   padding: calc(var(--nav-h) + 56px) 20px 72px;
-  width: 100%;
+  width: 100%; background: var(--cream); min-height: 100vh;
 }
 .navbar {
   position: fixed; top: 0; left: 0; width: 100%; height: var(--nav-h);
@@ -38,12 +38,8 @@ body {
   transition: transform 0.3s ease;
 }
 .navbar.hidden { transform: translateY(-100%); }
-.navbar-logo { justify-self: start; display: flex; align-items: center; gap: 10px; }
+.navbar-logo { justify-self: start; }
 .navbar-logo img { height: 36px; width: auto; display: block; }
-.navbar-logo-text {
-  font-size: 13px; font-weight: 800; letter-spacing: 0.12em;
-  text-transform: uppercase; color: #fff;
-}
 .navbar-links {
   justify-self: center;
   display: flex; gap: 36px;
@@ -268,7 +264,6 @@ body {
 <nav class="navbar">
   <div class="navbar-logo">
     <img src="https://assets.cdn.filesafe.space/x7nYndpXUc1dmpunATsZ/media/69b1f5947fc07c1663a685e2.png" alt="Founders">
-    <span class="navbar-logo-text">Founders</span>
   </div>
   <div class="navbar-links">
     <a href="#pasos">Mis pasos</a>
@@ -292,7 +287,7 @@ body {
           allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-<div id="pasos" style="width:100%;display:contents;">
+<div id="pasos" style="width:100%;display:flex;flex-direction:column;align-items:center;">
   <div class="section-head"><span>Completa ahora</span></div>
   <div class="steps">
     <a class="step locked" id="s1" href="#" target="_blank" rel="noopener">
@@ -322,7 +317,7 @@ body {
       <div class="s-icon-wrap">🎓</div>
       <div class="s-text">
         <div class="s-title">Acceso a Skool</div>
-        <div class="s-sub">Clases y recursos del programa</div>
+        <div class="s-sub">Clases y recursos del programa · <a href="#tutoriales" style="color:var(--beige);text-decoration:none;font-weight:600;" onclick="event.stopPropagation()">Ver tutorial ↓</a></div>
       </div>
       <span class="s-arrow">↗</span>
     </a>
@@ -331,7 +326,7 @@ body {
       <div class="s-icon-wrap">💬</div>
       <div class="s-text">
         <div class="s-title">Grupo de Telegram</div>
-        <div class="s-sub">Tu comunidad en tiempo real</div>
+        <div class="s-sub">Tu comunidad en tiempo real · <a href="#tutoriales" style="color:var(--beige);text-decoration:none;font-weight:600;" onclick="event.stopPropagation()">Ver tutorial ↓</a></div>
       </div>
       <span class="s-arrow">↗</span>
     </a>
