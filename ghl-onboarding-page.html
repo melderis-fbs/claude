@@ -23,14 +23,10 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   background: var(--cream);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: flex; flex-direction: column; align-items: center;
   padding: calc(var(--nav-h) + 48px) 20px 72px;
   -webkit-font-smoothing: antialiased;
 }
-
-/* ── Navbar ── */
 .navbar {
   position: fixed; top: 0; left: 0; width: 100%; height: var(--nav-h);
   background: rgba(242,238,233,0.92); backdrop-filter: blur(12px);
@@ -43,17 +39,9 @@ body {
 .navbar-links a {
   font-size: 12px; font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--muted); text-decoration: none;
-  transition: color 0.2s;
+  color: var(--muted); text-decoration: none; transition: color 0.2s;
 }
 .navbar-links a:hover { color: var(--black); }
-@media (max-width: 480px) {
-  .navbar { padding: 0 16px; }
-  .navbar-links { gap: 16px; }
-  .navbar-links a { font-size: 11px; }
-}
-
-/* ── Hero ── */
 .logo { margin-bottom: 40px; text-align: center; }
 .hero { text-align: center; max-width: 560px; margin-bottom: 32px; }
 .eyebrow {
@@ -66,8 +54,6 @@ body {
   color: var(--black); line-height: 1.12; letter-spacing: -0.02em;
 }
 .hero h1 em { font-style: normal; color: var(--beige); }
-
-/* ── Video ── */
 .video-card {
   width: 100%; max-width: 860px;
   background: var(--black); border-radius: 18px;
@@ -75,26 +61,22 @@ body {
   position: relative; margin-bottom: 48px;
 }
 .video-card iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-
-/* ── Section header ── */
 .section-head {
   display: flex; align-items: center; gap: 12px;
   width: 100%; max-width: 560px; margin-bottom: 6px;
 }
+.section-head.wide { max-width: 800px; }
 .section-head span {
   font-size: 11px; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--black); white-space: nowrap;
 }
 .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.section-head.wide { max-width: 800px; }
 .section-sub {
   width: 100%; max-width: 560px;
   font-size: 11px; color: var(--muted);
   margin-bottom: 12px; font-style: italic;
 }
-
-/* ── Steps ── */
 .steps {
   width: 100%; max-width: 560px;
   display: flex; flex-direction: column;
@@ -145,12 +127,9 @@ body {
 .step.locked .s-badge { background: #bbb; }
 .step.locked .s-arrow { color: #bbb; }
 .step.done { border-color: var(--beige); }
-
-/* ── Team section ── */
 .team-section { width: 100%; max-width: 800px; margin-top: 56px; }
 .team-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 20px; margin-top: 20px;
 }
 .team-card {
@@ -162,20 +141,11 @@ body {
   background: var(--beige); display: flex;
   align-items: center; justify-content: center;
   font-size: 20px; font-weight: 700; color: var(--white);
-  overflow: hidden; border: 2px solid var(--border);
-  flex-shrink: 0;
+  overflow: hidden; border: 2px solid var(--border); flex-shrink: 0;
 }
 .team-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .team-name { font-size: 12px; font-weight: 700; color: var(--black); line-height: 1.3; }
 .team-role { font-size: 10px; color: var(--muted); line-height: 1.4; }
-@media (max-width: 640px) {
-  .team-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-}
-@media (max-width: 360px) {
-  .team-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ── Tutorials section ── */
 .tuts-section { width: 100%; max-width: 800px; margin-top: 56px; }
 .tuts-grid {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -183,7 +153,8 @@ body {
 }
 .tut-card {
   background: var(--white); border: 1px solid var(--border);
-  border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+  border-radius: 18px; padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
 }
 .tut-header { display: flex; align-items: center; gap: 12px; }
 .tut-icon {
@@ -198,8 +169,8 @@ body {
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--cream); border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; color: var(--beige); flex-shrink: 0;
-  margin-top: 1px;
+  font-size: 10px; font-weight: 700; color: var(--beige);
+  flex-shrink: 0; margin-top: 1px;
 }
 .tut-step-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .tut-img {
@@ -208,11 +179,6 @@ body {
   border-radius: 10px; display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: #ccc; letter-spacing: 0.04em;
 }
-@media (max-width: 580px) {
-  .tuts-grid { grid-template-columns: 1fr; }
-}
-
-/* ── Footer / Progress / Sync ── */
 .footer {
   margin: 56px auto 0; text-align: center;
   max-width: 380px; width: 100%;
@@ -228,9 +194,7 @@ body {
   width: 100%; height: 3px;
   background: var(--border); border-radius: 99px; overflow: hidden;
 }
-.progress-fill {
-  height: 100%; background: var(--beige); border-radius: 99px; transition: width 0.5s ease;
-}
+.progress-fill { height: 100%; background: var(--beige); border-radius: 99px; transition: width 0.5s ease; }
 .sync-wrap { margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .sync { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #C4B49A; }
 .sync-dot {
@@ -242,12 +206,10 @@ body {
   50%       { opacity: 0.3; transform: scale(0.7); }
 }
 .refresh-btn {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px; font-weight: 600;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
   color: var(--black); background: var(--white);
   border: 1px solid var(--border); border-radius: 100px;
-  padding: 8px 20px; cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  padding: 8px 20px; cursor: pointer; transition: background 0.2s, border-color 0.2s;
 }
 .refresh-btn:hover { background: var(--black); color: var(--white); border-color: var(--black); }
 .toast {
@@ -261,17 +223,21 @@ body {
   white-space: nowrap; z-index: 999;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   body { padding: calc(var(--nav-h) + 32px) 16px 60px; }
+  .navbar { padding: 0 16px; }
+  .navbar-links { gap: 16px; }
+  .navbar-links a { font-size: 11px; }
   .step { padding: 16px; gap: 13px; }
   .s-icon-wrap { width: 40px; height: 40px; min-width: 40px; font-size: 17px; }
   .video-card { border-radius: 14px; }
+  .team-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .tuts-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <nav class="navbar">
   <div class="navbar-logo">
     <img src="https://assets.cdn.filesafe.space/x7nYndpXUc1dmpunATsZ/media/69b1f5947fc07c1663a685e2.png" alt="Founders">
@@ -283,12 +249,10 @@ body {
   </div>
 </nav>
 
-<!-- Hero -->
 <div class="logo">
   <img src="https://assets.cdn.filesafe.space/x7nYndpXUc1dmpunATsZ/media/69b1f5947fc07c1663a685e2.png"
-       alt="Founders" style="height: 56px; width: auto;">
+       alt="Founders" style="height:56px;width:auto;">
 </div>
-
 <div class="hero">
   <p class="eyebrow">Founders · Business Strategists</p>
   <h1>Bienvenido,<br><em id="contact-name">...</em> 👋</h1>
@@ -299,8 +263,7 @@ body {
           allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-<!-- Steps -->
-<section id="pasos" style="width:100%; display:contents;">
+<div id="pasos" style="width:100%;display:contents;">
   <div class="section-head"><span>Completa ahora</span></div>
   <div class="steps">
     <a class="step locked" id="s1" href="#" target="_blank" rel="noopener">
@@ -322,7 +285,6 @@ body {
       <span class="s-arrow" id="s2-arrow">→</span>
     </a>
   </div>
-
   <div class="section-head" style="margin-top:20px;"><span>Lo que te espera</span></div>
   <p class="section-sub">Se activan automáticamente a medida que completás los pasos anteriores.</p>
   <div class="steps">
@@ -354,171 +316,61 @@ body {
       <span class="s-arrow">↗</span>
     </a>
   </div>
-</section>
+</div>
 
-<!-- Team -->
 <section id="equipo" class="team-section">
   <div class="section-head wide"><span>El equipo</span></div>
   <div class="team-grid">
-
-    <div class="team-card">
-      <div class="team-avatar">VB</div>
-      <div class="team-name">Vicky Becci</div>
-      <div class="team-role">CEO & Fundadora</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">LB</div>
-      <div class="team-name">Leticia Bordoni</div>
-      <div class="team-role">Directora de Operaciones</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">MD</div>
-      <div class="team-name">Melisa Deris</div>
-      <div class="team-role">Administración y Soporte</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">MB</div>
-      <div class="team-name">María Alejandra Bouquet</div>
-      <div class="team-role">Operaciones</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">KH</div>
-      <div class="team-name">Kathering Hung</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">JP</div>
-      <div class="team-name">Jhossana Pacheco</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">CP</div>
-      <div class="team-name">Constanza Prosperi</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">NP</div>
-      <div class="team-name">Natalia Pérez</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">JR</div>
-      <div class="team-name">Johann Rodriguez</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">VP</div>
-      <div class="team-name">Victoria Picatto</div>
-      <div class="team-role">Business Coach</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">RP</div>
-      <div class="team-name">Romina Prosperi</div>
-      <div class="team-role">Business Coach & Mentora de Mentalidad</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">AP</div>
-      <div class="team-name">Adrián Plura</div>
-      <div class="team-role">Mentor de Ventas</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">LU</div>
-      <div class="team-name">Lucía Uñates</div>
-      <div class="team-role">Mentora de Contenido</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">BS</div>
-      <div class="team-name">Belén Soto</div>
-      <div class="team-role">Mentora de Anuncios</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">KP</div>
-      <div class="team-name">Kevin Pavón</div>
-      <div class="team-role">Mentor de Prospección y Asesor Comercial</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">BM</div>
-      <div class="team-name">Braian Marchetti</div>
-      <div class="team-role">Asesor Comercial</div>
-    </div>
-
-    <div class="team-card">
-      <div class="team-avatar">FZ</div>
-      <div class="team-name">Fabricio Zarate</div>
-      <div class="team-role">Encargado de Admisiones</div>
-    </div>
-
+    <div class="team-card"><div class="team-avatar">VB</div><div class="team-name">Vicky Becci</div><div class="team-role">CEO &amp; Fundadora</div></div>
+    <div class="team-card"><div class="team-avatar">LB</div><div class="team-name">Leticia Bordoni</div><div class="team-role">Directora de Operaciones</div></div>
+    <div class="team-card"><div class="team-avatar">MD</div><div class="team-name">Melisa Deris</div><div class="team-role">Administración y Soporte</div></div>
+    <div class="team-card"><div class="team-avatar">MB</div><div class="team-name">María Alejandra Bouquet</div><div class="team-role">Operaciones</div></div>
+    <div class="team-card"><div class="team-avatar">KH</div><div class="team-name">Kathering Hung</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">JP</div><div class="team-name">Jhossana Pacheco</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">CP</div><div class="team-name">Constanza Prosperi</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">NP</div><div class="team-name">Natalia Pérez</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">JR</div><div class="team-name">Johann Rodriguez</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">VP</div><div class="team-name">Victoria Picatto</div><div class="team-role">Business Coach</div></div>
+    <div class="team-card"><div class="team-avatar">RP</div><div class="team-name">Romina Prosperi</div><div class="team-role">Business Coach &amp; Mentora de Mentalidad</div></div>
+    <div class="team-card"><div class="team-avatar">AP</div><div class="team-name">Adrián Plura</div><div class="team-role">Mentor de Ventas</div></div>
+    <div class="team-card"><div class="team-avatar">LU</div><div class="team-name">Lucía Uñates</div><div class="team-role">Mentora de Contenido</div></div>
+    <div class="team-card"><div class="team-avatar">BS</div><div class="team-name">Belén Soto</div><div class="team-role">Mentora de Anuncios</div></div>
+    <div class="team-card"><div class="team-avatar">KP</div><div class="team-name">Kevin Pavón</div><div class="team-role">Mentor de Prospección y Asesor Comercial</div></div>
+    <div class="team-card"><div class="team-avatar">BM</div><div class="team-name">Braian Marchetti</div><div class="team-role">Asesor Comercial</div></div>
+    <div class="team-card"><div class="team-avatar">FZ</div><div class="team-name">Fabricio Zarate</div><div class="team-role">Encargado de Admisiones</div></div>
   </div>
 </section>
 
-<!-- Tutorials -->
 <section id="tutoriales" class="tuts-section">
   <div class="section-head wide"><span>Tutoriales</span></div>
   <div class="tuts-grid">
-
     <div class="tut-card">
       <div class="tut-header">
         <div class="tut-icon">🎓</div>
         <div class="tut-title">Cómo ingresar a Skool</div>
       </div>
       <div class="tut-steps">
-        <div class="tut-step">
-          <div class="tut-num">1</div>
-          <div class="tut-step-text">Hacé clic en el botón "Acceso a Skool" una vez que se desbloquee</div>
-        </div>
-        <div class="tut-step">
-          <div class="tut-num">2</div>
-          <div class="tut-step-text">Creá tu cuenta con el mismo email que usaste al contratar</div>
-        </div>
-        <div class="tut-step">
-          <div class="tut-num">3</div>
-          <div class="tut-step-text">Completá tu perfil y explorá los módulos del programa</div>
-        </div>
+        <div class="tut-step"><div class="tut-num">1</div><div class="tut-step-text">Hacé clic en el botón "Acceso a Skool" una vez que se desbloquee</div></div>
+        <div class="tut-step"><div class="tut-num">2</div><div class="tut-step-text">Creá tu cuenta con el mismo email que usaste al contratar</div></div>
+        <div class="tut-step"><div class="tut-num">3</div><div class="tut-step-text">Completá tu perfil y explorá los módulos del programa</div></div>
       </div>
       <div class="tut-img">Captura próximamente</div>
     </div>
-
     <div class="tut-card">
       <div class="tut-header">
         <div class="tut-icon">💬</div>
         <div class="tut-title">Cómo unirse a Telegram</div>
       </div>
       <div class="tut-steps">
-        <div class="tut-step">
-          <div class="tut-num">1</div>
-          <div class="tut-step-text">Descargá Telegram en tu celular o abrilo en el navegador</div>
-        </div>
-        <div class="tut-step">
-          <div class="tut-num">2</div>
-          <div class="tut-step-text">Hacé clic en el botón "Grupo de Telegram" una vez desbloqueado</div>
-        </div>
-        <div class="tut-step">
-          <div class="tut-num">3</div>
-          <div class="tut-step-text">Presentate en el grupo y conectá con tu comunidad</div>
-        </div>
+        <div class="tut-step"><div class="tut-num">1</div><div class="tut-step-text">Descargá Telegram en tu celular o abrilo en el navegador</div></div>
+        <div class="tut-step"><div class="tut-num">2</div><div class="tut-step-text">Hacé clic en el botón "Grupo de Telegram" una vez desbloqueado</div></div>
+        <div class="tut-step"><div class="tut-num">3</div><div class="tut-step-text">Presentate en el grupo y conectá con tu comunidad</div></div>
       </div>
       <div class="tut-img">Captura próximamente</div>
     </div>
-
   </div>
 </section>
 
-<!-- Footer -->
 <div class="footer">
   <p>¿Tenés alguna duda? <strong>Contactate con nosotros.</strong></p>
 </div>
@@ -546,10 +398,7 @@ body {
   var params = new URLSearchParams(window.location.search);
   var contactId = params.get('contact_id');
 
-  if (!contactId) {
-    document.getElementById('contact-name').textContent = '';
-    return;
-  }
+  if (!contactId) { document.getElementById('contact-name').textContent = ''; return; }
 
   fetch(WORKER + '?id=' + contactId)
     .then(function (r) { return r.json(); })
@@ -567,8 +416,7 @@ body {
       if (s.form_completed)  markDone('s2', 's2-sub', 's2-arrow', 'Completado');
 
       if (s.contract_signed) {
-        unlock('s3');
-        unlock('s4');
+        unlock('s3'); unlock('s4');
       } else {
         addToast('s3', '🔒 Firmá el contrato primero');
         addToast('s4', '🔒 Firmá el contrato primero');
@@ -587,9 +435,7 @@ body {
         setTimeout(function () { window.location.reload(); }, 300000);
       }
     })
-    .catch(function () {
-      document.getElementById('contact-name').textContent = '';
-    });
+    .catch(function () { document.getElementById('contact-name').textContent = ''; });
 
   function updateProgressBar(s) {
     var done = 0;
@@ -603,7 +449,6 @@ body {
     document.getElementById('pb-fill').style.width = pct + '%';
     document.getElementById('pb-label').textContent = done + ' de 5 pasos completados';
   }
-
   function markDone(stepId, subId, arrowId, text) {
     document.getElementById(stepId).classList.add('done');
     document.getElementById(subId).textContent   = text;
@@ -622,8 +467,7 @@ body {
   var toastTimer;
   function showToast(msg) {
     var t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
+    t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
   }
