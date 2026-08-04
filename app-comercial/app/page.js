@@ -116,7 +116,7 @@ export default async function Home() {
     );
   } catch (err) {
     const msg = String(err?.message || '');
-    const es404 = /error 404|page not found|unable to open the file/i.test(msg);
+    const es404 = /error 404|page not found|unable to open the file|página de login|unexpected token|<!doctype|cualquier usuario/i.test(msg);
     return (
       <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
         <div className="bg-white border border-red-200 rounded-xl p-6 max-w-xl w-full shadow-sm">

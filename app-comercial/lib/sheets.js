@@ -21,7 +21,13 @@ async function fetchScript(url, params = {}, { retries = 1 } = {}) {
     try {
       const res = await fetch(fullUrl, { cache: 'no-store', signal: AbortSignal.timeout(READ_TIMEOUT) });
       if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
-      return res.json();
+      const text = await res.text();
+      // Si devuelve HTML (página de login/consent de Google) en vez de JSON, el
+      // Web App está pidiendo login → el acceso no es "Cualquier usuario" (anónimo).
+      if (/^\s*</.test(text)) {
+        throw new Error('Apps Script devolvió una página de login (HTML) en vez de datos. En la implementación del Web App poné "Quién tiene acceso: Cualquier usuario" (anónimo, NO "con cuenta de Google").');
+      }
+      return JSON.parse(text);
     } catch (err) {
       lastErr = err;
       // Sólo reintentamos ante timeout o problemas de red transitorios.
