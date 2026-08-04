@@ -16,8 +16,10 @@ export const maxDuration = 60;
 export default async function Home() {
   try {
     // getEgresosTab usa otra Web App de Apps Script → puede ir en paralelo sin
-    // competir por la cola de ejecuciones de la planilla de clientes.
-    const egresosP = getEgresosTab('Consolidado').catch(() => []);
+    // competir por la cola de ejecuciones de la planilla de clientes. Arrancamos
+    // ambas lecturas de egresos ACÁ (en paralelo) para no sumar latencia luego.
+    const egresosP    = getEgresosTab('Consolidado').catch(() => []);
+    const comAjustesP = getEgresosTab('Comisiones ajustes').catch(() => []);
 
     // El resto comparten la MISMA Web App de Apps Script, que serializa las
     // ejecuciones concurrentes: pedir las 6 a la vez satura la cola y provoca
@@ -29,9 +31,8 @@ export default async function Home() {
     const deudoresRecords = await getDeudores().catch(() => []);
     const facturas        = await getFacturas().catch(() => []);
     const anunciosRows    = await getAnuncios().catch(() => []);
-    // Ajustes de comisiones: pestaña "Comisiones ajustes" en la planilla de
-    // Egresos, leída con la función genérica getTab (ya deployada → sin redeploys).
-    const comAjustesRows  = await getEgresosTab('Comisiones ajustes').catch(() => []);
+    // Ajustes de comisiones y egresos ya venían corriendo en paralelo arriba.
+    const comAjustesRows  = await comAjustesP;
     const egresosRows     = await egresosP;
 
     // Formato plano: una fila por concepto (Mes, Closer, Fijo, Concepto Variable,
