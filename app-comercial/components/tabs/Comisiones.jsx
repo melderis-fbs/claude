@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, Fragment } from 'react';
+import { useState, Fragment } from 'react';
 
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 const fmtSigno = n => `${n < 0 ? '-' : '+'}$${Math.round(Math.abs(n)).toLocaleString('es-AR')}`;
@@ -12,60 +12,27 @@ const fmtFecha = val => {
   return s;
 };
 
-// Ajustes por closer/mes (fijos + variables). Se guardan en el sheet (pestaña
-// "Comisiones ajustes"), así los ve cualquiera que entre. No tocan el cálculo
-// del 8%, son una capa arriba.
+// Ajustes por closer/mes (fijos + extras). Vienen del sheet (pestaña
+// "Comisiones ajustes"), así los ve cualquiera que entre. Solo lectura: se
+// cargan y editan en la planilla. No tocan el cálculo del 8%, son una capa arriba.
 const adjVacio = { fijo: 0, items: [] };
 const sumaItems = items => (items || []).reduce((a, i) => a + (Number(i.monto) || 0), 0);
 const totalAjuste = adj => (Number(adj?.fijo) || 0) + sumaItems(adj?.items);
+const norm = s => String(s || '').toLowerCase().trim();
 
 export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
   const [mesSel, setMesSel] = useState(comisiones[comisiones.length - 1]?.mes ?? '');
   const [expandido, setExpandido] = useState(null); // closer expandido
-  const [ajustes, setAjustes] = useState(ajustesIniciales); // { "mes|closer": {fijo, items} } (del sheet)
-  const [guardado, setGuardado] = useState('');     // '' | 'guardando' | 'ok' | 'error'
-  const timers = useRef({});
   const mes = comisiones.find(m => m.mes === mesSel);
 
   if (!comisiones.length) return <p className="text-gray-400 text-sm">Sin datos de comisiones.</p>;
 
   const allClosers = [...new Set(comisiones.flatMap(m => m.detalle.map(d => d.closer)))].sort();
 
-  const getAdj = closer => ajustes[`${mesSel}|${closer}`] || adjVacio;
+  // Match case-insensitive: en la planilla puede figurar "Kevin" y "kevin".
+  const getAdj = closer => ajustesIniciales[`${mesSel}|${norm(closer)}`] || adjVacio;
   const totalPagarCloser = d => d.comision + totalAjuste(getAdj(d.closer));
   const totalPagarMes = mes ? mes.detalle.reduce((a, d) => a + totalPagarCloser(d), 0) : 0;
-
-  // Guarda (debounce) el ajuste del closer/mes en el sheet, para que sea compartido.
-  function guardarServer(closer, adj) {
-    const key = `${mesSel}|${closer}`;
-    clearTimeout(timers.current[key]);
-    setGuardado('guardando');
-    timers.current[key] = setTimeout(async () => {
-      const fijo  = Number(adj.fijo) || 0;
-      const items = (adj.items || [])
-        .filter(i => (i.concepto || '').trim() || Number(i.monto))
-        .map(i => ({ concepto: (i.concepto || '').trim(), monto: Number(i.monto) || 0 }));
-      try {
-        const res = await fetch('/api/comisiones/ajustes', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mes: mesSel, closer, fijo, extras: JSON.stringify(items) }),
-        });
-        setGuardado(res.ok ? 'ok' : 'error');
-      } catch { setGuardado('error'); }
-      setTimeout(() => setGuardado(''), 2000);
-    }, 700);
-  }
-
-  // Actualiza el ajuste en pantalla y dispara el guardado al sheet.
-  function setAdj(closer, updater) {
-    const key = `${mesSel}|${closer}`;
-    setAjustes(prev => {
-      const cur = prev[key] || adjVacio;
-      const nextAdj = updater({ fijo: cur.fijo ?? '', items: (cur.items || []).map(i => ({ ...i })) });
-      guardarServer(closer, nextAdj);
-      return { ...prev, [key]: nextAdj };
-    });
-  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -80,15 +47,6 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
             {m.label}
           </button>
         ))}
-        {guardado && (
-          <span className={`text-xs px-2 py-1 rounded-full ml-1 ${
-            guardado === 'ok' ? 'bg-emerald-50 text-emerald-600'
-            : guardado === 'error' ? 'bg-red-50 text-red-600'
-            : 'bg-gray-100 text-gray-500'
-          }`}>
-            {guardado === 'guardando' ? 'Guardando…' : guardado === 'ok' ? '✓ Guardado' : 'Error al guardar'}
-          </span>
-        )}
       </div>
 
       {mes && (
@@ -210,44 +168,40 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
                             </div>
                           )}
 
-                          {/* Editor de fijos y variables (inline, sin modal) */}
+                          {/* Fijos y extras (solo lectura, desde la planilla "Comisiones ajustes") */}
                           {(() => {
-                            const adj = getAdj(d.closer);
+                            const adj   = getAdj(d.closer);
+                            const fijo  = Number(adj.fijo) || 0;
+                            const items = adj.items || [];
                             return (
                               <div className="bg-white border border-gray-200 rounded-xl p-4 max-w-md">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Fijos y ajustes</p>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Fijos y extras</p>
 
-                                <div className="flex items-center gap-2 mb-3">
-                                  <label className="text-sm text-gray-600 w-16 flex-shrink-0">Fijo</label>
-                                  <span className="text-gray-400">$</span>
-                                  <input type="number" inputMode="numeric" value={adj.fijo || ''} placeholder="0"
-                                    onChange={e => setAdj(d.closer, a => ({ ...a, fijo: e.target.value }))}
-                                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                  <span className="text-gray-600">Comisión (8%)</span>
+                                  <span className="font-medium text-gray-800">{fmt(d.comision)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                  <span className="text-gray-600">Fijo</span>
+                                  <span className="font-medium text-gray-800">{fijo ? fmt(fijo) : <span className="text-gray-300">—</span>}</span>
                                 </div>
 
-                                <div className="space-y-2">
-                                  {(adj.items || []).map((it, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                      <input value={it.concepto || ''} placeholder="Concepto"
-                                        onChange={e => setAdj(d.closer, a => ({ ...a, items: a.items.map((x, xi) => xi === i ? { ...x, concepto: e.target.value } : x) }))}
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                                      <input type="number" inputMode="numeric" value={it.monto || ''} placeholder="0"
-                                        onChange={e => setAdj(d.closer, a => ({ ...a, items: a.items.map((x, xi) => xi === i ? { ...x, monto: e.target.value } : x) }))}
-                                        className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-                                      <button onClick={() => setAdj(d.closer, a => ({ ...a, items: a.items.filter((_, xi) => xi !== i) }))}
-                                        className="text-gray-300 hover:text-red-400 text-lg px-1 flex-shrink-0">×</button>
-                                    </div>
-                                  ))}
-                                </div>
-
-                                <button onClick={() => setAdj(d.closer, a => ({ ...a, items: [...(a.items || []), { concepto: '', monto: '' }] }))}
-                                  className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800">+ Agregar variable</button>
-                                <p className="text-[11px] text-gray-400 mt-1">Montos negativos para descuentos/adelantos (ej. -5000). Se guarda solo.</p>
+                                {items.length > 0 && (
+                                  <div className="mt-1 space-y-1">
+                                    {items.map((it, i) => (
+                                      <div key={i} className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-500">{it.concepto || 'Extra'}</span>
+                                        <span className={`font-medium ${Number(it.monto) < 0 ? 'text-red-600' : 'text-gray-800'}`}>{fmtSigno(Number(it.monto) || 0)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
 
                                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                                   <span className="text-sm text-gray-600">Total a pagar</span>
                                   <span className="text-lg font-bold text-emerald-700">{fmt(totalPagarCloser(d))}</span>
                                 </div>
+                                <p className="text-[11px] text-gray-400 mt-2">Los fijos y extras se cargan en la planilla (pestaña <span className="font-medium">Comisiones ajustes</span>).</p>
                               </div>
                             );
                           })()}

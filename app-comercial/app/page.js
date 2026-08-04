@@ -32,12 +32,18 @@ export default async function Home() {
     const comAjustesRaw   = await getComisionesAjustes().catch(() => []);
     const egresosRows     = await egresosP;
 
-    // Ajustes de comisiones (fijos + extras) compartidos → mapa "mes|closer".
+    // Ajustes de comisiones (formato plano del sheet: una fila por concepto).
+    // Agrupamos por mes + closer (case-insensitive, porque en la planilla puede
+    // figurar "Kevin" y "kevin"). Fila con Fijo → fijo; fila con Concepto/Monto
+    // Variable → extra.
     const comisionesAjustes = {};
     for (const a of comAjustesRaw) {
-      let items = [];
-      try { items = JSON.parse(a.extras || '[]'); if (!Array.isArray(items)) items = []; } catch { items = []; }
-      comisionesAjustes[`${a.mes}|${a.closer}`] = { fijo: Number(a.fijo) || 0, items };
+      const key = `${a.mes}|${String(a.closer).toLowerCase().trim()}`;
+      if (!comisionesAjustes[key]) comisionesAjustes[key] = { fijo: 0, items: [] };
+      if (a.fijo) comisionesAjustes[key].fijo += Number(a.fijo) || 0;
+      if ((a.concepto && a.concepto.trim()) || a.monto) {
+        comisionesAjustes[key].items.push({ concepto: a.concepto || '', monto: Number(a.monto) || 0 });
+      }
     }
 
     const resumen              = calcularResumenMensual(clientes, egresosRows);

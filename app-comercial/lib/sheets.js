@@ -171,11 +171,6 @@ export async function getComisionesAjustes() {
   return data.ajustes ?? [];
 }
 
-export async function saveComisionAjuste(mes, closer, fijo, extras) {
-  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
-  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertComisionAjuste', mes, closer, fijo, extras });
-}
-
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function appendEgreso(rowValues) {
