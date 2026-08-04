@@ -1,4 +1,4 @@
-import { MOCK_MODE } from '../../../lib/sheets.js';
+import { MOCK_MODE, getEgresosTab } from '../../../lib/sheets.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,10 +22,24 @@ async function probe(url) {
   return out;
 }
 
+async function probeComAjustes() {
+  try {
+    const rows = await getEgresosTab('Comisiones ajustes');
+    return {
+      filas: rows.length,
+      encabezados: rows[0] ? Object.keys(rows[0]).filter(k => k !== '_rowIndex') : [],
+      primeras: rows.slice(0, 4),
+    };
+  } catch (e) {
+    return { error: String(e?.message || e).slice(0, 200) };
+  }
+}
+
 export async function GET() {
   return Response.json({
     mockMode: MOCK_MODE,
     clientes: await probe(process.env.APPS_SCRIPT_CLIENTES_URL),
     egresos:  await probe(process.env.APPS_SCRIPT_EGRESOS_URL),
+    comisionesAjustes: await probeComAjustes(),
   });
 }
