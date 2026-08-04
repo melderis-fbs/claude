@@ -6,14 +6,14 @@
 export const MOCK_MODE =
   !process.env.APPS_SCRIPT_CLIENTES_URL && !process.env.APPS_SCRIPT_EGRESOS_URL;
 
-const READ_TIMEOUT  = 20000;
+const READ_TIMEOUT  = 35000;
 const WRITE_TIMEOUT = 20000;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // GET (lecturas) — idempotente, así que reintentamos ante timeout / error de red.
 // Apps Script suele tardar más de lo normal en arranque en frío.
-async function fetchScript(url, params = {}, { retries = 1 } = {}) {
+async function fetchScript(url, params = {}, { retries = 0 } = {}) {
   const qs = new URLSearchParams(params).toString();
   const fullUrl = qs ? `${url}?${qs}` : url;
   let lastErr;

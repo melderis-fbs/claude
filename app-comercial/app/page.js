@@ -21,16 +21,17 @@ export default async function Home() {
     const egresosP    = getEgresosTab('Consolidado').catch(() => []);
     const comAjustesP = getEgresosTab('Comisiones ajustes').catch(() => []);
 
-    // El resto comparten la MISMA Web App de Apps Script, que serializa las
-    // ejecuciones concurrentes: pedir las 6 a la vez satura la cola y provoca
-    // timeouts. Las pedimos en secuencia para no saturarla. Primero las dos
-    // críticas (sin las cuales no hay app); el resto degrada con .catch.
+    // Primero las dos CRÍTICAS en secuencia (calientan el Apps Script). El
+    // resto va en PARALELO (el script ya está caliente) y cada una degrada a []
+    // si falla, para no bloquear la carga si una tarda.
     const clientes        = await getClientes();
     const headers         = await getClientesHeaders();
-    const abonos          = await getAbonos().catch(() => []);
-    const deudoresRecords = await getDeudores().catch(() => []);
-    const facturas        = await getFacturas().catch(() => []);
-    const anunciosRows    = await getAnuncios().catch(() => []);
+    const [abonos, deudoresRecords, facturas, anunciosRows] = await Promise.all([
+      getAbonos().catch(() => []),
+      getDeudores().catch(() => []),
+      getFacturas().catch(() => []),
+      getAnuncios().catch(() => []),
+    ]);
     // Ajustes de comisiones y egresos ya venían corriendo en paralelo arriba.
     const comAjustesRows  = await comAjustesP;
     const egresosRows     = await egresosP;
