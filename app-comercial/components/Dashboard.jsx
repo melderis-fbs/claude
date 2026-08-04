@@ -125,7 +125,7 @@ export default function Dashboard({
   clientes, headers, resumen, ventasPorMes, comisiones,
   cobranzas, cobrosSemanales, pendientesPorMes,
   proyeccion, proyeccionAnual = [], abonos, deudores, facturas, cobrosAutomatica,
-  anunciosPorMes = {},
+  anunciosPorMes = {}, comisionesAjustes = {},
 }) {
   const [tab, setTab] = useState('resumen');
   const tabActual = TABS.find(t => t.id === tab);
@@ -176,7 +176,7 @@ export default function Dashboard({
           {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
           {tab === 'deudores'   && <Deudores deudores={deudores} clientes={clientes} />}
           {tab === 'abonos'     && <Abonos abonos={abonos} />}
-          {tab === 'comisiones' && <Comisiones comisiones={comisiones} />}
+          {tab === 'comisiones' && <Comisiones comisiones={comisiones} ajustesIniciales={comisionesAjustes} />}
           {tab === 'facturas'   && <Facturas facturas={facturas} />}
           {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
           {tab === 'documentos' && <Documentos clientes={clientes} />}

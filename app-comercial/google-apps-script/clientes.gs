@@ -11,6 +11,7 @@ const TAB_FACTURAS   = 'Facturas';
 const TAB_DOCUMENTOS = 'Documentos_Emitidos';
 const TAB_ANUNCIOS   = 'Anuncios';
 const TAB_TRACKER    = 'Tracker pagos';
+const TAB_COM_AJUSTES = 'Comisiones ajustes';
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -24,6 +25,7 @@ function doGet(e) {
     if (action === 'getUltimoNumero')  return ok(getUltimoNumero(e.parameter.tipo));
     if (action === 'getAnuncios')      return ok(getAnuncios());
     if (action === 'getTrackerPagos')  return ok(getTrackerPagos());
+    if (action === 'getComisionesAjustes') return ok(getComisionesAjustes());
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -43,6 +45,7 @@ function doPost(e) {
     if (action === 'appendFactura')    return ok(appendFactura(body.rowValues));
     if (action === 'updateFactura')    return ok(updateFacturaRow(body.rowIndex, body.rowValues));
     if (action === 'appendDocumento')  return ok(appendDocumento(body.rowValues));
+    if (action === 'upsertComisionAjuste') return ok(upsertComisionAjuste(body.mes, body.closer, body.fijo, body.extras));
     return ok({ error: 'Acción no reconocida', action });
   } catch (err) {
     return error(err.message);
@@ -379,6 +382,56 @@ function getTrackerPagos() {
   });
 
   return { movimientos: movimientos };
+}
+
+// ── Comisiones: ajustes (fijos + extras) por mes y closer ─────────────────────
+
+function getComisionesAjustesSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TAB_COM_AJUSTES);
+  if (!sheet) {
+    sheet = ss.insertSheet(TAB_COM_AJUSTES);
+    sheet.appendRow(['Mes', 'Closer', 'Fijo', 'Extras']);
+  }
+  return sheet;
+}
+
+function getComisionesAjustes() {
+  const sheet = getComisionesAjustesSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ajustes: [] };
+  const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  const ajustes = values
+    .filter(r => String(r[0]).trim() && String(r[1]).trim())
+    .map(r => ({
+      mes:    String(r[0]).trim(),
+      closer: String(r[1]).trim(),
+      fijo:   Number(r[2]) || 0,
+      extras: String(r[3] || ''),
+    }));
+  return { ajustes: ajustes };
+}
+
+// Upsert por (mes, closer): si existe la fila la actualiza, si no la agrega.
+function upsertComisionAjuste(mes, closer, fijo, extras) {
+  const sheet = getComisionesAjustesSheet();
+  const lastRow = sheet.getLastRow();
+  const m = String(mes).trim(), c = String(closer).trim();
+  const fijoNum = Number(fijo) || 0;
+  const extrasStr = extras == null ? '' : String(extras);
+
+  if (lastRow >= 2) {
+    const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    for (var i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim() === m && String(values[i][1]).trim() === c) {
+        sheet.getRange(i + 2, 3).setValue(fijoNum);
+        sheet.getRange(i + 2, 4).setValue(extrasStr);
+        return { ok: true, updated: true };
+      }
+    }
+  }
+  sheet.appendRow([m, c, fijoNum, extrasStr]);
+  return { ok: true, updated: false };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

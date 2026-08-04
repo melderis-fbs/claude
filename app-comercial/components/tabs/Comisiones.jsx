@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useRef, Fragment } from 'react';
 
 const fmt = n => `$${Math.round(n).toLocaleString('es-AR')}`;
 const fmtSigno = n => `${n < 0 ? '-' : '+'}$${Math.round(Math.abs(n)).toLocaleString('es-AR')}`;
@@ -12,22 +12,20 @@ const fmtFecha = val => {
   return s;
 };
 
-// Ajustes por closer/mes (fijos + variables). Se guardan por navegador; no
-// tocan el cálculo del 8%, son una capa arriba solo para este tab.
-const COM_ADJ_KEY = 'comisiones_ajustes_v1';
+// Ajustes por closer/mes (fijos + variables). Se guardan en el sheet (pestaña
+// "Comisiones ajustes"), así los ve cualquiera que entre. No tocan el cálculo
+// del 8%, son una capa arriba.
 const adjVacio = { fijo: 0, items: [] };
 const sumaItems = items => (items || []).reduce((a, i) => a + (Number(i.monto) || 0), 0);
 const totalAjuste = adj => (Number(adj?.fijo) || 0) + sumaItems(adj?.items);
 
-export default function Comisiones({ comisiones }) {
+export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
   const [mesSel, setMesSel] = useState(comisiones[comisiones.length - 1]?.mes ?? '');
   const [expandido, setExpandido] = useState(null); // closer expandido
-  const [ajustes, setAjustes] = useState({});       // { "mes|closer": {fijo, items} }
+  const [ajustes, setAjustes] = useState(ajustesIniciales); // { "mes|closer": {fijo, items} } (del sheet)
+  const [guardado, setGuardado] = useState('');     // '' | 'guardando' | 'ok' | 'error'
+  const timers = useRef({});
   const mes = comisiones.find(m => m.mes === mesSel);
-
-  useEffect(() => {
-    try { setAjustes(JSON.parse(localStorage.getItem(COM_ADJ_KEY) || '{}')); } catch {}
-  }, []);
 
   if (!comisiones.length) return <p className="text-gray-400 text-sm">Sin datos de comisiones.</p>;
 
@@ -37,15 +35,35 @@ export default function Comisiones({ comisiones }) {
   const totalPagarCloser = d => d.comision + totalAjuste(getAdj(d.closer));
   const totalPagarMes = mes ? mes.detalle.reduce((a, d) => a + totalPagarCloser(d), 0) : 0;
 
-  // Guarda el ajuste del closer del mes actual, directo a estado + localStorage.
+  // Guarda (debounce) el ajuste del closer/mes en el sheet, para que sea compartido.
+  function guardarServer(closer, adj) {
+    const key = `${mesSel}|${closer}`;
+    clearTimeout(timers.current[key]);
+    setGuardado('guardando');
+    timers.current[key] = setTimeout(async () => {
+      const fijo  = Number(adj.fijo) || 0;
+      const items = (adj.items || [])
+        .filter(i => (i.concepto || '').trim() || Number(i.monto))
+        .map(i => ({ concepto: (i.concepto || '').trim(), monto: Number(i.monto) || 0 }));
+      try {
+        const res = await fetch('/api/comisiones/ajustes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mes: mesSel, closer, fijo, extras: JSON.stringify(items) }),
+        });
+        setGuardado(res.ok ? 'ok' : 'error');
+      } catch { setGuardado('error'); }
+      setTimeout(() => setGuardado(''), 2000);
+    }, 700);
+  }
+
+  // Actualiza el ajuste en pantalla y dispara el guardado al sheet.
   function setAdj(closer, updater) {
     const key = `${mesSel}|${closer}`;
     setAjustes(prev => {
       const cur = prev[key] || adjVacio;
       const nextAdj = updater({ fijo: cur.fijo ?? '', items: (cur.items || []).map(i => ({ ...i })) });
-      const next = { ...prev, [key]: nextAdj };
-      try { localStorage.setItem(COM_ADJ_KEY, JSON.stringify(next)); } catch {}
-      return next;
+      guardarServer(closer, nextAdj);
+      return { ...prev, [key]: nextAdj };
     });
   }
 
@@ -62,6 +80,15 @@ export default function Comisiones({ comisiones }) {
             {m.label}
           </button>
         ))}
+        {guardado && (
+          <span className={`text-xs px-2 py-1 rounded-full ml-1 ${
+            guardado === 'ok' ? 'bg-emerald-50 text-emerald-600'
+            : guardado === 'error' ? 'bg-red-50 text-red-600'
+            : 'bg-gray-100 text-gray-500'
+          }`}>
+            {guardado === 'guardando' ? 'Guardando…' : guardado === 'ok' ? '✓ Guardado' : 'Error al guardar'}
+          </span>
+        )}
       </div>
 
       {mes && (

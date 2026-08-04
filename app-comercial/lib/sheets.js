@@ -163,6 +163,19 @@ export async function getDocumentos() {
   return data.documentos ?? [];
 }
 
+// ── COMISIONES: ajustes (fijos + extras) compartidos ─────────────────────────
+
+export async function getComisionesAjustes() {
+  if (MOCK_MODE) return [];
+  const data = await fetchScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'getComisionesAjustes' });
+  return data.ajustes ?? [];
+}
+
+export async function saveComisionAjuste(mes, closer, fijo, extras) {
+  if (MOCK_MODE) throw new Error('Escritura no disponible en modo mock');
+  return postScript(process.env.APPS_SCRIPT_CLIENTES_URL, { action: 'upsertComisionAjuste', mes, closer, fijo, extras });
+}
+
 // ── EGRESOS ───────────────────────────────────────────────────────────────────
 
 export async function appendEgreso(rowValues) {

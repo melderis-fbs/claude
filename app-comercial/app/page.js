@@ -1,4 +1,4 @@
-import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas, getAnuncios } from '../lib/sheets.js';
+import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas, getAnuncios, getComisionesAjustes } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
@@ -29,7 +29,16 @@ export default async function Home() {
     const deudoresRecords = await getDeudores().catch(() => []);
     const facturas        = await getFacturas().catch(() => []);
     const anunciosRows    = await getAnuncios().catch(() => []);
+    const comAjustesRaw   = await getComisionesAjustes().catch(() => []);
     const egresosRows     = await egresosP;
+
+    // Ajustes de comisiones (fijos + extras) compartidos → mapa "mes|closer".
+    const comisionesAjustes = {};
+    for (const a of comAjustesRaw) {
+      let items = [];
+      try { items = JSON.parse(a.extras || '[]'); if (!Array.isArray(items)) items = []; } catch { items = []; }
+      comisionesAjustes[`${a.mes}|${a.closer}`] = { fijo: Number(a.fijo) || 0, items };
+    }
 
     const resumen              = calcularResumenMensual(clientes, egresosRows);
     const ventasPorMes         = calcularVentasPorMes(clientes);
@@ -83,6 +92,7 @@ export default async function Home() {
         facturas={facturas}
         cobrosAutomatica={cobrosAutomatica}
         anunciosPorMes={anunciosPorMes}
+        comisionesAjustes={comisionesAjustes}
       />
     );
   } catch (err) {
