@@ -1,3 +1,4 @@
+import { revalidateTag } from 'next/cache';
 import { updateClienteField, MOCK_MODE } from '../../../lib/sheets.js';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ export async function PATCH(request) {
       return Response.json({ ok: false, error: 'rowIndex y headerName requeridos' }, { status: 400 });
     }
     await updateClienteField(rowIndex, headerName, value ?? 'SI');
+    revalidateTag('sheets'); // el cambio se refleja de inmediato en la próxima carga
     return Response.json({ ok: true });
   } catch (err) {
     return Response.json({ ok: false, error: err.message }, { status: 500 });

@@ -6,7 +6,7 @@
 export const MOCK_MODE =
   !process.env.APPS_SCRIPT_CLIENTES_URL && !process.env.APPS_SCRIPT_EGRESOS_URL;
 
-const READ_TIMEOUT  = 35000;
+const READ_TIMEOUT  = 50000;
 const WRITE_TIMEOUT = 20000;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
