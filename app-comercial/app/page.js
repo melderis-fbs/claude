@@ -1,4 +1,4 @@
-import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas, getAnuncios, getComisionesAjustes } from '../lib/sheets.js';
+import { getClientes, getClientesHeaders, getEgresosTab, getAbonos, getDeudores, getFacturas, getAnuncios } from '../lib/sheets.js';
 import {
   calcularResumenMensual, calcularComisiones,
   calcularCobranzas, calcularCobrosSemanales,
@@ -29,21 +29,34 @@ export default async function Home() {
     const deudoresRecords = await getDeudores().catch(() => []);
     const facturas        = await getFacturas().catch(() => []);
     const anunciosRows    = await getAnuncios().catch(() => []);
-    const comAjustesRaw   = await getComisionesAjustes().catch(() => []);
+    // Ajustes de comisiones: pestaña "Comisiones ajustes" en la planilla de
+    // Egresos, leída con la función genérica getTab (ya deployada → sin redeploys).
+    const comAjustesRows  = await getEgresosTab('Comisiones ajustes').catch(() => []);
     const egresosRows     = await egresosP;
 
-    // Ajustes de comisiones (formato plano del sheet: una fila por concepto).
-    // Agrupamos por mes + closer (case-insensitive, porque en la planilla puede
-    // figurar "Kevin" y "kevin"). Fila con Fijo → fijo; fila con Concepto/Monto
-    // Variable → extra.
+    // Formato plano: una fila por concepto (Mes, Closer, Fijo, Concepto Variable,
+    // Monto Variable). Agrupamos por mes + closer (case-insensitive: "Kevin"="kevin").
+    const gAdj  = (r, ...ks) => { for (const k of ks) { if (r[k] != null && r[k] !== '') return r[k]; } return ''; };
+    const numOf = v => Number(String(v).replace(/[^0-9.\-]/g, '')) || 0;
+    const normMes = v => {
+      const s = String(v || '').trim();
+      if (/^\d{4}-\d{2}$/.test(s)) return s;
+      const d = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (d) return `${d[3]}-${d[2].padStart(2, '0')}`;
+      return s;
+    };
     const comisionesAjustes = {};
-    for (const a of comAjustesRaw) {
-      const key = `${a.mes}|${String(a.closer).toLowerCase().trim()}`;
+    for (const r of comAjustesRows) {
+      const mes    = normMes(gAdj(r, 'Mes', 'mes'));
+      const closer = String(gAdj(r, 'Closer', 'closer', 'CLOSER')).trim();
+      if (!mes || !closer) continue;
+      const fijo     = numOf(gAdj(r, 'Fijo', 'fijo'));
+      const concepto = String(gAdj(r, 'Concepto Variable', 'Concepto', 'concepto')).trim();
+      const monto    = numOf(gAdj(r, 'Monto Variable', 'Monto', 'monto'));
+      const key = `${mes}|${closer.toLowerCase()}`;
       if (!comisionesAjustes[key]) comisionesAjustes[key] = { fijo: 0, items: [] };
-      if (a.fijo) comisionesAjustes[key].fijo += Number(a.fijo) || 0;
-      if ((a.concepto && a.concepto.trim()) || a.monto) {
-        comisionesAjustes[key].items.push({ concepto: a.concepto || '', monto: Number(a.monto) || 0 });
-      }
+      if (fijo) comisionesAjustes[key].fijo += fijo;
+      if (concepto || monto) comisionesAjustes[key].items.push({ concepto, monto });
     }
 
     const resumen              = calcularResumenMensual(clientes, egresosRows);
