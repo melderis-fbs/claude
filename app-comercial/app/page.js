@@ -96,11 +96,24 @@ export default async function Home() {
       />
     );
   } catch (err) {
+    const msg = String(err?.message || '');
+    const es404 = /error 404|page not found|unable to open the file/i.test(msg);
     return (
       <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-lg w-full">
-          <h2 className="text-red-700 font-semibold text-lg mb-2">Error al conectar</h2>
-          <p className="text-red-600 text-sm font-mono break-all">{err.message}</p>
+        <div className="bg-white border border-red-200 rounded-xl p-6 max-w-xl w-full shadow-sm">
+          <h2 className="text-red-700 font-semibold text-lg mb-2">Error al conectar con la planilla</h2>
+          {es404 ? (
+            <div className="space-y-3 text-sm text-gray-700">
+              <p>El Apps Script devolvió <span className="font-semibold">404</span>. Casi siempre es una de estas dos:</p>
+              <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                <li><span className="font-medium text-gray-800">Acceso restringido:</span> en Apps Script → Administrar implementaciones → editar, poné <span className="font-medium">“Quién tiene acceso: Cualquier usuario”</span>. Al redeployar suele volver a “Solo yo”.</li>
+                <li><span className="font-medium text-gray-800">URL desactualizada:</span> la URL <code>…/exec</code> en las variables de entorno no es la de la implementación activa.</li>
+              </ol>
+              <p className="text-xs text-gray-400">Tip: para que no cambie la URL, actualizá el script con “editar implementación → Nueva versión”, no con “Nueva implementación”.</p>
+            </div>
+          ) : (
+            <p className="text-red-600 text-sm font-mono break-all">{msg}</p>
+          )}
         </div>
       </div>
     );
