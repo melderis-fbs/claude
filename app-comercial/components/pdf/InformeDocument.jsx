@@ -37,8 +37,8 @@ const s = StyleSheet.create({
   kpiWrap: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3 },
   kpi: { width: '33.333%', paddingHorizontal: 3, marginBottom: 6 },
   kpi20: { width: '20%', paddingHorizontal: 3, marginBottom: 6 },
-  cardLight: { backgroundColor: CREAM, borderWidth: 0.5, borderColor: LINE, borderRadius: 4, padding: 8, height: '100%' },
-  cardDark: { backgroundColor: DARK, borderRadius: 4, padding: 8, height: '100%' },
+  cardLight: { backgroundColor: CREAM, borderWidth: 0.5, borderColor: LINE, borderRadius: 4, padding: 8 },
+  cardDark: { backgroundColor: DARK, borderRadius: 4, padding: 8 },
   kL: { fontSize: 6.3, letterSpacing: 0.5, color: GRAY, marginBottom: 3, textTransform: 'uppercase' },
   kLd: { fontSize: 6.3, letterSpacing: 0.5, color: '#bbb', marginBottom: 3, textTransform: 'uppercase' },
   kV: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: DARK },
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
   cL: { flex: 1 },
   cR: { flex: 1, textAlign: 'right' },
   cRn: { width: 66, textAlign: 'right' },
-  cRs: { width: 44, textAlign: 'right' },
+  cRs: { width: 54, textAlign: 'right' },
 
   note: { fontSize: 6.6, color: MUT, marginTop: 4, lineHeight: 1.35 },
   twoCol: { flexDirection: 'row', marginHorizontal: -6 },
@@ -129,8 +129,6 @@ export default function InformeDocument({ data, logoSrc }) {
   // Rentabilidad cobrada = (recolección − costos) ÷ recolección.
   const gananciaCobrada = (m.cashTotal || 0) - (m.totalCostos || 0);
   const rentCobrada = m.cashTotal > 0 ? (gananciaCobrada / m.cashTotal) * 100 : null;
-
-  const hasEmbudo = anuncio && (anuncio.leads != null || anuncio.agendas != null || anuncio.cierres != null || anuncio.asistencias != null);
 
   return (
     <Document>
@@ -265,8 +263,8 @@ export default function InformeDocument({ data, logoSrc }) {
             <View style={s.th}>
               <Text style={[s.thc, s.cL]}>Categoría</Text>
               <Text style={[s.thc, s.cRn]}>Monto</Text>
-              <Text style={[s.thc, s.cRs]}>% s/costos</Text>
-              <Text style={[s.thc, s.cRs]}>% s/venta</Text>
+              <Text style={[s.thc, s.cRs]}>% cost.</Text>
+              <Text style={[s.thc, s.cRs]}>% vta.</Text>
             </View>
             {costEntries.map(([cat, val]) => (
               <View style={s.tr} key={cat}>
@@ -351,19 +349,6 @@ export default function InformeDocument({ data, logoSrc }) {
           <Kpi w20 label="Costo / lead" value={anuncio.costoLead != null ? money(anuncio.costoLead) : '—'} hint="inv. ÷ leads" />
           <Kpi w20 label="Costo / agenda" value={anuncio.costoAgenda != null ? money(anuncio.costoAgenda) : '—'} hint="inv. ÷ agendas" />
         </View>
-
-        {hasEmbudo && (
-          <>
-            <Text style={[s.capLabel, { marginTop: 4 }]}>Embudo</Text>
-            <View style={s.th}><Text style={[s.thc, s.cL]}>Etapa</Text><Text style={[s.thc, s.cR]}>Valor</Text></View>
-            {anuncio.leads != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Leads</Text><Text style={[s.td, s.cR]}>{anuncio.leads}</Text></View>}
-            {anuncio.agendas != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Agendas cualificadas</Text><Text style={[s.td, s.cR]}>{anuncio.agendas}</Text></View>}
-            {anuncio.asistencias != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Asistencias</Text><Text style={[s.td, s.cR]}>{anuncio.asistencias}</Text></View>}
-            {anuncio.cierres != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Cierres</Text><Text style={[s.td, s.cR]}>{anuncio.cierres}</Text></View>}
-            {anuncio.ventaPauta != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Venta de pauta</Text><Text style={[s.td, s.cR]}>{money(anuncio.ventaPauta)}</Text></View>}
-            {anuncio.recolPauta != null && <View style={s.tr}><Text style={[s.td, s.cL]}>Recolección de pauta</Text><Text style={[s.td, s.cR]}>{money(anuncio.recolPauta)}</Text></View>}
-          </>
-        )}
         <Foot />
       </Page>
     </Document>
