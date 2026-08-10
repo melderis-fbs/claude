@@ -156,6 +156,7 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
         resumen,
         cobranzas,
         anuncio: anunciosPorMes[mesSel] || {},
+        ventaMes: ventasPorMes.find(v => v.mes === mesSel) || null,
         // proyección: sólo meses futuros respecto al mes seleccionado
         pendientesPorMes: Object.fromEntries(
           Object.entries(pendientesPorMes).filter(([k]) => k >= mesSel)

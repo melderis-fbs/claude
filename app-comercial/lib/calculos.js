@@ -788,7 +788,10 @@ export function calcularProyeccionAnual(clientes, resumen, ventasPorMes) {
 }
 
 // Parsea la pestaña "Anuncios" (pivote: filas=métricas, columnas=meses) →
-// { 'YYYY-MM': { inversion, roas, roasCash, costoLead, costoAgenda } }
+// { 'YYYY-MM': { inversion, roas, roasCash, costoLead, costoAgenda, leads,
+//   agendas, asistencias, cierres, ventaPauta, recolPauta } }
+// Los campos del embudo (leads/agendas/…) sólo aparecen si esas filas existen
+// en la planilla; si no están, quedan ausentes y el informe los omite.
 export function parseAnunciosTab(rows) {
   if (!rows || rows.length < 2) return {};
 
@@ -814,12 +817,20 @@ export function parseAnunciosTab(rows) {
     const metricRaw = String(row[0] || '').trim().toLowerCase();
     if (!metricRaw) continue;
 
+    const esCosto = /costo|cpl|cpa|\$/.test(metricRaw);
     let field = null;
-    if (metricRaw.includes('invers'))                            field = 'inversion';
+    if (metricRaw.includes('invers'))                                 field = 'inversion';
     else if (metricRaw.includes('roas') && metricRaw.includes('cash')) field = 'roasCash';
-    else if (metricRaw === 'roas')                               field = 'roas';
-    else if (metricRaw.includes('lead'))                         field = 'costoLead';
-    else if (metricRaw.includes('agenda'))                       field = 'costoAgenda';
+    else if (metricRaw === 'roas')                                    field = 'roas';
+    else if (metricRaw.includes('cpl') || (metricRaw.includes('lead') && esCosto))     field = 'costoLead';
+    else if (metricRaw.includes('agenda') && esCosto)                 field = 'costoAgenda';
+    // Embudo (conteos / montos) — sólo si la planilla trae esas filas.
+    else if (metricRaw.includes('lead'))                              field = 'leads';
+    else if (metricRaw.includes('agenda'))                            field = 'agendas';
+    else if (metricRaw.includes('asisten'))                           field = 'asistencias';
+    else if (metricRaw.includes('cierre'))                            field = 'cierres';
+    else if (metricRaw.includes('recolec') || metricRaw.includes('cobr')) field = 'recolPauta';
+    else if (metricRaw.includes('venta'))                             field = 'ventaPauta';
 
     if (!field) continue;
 
