@@ -336,7 +336,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
               title={reembolso ? 'Quitar Reembolso' : 'Marcar como Reembolso'}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
                 reembolso
-                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-900'
                   : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               }`}>
               {reembolso ? '↩ Reembolso' : '○ Reembolso'}
@@ -348,7 +348,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
               title={terminado ? 'Marcar como no terminado' : 'Marcar como terminado'}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
                 terminado
-                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-900'
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}>
               {terminado ? '✓ Terminado' : '○ Terminado'}
@@ -358,7 +358,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
               <button
                 onClick={enterEdit}
                 title="Editar datos"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-stone-50 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M13.586 3.586a2 2 0 112.828 2.828l-8.5 8.5a2 2 0 01-.878.515l-3 .75a.5.5 0 01-.607-.607l.75-3a2 2 0 01.515-.878l8.5-8.5z"/>
                 </svg>
@@ -381,7 +381,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                     <select
                       value={editValues[key]}
                       onChange={e => setEditValues(v => ({ ...v, [key]: e.target.value }))}
-                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500">
+                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:border-gray-200">
                       <option value="">—</option>
                       {options.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
@@ -390,7 +390,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                       type="text"
                       value={editValues[key]}
                       onChange={e => setEditValues(v => ({ ...v, [key]: e.target.value }))}
-                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500"
+                      className="mt-0.5 w-full text-sm font-semibold text-gray-800 bg-white border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:border-gray-200"
                     />
                   )
                 ) : (
@@ -407,7 +407,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                 Cancelar
               </button>
               <button onClick={saveEdit} disabled={saving}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50">
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-900 hover:bg-gray-900 text-white transition-colors disabled:opacity-50">
                 {saving ? 'Guardando…' : 'Guardar cambios'}
               </button>
             </div>
@@ -420,9 +420,9 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                 const pagado = esPagadoLocal(x.estado);
                 const enProceso = marcando.has(String(x.n));
                 return (
-                  <div key={x.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado || enProceso ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div key={x.n} className={`flex items-center justify-between rounded-lg px-4 py-3 border ${pagado || enProceso ? 'bg-stone-50 border-gray-200' : 'bg-gray-50 border-gray-200'}`}>
                     <div className="flex items-center gap-3">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${pagado || enProceso ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>{x.n}</span>
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${pagado || enProceso ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-500'}`}>{x.n}</span>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">${Number(String(x.monto).replace(/[$,\s]/g,'')).toLocaleString('es-AR')}</p>
                         <p className="text-xs text-gray-400">{formatFecha(x.fecha)} · {x.met || '—'}</p>
@@ -435,9 +435,9 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                         📄 Recibo
                       </button>
                       {pagado || enProceso
-                        ? <span className="text-xs font-semibold text-emerald-600">✓ Pagado</span>
+                        ? <span className="text-xs font-semibold text-gray-700">✓ Pagado</span>
                         : <button onClick={() => marcarPagado(x)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                            className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
                             ✓ Marcar pagado
                           </button>
                       }
@@ -453,7 +453,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
             return (
               <div className="flex gap-6 pt-3 border-t border-gray-100">
                 <div><p className="text-xs text-gray-400">Monto total</p><p className="text-xl font-bold text-gray-900">${total.toLocaleString('es-AR')}</p></div>
-                <div><p className="text-xs text-gray-400">Pagado</p><p className="text-xl font-bold text-emerald-600">${pagado.toLocaleString('es-AR')}</p></div>
+                <div><p className="text-xs text-gray-400">Pagado</p><p className="text-xl font-bold text-gray-700">${pagado.toLocaleString('es-AR')}</p></div>
                 <div><p className="text-xs text-gray-400">Cuotas</p><p className="text-xl font-bold text-gray-700">{getCuotasInfo(c)}</p></div>
               </div>
             );
@@ -466,12 +466,12 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
               onChange={e => setComentario(e.target.value)}
               placeholder="Agregar nota sobre este cliente…"
               rows={3}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none"
             />
             <div className="flex justify-end mt-1.5">
               <button onClick={guardarNota} disabled={guardandoNota}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
-                  notaGuardada ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  notaGuardada ? 'bg-gray-100 text-gray-700' : 'bg-gray-900 hover:bg-gray-900 text-white'
                 }`}>
                 {notaGuardada ? '✓ Guardado' : guardandoNota ? 'Guardando…' : 'Guardar nota'}
               </button>
@@ -502,41 +502,41 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de pago</label>
                   <input value={reciboForm.fecha} onChange={e => setRF('fecha', e.target.value)} placeholder="DD/MM/YYYY"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">A nombre de</label>
                 <input value={reciboForm.nombre} onChange={e => setRF('nombre', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
                   <input value={reciboForm.email} onChange={e => setRF('email', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
                   <input value={reciboForm.telefono} onChange={e => setRF('telefono', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
                 <input value={reciboForm.descripcion} onChange={e => setRF('descripcion', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
                   <input type="number" value={reciboForm.monto} onChange={e => setRF('monto', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Moneda</label>
                   <select value={reciboForm.moneda} onChange={e => setRF('moneda', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500">
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-gray-200">
                     <option>USD</option>
                     <option>ARS</option>
                   </select>
@@ -551,7 +551,7 @@ export default function FichaCliente({ cliente: c, onClose, onPagadoUpdated }) {
                   {reciboBusy === 'preview' ? 'Generando…' : '👁 Vista previa'}
                 </button>
                 <button onClick={() => genRecibo(true)} disabled={!!reciboBusy}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+                  className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-900 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
                   {reciboBusy === 'download' ? 'Generando…' : '⬇ Descargar PDF'}
                 </button>
               </div>

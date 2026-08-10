@@ -70,7 +70,7 @@ function SlackReporteBtn() {
                 value={texto}
                 onChange={e => { setTexto(e.target.value); setEnviado(false); }}
                 rows={18}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-blue-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-gray-200"
               />
             </div>
             {error && <p className="px-5 pb-2 text-red-600 text-xs">{error}</p>}
@@ -83,7 +83,7 @@ function SlackReporteBtn() {
                 onClick={enviar}
                 disabled={enviando || enviado}
                 className={`px-4 py-2 text-xs rounded-lg font-semibold transition-colors ${
-                  enviado ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60'
+                  enviado ? 'bg-gray-900 text-white' : 'bg-gray-900 hover:bg-gray-900 text-white disabled:opacity-60'
                 }`}
               >
                 {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
@@ -135,7 +135,7 @@ export default function Dashboard({
       {/* Sidebar lateral */}
       <aside className="w-56 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">
         <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold select-none">F</div>
+          <div className="w-9 h-9 rounded-lg bg-gray-900 flex items-center justify-center text-white font-bold select-none">F</div>
           <div className="leading-tight">
             <p className="font-semibold text-gray-900 text-sm">Founders BS</p>
             <p className="text-xs text-gray-400">Comercial</p>
@@ -164,14 +164,14 @@ export default function Dashboard({
           <span className="font-semibold text-gray-900">{tabActual?.label}</span>
           <div className="flex items-center gap-2">
             <SlackReporteBtn />
-            <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-medium">
+            <span className="text-xs text-gray-700 bg-stone-50 border border-gray-200 px-3 py-1 rounded-full font-medium">
               ● {clientes.length} clientes
             </span>
           </div>
         </header>
 
         <main className="flex-1 overflow-auto p-6">
-          {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} />}
+          {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobranzas={cobranzas} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} pendientesPorMes={pendientesPorMes} />}
           {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
           {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
           {tab === 'deudores'   && <Deudores deudores={deudores} clientes={clientes} />}

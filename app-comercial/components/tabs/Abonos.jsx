@@ -9,7 +9,7 @@ const FORMAS_PAGO = ['Transferencia USD','Wise','Stripe','PayPal/Payoneer','Crip
 
 const ESTADOS = [
   { value: '',         label: '—',        color: 'bg-gray-100 text-gray-400'       },
-  { value: 'Ingresó',  label: 'Ingresó',  color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'Ingresó',  label: 'Ingresó',  color: 'bg-gray-100 text-gray-700' },
   { value: 'Devuelta', label: 'Devuelta', color: 'bg-red-100 text-red-700'         },
 ];
 
@@ -130,10 +130,10 @@ export default function Abonos({ abonos }) {
           <p className="text-3xl font-bold text-gray-900">{fmt(montoPendiente)}</p>
           <p className="text-xs text-gray-400 mt-1">{abonosLocal.filter(a => !get(a,'Estado','estado')).length} señas sin resolver</p>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ingresaron</p>
-          <p className="text-3xl font-bold text-emerald-700">{fmt(montoIngreso)}</p>
-          <p className="text-xs text-emerald-600 mt-1">{abonosLocal.filter(a => get(a,'Estado','estado') === 'Ingresó').length} señas</p>
+          <p className="text-3xl font-bold text-gray-700">{fmt(montoIngreso)}</p>
+          <p className="text-xs text-gray-700 mt-1">{abonosLocal.filter(a => get(a,'Estado','estado') === 'Ingresó').length} señas</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Devueltas</p>
@@ -146,9 +146,9 @@ export default function Abonos({ abonos }) {
       <div className="flex gap-3 items-center">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre…"
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 w-64 shadow-sm" />
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-200 w-64 shadow-sm" />
         <button onClick={() => setShowForm(s => !s)}
-          className="ml-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          className="ml-auto px-4 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-lg transition-colors">
           + Nuevo abono
         </button>
       </div>
@@ -162,22 +162,22 @@ export default function Abonos({ abonos }) {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
               <input value={form.nombre} onChange={e => set('nombre', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Fecha de seña</label>
               <input type="text" placeholder="DD/MM/YYYY" value={form.fecha} onChange={e => set('fecha', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
               <input type="number" value={form.monto} onChange={e => set('monto', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Forma de pago</label>
               <select value={form.formaPago} onChange={e => set('formaPago', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200 bg-white">
                 <option value="">— Elegir —</option>
                 {FORMAS_PAGO.map(o => <option key={o}>{o}</option>)}
               </select>
@@ -185,7 +185,7 @@ export default function Abonos({ abonos }) {
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Closer</label>
               <select value={form.closer} onChange={e => set('closer', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200 bg-white">
                 <option value="">— Elegir —</option>
                 {CLOSERS.map(o => <option key={o}>{o}</option>)}
               </select>
@@ -194,7 +194,7 @@ export default function Abonos({ abonos }) {
               <label className="block text-xs font-medium text-gray-500 mb-1">Seguimiento</label>
               <input value={form.seguimiento} onChange={e => set('seguimiento', e.target.value)}
                 placeholder="Estado, notas…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
           </div>
           <div className="flex gap-3">
@@ -203,7 +203,7 @@ export default function Abonos({ abonos }) {
               Cancelar
             </button>
             <button onClick={guardar} disabled={saving}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+              className="px-4 py-2 bg-gray-900 hover:bg-gray-900 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
@@ -239,47 +239,47 @@ export default function Abonos({ abonos }) {
                   const isEditing = editandoIdx === a._rowIndex;
                   if (isEditing) {
                     return (
-                      <tr key={i} className="bg-blue-50/40">
+                      <tr key={i} className="bg-stone-50/40">
                         <td className="px-3 py-2">
                           <input value={editForm.nombre} onChange={e => setE('nombre', e.target.value)}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200" />
                         </td>
                         <td className="px-3 py-2">
                           <input value={editForm.fecha} onChange={e => setE('fecha', e.target.value)} placeholder="DD/MM/YYYY"
-                            className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                            className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200" />
                         </td>
                         <td className="px-3 py-2">
                           <input type="number" value={editForm.monto} onChange={e => setE('monto', e.target.value)}
-                            className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                            className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200" />
                         </td>
                         <td className="px-3 py-2">
                           <select value={editForm.formaPago} onChange={e => setE('formaPago', e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200 bg-white">
                             <option value="">—</option>
                             {FORMAS_PAGO.map(o => <option key={o}>{o}</option>)}
                           </select>
                         </td>
                         <td className="px-3 py-2">
                           <select value={editForm.closer} onChange={e => setE('closer', e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200 bg-white">
                             <option value="">—</option>
                             {CLOSERS.map(o => <option key={o}>{o}</option>)}
                           </select>
                         </td>
                         <td className="px-3 py-2">
                           <input value={editForm.seguimiento} onChange={e => setE('seguimiento', e.target.value)}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500" />
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200" />
                         </td>
                         <td className="px-3 py-2">
                           <select value={editForm.estado} onChange={e => setE('estado', e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 bg-white">
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-200 bg-white">
                             {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
                           </select>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex gap-1">
                             <button onClick={() => guardarEdicion(a)} disabled={savingEdit}
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded transition-colors">
+                              className="px-2.5 py-1 bg-gray-900 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-bold rounded transition-colors">
                               {savingEdit ? '…' : '✓'}
                             </button>
                             <button onClick={() => setEditandoIdx(null)}
@@ -297,7 +297,7 @@ export default function Abonos({ abonos }) {
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">{get(a,'Nombre','nombre') || '—'}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{get(a,'Fecha','fecha') || '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-amber-700">{fmt(get(a,'Monto','monto'))}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-700">{fmt(get(a,'Monto','monto'))}</td>
                       <td className="px-4 py-3 text-gray-600">{get(a,'Forma de pago') || '—'}</td>
                       <td className="px-4 py-3 text-gray-700">{get(a,'CLOSER','Closer','closer') || '—'}</td>
                       <td className="px-4 py-3 text-gray-500">{get(a,'Seguimiento','seguimiento') || '—'}</td>
@@ -306,7 +306,7 @@ export default function Abonos({ abonos }) {
                       </td>
                       <td className="px-4 py-3">
                         <button onClick={() => abrirEditar(a)}
-                          className="text-gray-300 hover:text-blue-500 transition-colors text-base" title="Editar">
+                          className="text-gray-300 hover:text-gray-700 transition-colors text-base" title="Editar">
                           ✏
                         </button>
                       </td>

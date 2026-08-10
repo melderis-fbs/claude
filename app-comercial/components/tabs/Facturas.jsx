@@ -33,9 +33,9 @@ function parseM(val) {
 
 const ESTADO_STYLE = {
   Pendiente: 'bg-red-100 text-red-700',
-  Estudio:   'bg-amber-100 text-amber-700',
-  Enviada:   'bg-blue-100 text-blue-700',
-  Pagada:    'bg-emerald-100 text-emerald-700',
+  Estudio:   'bg-gray-100 text-gray-700',
+  Enviada:   'bg-gray-100 text-gray-700',
+  Pagada:    'bg-gray-100 text-gray-700',
 };
 
 const EMPTY_FORM = { tipo:'Emitida', fecha:'', monto:'', nombre:'', cuit:'', estado:'Pendiente' };
@@ -162,33 +162,33 @@ export default function Facturas({ facturas = [] }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 flex-wrap">
           <button onClick={() => setMesSel('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${mesSel === 'all' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${mesSel === 'all' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             Todos
           </button>
           {months.map(m => (
             <button key={m} onClick={() => setMesSel(m)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${mesSel === m ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${mesSel === m ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
               {mesLabel(m)}
             </button>
           ))}
         </div>
         <button onClick={() => { setForm(EMPTY_FORM); setFormError(''); setShowModal(true); }}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          className="px-4 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-lg transition-colors">
           + Nueva factura
         </button>
       </div>
 
       {/* Cards: Emitido · Recibido · Pendientes mes anterior (editable) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Emitido</p>
-          <p className="text-2xl font-bold text-blue-700">{fmt(totalEmitido)}</p>
-          <p className="text-xs text-blue-500 mt-1">{emitidas.length} facturas</p>
+          <p className="text-2xl font-bold text-gray-700">{fmt(totalEmitido)}</p>
+          <p className="text-xs text-gray-700 mt-1">{emitidas.length} facturas</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Recibido</p>
-          <p className="text-2xl font-bold text-amber-700">{fmt(totalRecibido)}</p>
-          <p className="text-xs text-amber-500 mt-1">{recibidas.length} facturas</p>
+          <p className="text-2xl font-bold text-gray-700">{fmt(totalRecibido)}</p>
+          <p className="text-xs text-gray-700 mt-1">{recibidas.length} facturas</p>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pendientes mes anterior</p>
@@ -221,9 +221,9 @@ export default function Facturas({ facturas = [] }) {
                 {filtered.map((f, i) => {
                   const enEdicion = editRow === f._rowIndex;
                   if (enEdicion) {
-                    const inputCls = 'w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-blue-500';
+                    const inputCls = 'w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-gray-200';
                     return (
-                      <tr key={f._rowIndex ?? i} className="bg-blue-50/40">
+                      <tr key={f._rowIndex ?? i} className="bg-stone-50/40">
                         <td className="px-3 py-2">
                           <select value={edit.tipo} onChange={e => setE('tipo', e.target.value)} className={`${inputCls} bg-white`}>
                             {TIPOS.map(t => <option key={t}>{t}</option>)}
@@ -241,7 +241,7 @@ export default function Facturas({ facturas = [] }) {
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex gap-1">
                             <button onClick={guardarEdit} disabled={savingEdit}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white">
+                              className="px-2.5 py-1 text-xs font-semibold rounded-md bg-gray-900 hover:bg-gray-900 disabled:opacity-50 text-white">
                               {savingEdit ? '…' : 'Guardar'}
                             </button>
                             <button onClick={() => setEditRow(null)} disabled={savingEdit}
@@ -258,7 +258,7 @@ export default function Facturas({ facturas = [] }) {
                   return (
                     <tr key={f._rowIndex ?? i} className="hover:bg-gray-50 group">
                       <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${tipo === 'Emitida' ? 'bg-blue-100 text-blue-700' : tipo === 'Recibida' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${tipo === 'Emitida' ? 'bg-gray-900 text-white' : tipo === 'Recibida' ? 'bg-gray-100 text-gray-700' : 'bg-gray-100 text-gray-500'}`}>
                           {tipo || '—'}
                         </span>
                       </td>
@@ -302,7 +302,7 @@ export default function Facturas({ facturas = [] }) {
                 {TIPOS.map(t => (
                   <button key={t} type="button" onClick={() => set('tipo', t)}
                     className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
-                      form.tipo === t ? (t === 'Emitida' ? 'bg-blue-600 text-white border-blue-600' : 'bg-amber-500 text-white border-amber-500')
+                      form.tipo === t ? (t === 'Emitida' ? 'bg-gray-900 text-white border-gray-200' : 'bg-gray-900 text-white border-gray-200')
                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                     }`}>{t}</button>
                 ))}
@@ -312,22 +312,22 @@ export default function Facturas({ facturas = [] }) {
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Fecha *</label>
                   <input type="text" placeholder="DD/MM/YYYY" value={form.fecha} onChange={e => set('fecha', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
                   <input type="number" placeholder="0" value={form.monto} onChange={e => set('monto', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
                   <input type="text" placeholder="Nombre / razón social" value={form.nombre} onChange={e => set('nombre', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">CUIT</label>
                   <input type="text" placeholder="20-12345678-9" value={form.cuit} onChange={e => set('cuit', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
               </div>
 
@@ -348,7 +348,7 @@ export default function Facturas({ facturas = [] }) {
                   Cancelar
                 </button>
                 <button onClick={guardar} disabled={submitting}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl text-sm font-semibold text-white">
+                  className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-900 disabled:opacity-50 rounded-xl text-sm font-semibold text-white">
                   {submitting ? 'Guardando…' : 'Guardar factura'}
                 </button>
               </div>

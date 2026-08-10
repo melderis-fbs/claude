@@ -19,10 +19,10 @@ const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
 const ESTADOS = [
   { value: '',           label: 'Sin clasificar', color: 'bg-gray-100 text-gray-500'       },
-  { value: 'Moroso',     label: 'Moroso',          color: 'bg-amber-100 text-amber-700'     },
-  { value: 'En gestión', label: 'En gestión',       color: 'bg-blue-100 text-blue-700'      },
+  { value: 'Moroso',     label: 'Moroso',          color: 'bg-gray-100 text-gray-700'     },
+  { value: 'En gestión', label: 'En gestión',       color: 'bg-gray-100 text-gray-700'      },
   { value: 'Incobrable', label: 'Incobrable',       color: 'bg-red-100 text-red-700'        },
-  { value: 'Saldado',    label: 'Saldado',          color: 'bg-emerald-100 text-emerald-700'},
+  { value: 'Saldado',    label: 'Saldado',          color: 'bg-gray-100 text-gray-700'},
 ];
 
 const estadoStyle = val => ESTADOS.find(e => e.value === val) || ESTADOS[0];
@@ -85,10 +85,10 @@ function clasiMet(met) {
 }
 
 const CHIP = {
-  ar:       'bg-blue-100 text-blue-700',
-  usd:      'bg-indigo-100 text-indigo-700',
-  dolarapp: 'bg-teal-100 text-teal-700',
-  efectivo: 'bg-amber-100 text-amber-700',
+  ar:       'bg-gray-100 text-gray-700',
+  usd:      'bg-gray-100 text-gray-700',
+  dolarapp: 'bg-gray-100 text-gray-700',
+  efectivo: 'bg-gray-100 text-gray-700',
 };
 const CHIP_LABEL = { ar: 'AR', usd: 'USD', dolarapp: 'DA', efectivo: 'Cash' };
 
@@ -131,7 +131,7 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
         {cobranzas.map(m => (
           <button key={m.mes} onClick={() => setMesSel(m.mes)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              m.mes === mesSel ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>{m.label}</button>
         ))}
       </div>
@@ -143,9 +143,9 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">A cobrar</p>
               <p className="text-2xl font-bold text-gray-900">{fmt(mesActual.aCobrar)}</p>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+            <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cobrado</p>
-              <p className="text-2xl font-bold text-emerald-700">{fmt(mesActual.cobrado)}</p>
+              <p className="text-2xl font-bold text-gray-700">{fmt(mesActual.cobrado)}</p>
               <p className="text-xs text-gray-500 mt-1">{pct(mesActual.pctCobrado)}</p>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-xl p-5">
@@ -190,7 +190,7 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
                         </td>
                         <td className="px-4 py-3">
                           <button onClick={() => marcarPagado(p)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                            className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
                             ✓ Marcar pagado
                           </button>
                         </td>
@@ -217,17 +217,17 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
               <tbody className="divide-y divide-gray-100">
                 {[...cobranzas].reverse().map(m => (
                   <tr key={m.mes} onClick={() => setMesSel(m.mes)}
-                    className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                    className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-stone-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-5 py-3 font-semibold text-gray-800">{m.label}</td>
                     <td className="px-5 py-3 text-gray-700">{fmt(m.aCobrar)}</td>
-                    <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(m.cobrado)}</td>
+                    <td className="px-5 py-3 text-gray-700 font-medium">{fmt(m.cobrado)}</td>
                     <td className="px-5 py-3 text-red-500 font-medium">{fmt(m.pendiente)}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-1.5 max-w-20">
-                          <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.min(m.pctCobrado, 100)}%` }} />
+                          <div className="bg-gray-900 h-1.5 rounded-full" style={{ width: `${Math.min(m.pctCobrado, 100)}%` }} />
                         </div>
-                        <span className={`text-xs font-semibold ${m.pctCobrado >= 80 ? 'text-emerald-600' : m.pctCobrado >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                        <span className={`text-xs font-semibold ${m.pctCobrado >= 80 ? 'text-gray-700' : m.pctCobrado >= 50 ? 'text-gray-700' : 'text-red-500'}`}>
                           {pct(m.pctCobrado)}
                         </span>
                       </div>
@@ -303,16 +303,16 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mes</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap">Venta AR</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-400 uppercase tracking-wider">%AR</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-500 uppercase tracking-wider whitespace-nowrap">Venta USA</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-400 uppercase tracking-wider">%USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Venta AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">%AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Venta USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">%USA</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-200 uppercase tracking-wider">│</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap">Ingreso AR</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-blue-400 uppercase tracking-wider">%AR</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-500 uppercase tracking-wider whitespace-nowrap">Ingreso USA</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-indigo-400 uppercase tracking-wider">%USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Ingreso AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">%AR</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Ingreso USA</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">%USA</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total ingreso</th>
                 </tr>
               </thead>
@@ -327,16 +327,16 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
                       <td className="px-4 py-2.5 font-medium text-gray-800 whitespace-nowrap">
                         {r.label}{r.esFuturo && <span className="ml-1 text-xs text-gray-400 font-normal">proy.</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-blue-700 font-medium">{fmt(r.ventaAR)}</td>
-                      <td className="px-4 py-2.5 text-blue-500 text-xs">{pct(pVAR)}</td>
-                      <td className="px-4 py-2.5 text-indigo-700 font-medium">{fmt(r.ventaUSA)}</td>
-                      <td className="px-4 py-2.5 text-indigo-500 text-xs">{pct(pVUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{fmt(r.ventaAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{pct(pVAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{fmt(r.ventaUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{pct(pVUSA)}</td>
                       <td className="px-4 py-2.5 font-semibold text-gray-900">{fmt(r.total)}</td>
                       <td className="px-4 py-2.5 text-gray-200">│</td>
-                      <td className="px-4 py-2.5 text-blue-700 font-medium">{fmt(r.ingresoAR)}</td>
-                      <td className="px-4 py-2.5 text-blue-500 text-xs">{pct(pIAR)}</td>
-                      <td className="px-4 py-2.5 text-indigo-700 font-medium">{fmt(r.ingresoUSA)}</td>
-                      <td className="px-4 py-2.5 text-indigo-500 text-xs">{pct(pIUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{fmt(r.ingresoAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{pct(pIAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{fmt(r.ingresoUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{pct(pIUSA)}</td>
                       <td className="px-4 py-2.5 font-semibold text-gray-900">{fmt(r.totalIngreso)}</td>
                     </tr>
                   );
@@ -352,16 +352,16 @@ function VistaResumenMensual({ cobranzas, pendientesPorMes, proyeccionAnual = []
                   return (
                     <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                       <td className="px-4 py-2.5 text-gray-900">TOTAL</td>
-                      <td className="px-4 py-2.5 text-blue-800">{fmt(tVAR)}</td>
-                      <td className="px-4 py-2.5 text-blue-600 text-xs">{tV>0?pct((tVAR/tV)*100):'—'}</td>
-                      <td className="px-4 py-2.5 text-indigo-800">{fmt(tVUSA)}</td>
-                      <td className="px-4 py-2.5 text-indigo-600 text-xs">{tV>0?pct((tVUSA/tV)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(tVAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{tV>0?pct((tVAR/tV)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(tVUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{tV>0?pct((tVUSA/tV)*100):'—'}</td>
                       <td className="px-4 py-2.5 text-gray-900">{fmt(tV)}</td>
                       <td className="px-4 py-2.5 text-gray-200">│</td>
-                      <td className="px-4 py-2.5 text-blue-800">{fmt(tIAR)}</td>
-                      <td className="px-4 py-2.5 text-blue-600 text-xs">{tI>0?pct((tIAR/tI)*100):'—'}</td>
-                      <td className="px-4 py-2.5 text-indigo-800">{fmt(tIUSA)}</td>
-                      <td className="px-4 py-2.5 text-indigo-600 text-xs">{tI>0?pct((tIUSA/tI)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(tIAR)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{tI>0?pct((tIAR/tI)*100):'—'}</td>
+                      <td className="px-4 py-2.5 text-gray-700">{fmt(tIUSA)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 text-xs">{tI>0?pct((tIUSA/tI)*100):'—'}</td>
                       <td className="px-4 py-2.5 text-gray-900">{fmt(tI)}</td>
                     </tr>
                   );
@@ -455,7 +455,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
         <button onClick={() => setOffset(o => o - 1)} disabled={idx === 0}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">‹</button>
         <div className="flex-1 text-center">
-          <p className={`text-sm font-semibold ${semana.esActual ? 'text-blue-600' : 'text-gray-700'}`}>
+          <p className={`text-sm font-semibold ${semana.esActual ? 'text-gray-700' : 'text-gray-700'}`}>
             {semana.esActual ? '● Esta semana' : semana.label}
           </p>
           {semana.esActual && <p className="text-xs text-gray-400 mt-0.5">{semana.label}</p>}
@@ -475,7 +475,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
             }
           }}
           title="Generar reporte Slack"
-          className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:bg-stone-50 transition-colors text-sm">
           📤
         </button>
       </div>
@@ -486,10 +486,10 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
           <p className="text-2xl font-bold text-gray-900">{fmt(semana.totalEsperado)}</p>
           <p className="text-xs text-gray-400 mt-1">{Object.values(semana.dias).flat().length} cobros</p>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cobrado</p>
-          <p className="text-2xl font-bold text-emerald-700">{fmt(semana.totalCobrado)}</p>
-          <p className="text-xs text-emerald-600 mt-1">{Object.values(semana.dias).flat().filter(c => c.pagado).length} pagos</p>
+          <p className="text-2xl font-bold text-gray-700">{fmt(semana.totalCobrado)}</p>
+          <p className="text-xs text-gray-700 mt-1">{Object.values(semana.dias).flat().filter(c => c.pagado).length} pagos</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pendiente</p>
@@ -516,7 +516,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
                   <span className="text-sm font-semibold text-gray-700">{diaLabel}</span>
                   <div className="flex gap-3 text-xs">
-                    {cobradoHoy > 0 && <span className="text-emerald-600 font-medium">{fmt(cobradoHoy)} cobrado</span>}
+                    {cobradoHoy > 0 && <span className="text-gray-700 font-medium">{fmt(cobradoHoy)} cobrado</span>}
                     {pendienteHoy > 0 && <span className="text-red-500 font-medium">{fmt(pendienteHoy)} pendiente</span>}
                   </div>
                 </div>
@@ -529,7 +529,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                     <div key={j} className="px-5 py-3 space-y-1.5">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-gray-900' : 'bg-gray-300'}`} />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
@@ -546,11 +546,11 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className={`text-sm font-bold ${co.pagado ? 'text-emerald-600' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
+                          <span className={`text-sm font-bold ${co.pagado ? 'text-gray-700' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
                           {co.pagado
-                            ? <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
+                            ? <span className="text-xs font-semibold text-gray-700 bg-stone-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
                             : <button onClick={() => marcarPagado(co)}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                                className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors">
                                 ✓ Cobrado
                               </button>
                           }
@@ -561,10 +561,10 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                           <div className="space-y-1.5">
                             <textarea value={textoEdit} onChange={e => setTextoEdit(e.target.value)} autoFocus rows={2}
                               placeholder="Ej: Llamó, prometió pagar el viernes…"
-                              className="w-full border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                              className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
                             <div className="flex gap-2">
                               <button onClick={() => guardarNota(co)}
-                                className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                                className="px-3 py-1 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-900 transition-colors">
                                 Guardar
                               </button>
                               <button onClick={() => setEditandoKey(null)}
@@ -574,7 +574,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                             </div>
                           </div>
                         ) : (
-                          <button onClick={() => abrirNota(co)} className="text-xs italic text-left w-full hover:text-blue-500 transition-colors">
+                          <button onClick={() => abrirNota(co)} className="text-xs italic text-left w-full hover:text-gray-700 transition-colors">
                             {nota
                               ? <span className="text-gray-500">{nota}</span>
                               : <span className="text-gray-300">+ Agregar nota de gestión…</span>
@@ -610,7 +610,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                 value={textoReporte}
                 onChange={e => { setTextoReporte(e.target.value); setEnviado(false); }}
                 rows={14}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-blue-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none focus:border-gray-200"
               />
             </div>
             {errorSlack && <p className="px-5 pb-2 text-red-600 text-xs">{errorSlack}</p>}
@@ -638,7 +638,7 @@ function VistaSemanal({ proyeccion, deudores = [], clientes = [] }) {
                   }
                 }}
                 className={`px-4 py-2 text-xs rounded-lg font-semibold transition-colors ${
-                  enviado ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60'
+                  enviado ? 'bg-gray-900 text-white' : 'bg-gray-900 hover:bg-gray-900 text-white disabled:opacity-60'
                 }`}
               >
                 {enviado ? '✓ Enviado a Slack' : enviando ? 'Enviando…' : '📤 Enviar a Slack'}
@@ -859,7 +859,7 @@ function VistaPagos({ clientes = [] }) {
         {mesesDisp.slice(0, 12).map(m => (
           <button key={m.mes} onClick={() => { setMesSel(m.mes); setFiltroMet(''); }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              m.mes === mesSel ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>{m.label}</button>
         ))}
       </div>
@@ -890,12 +890,12 @@ function VistaPagos({ clientes = [] }) {
               {(() => {
                 const vCount = pagosFilt.filter(p => verificados.has(`${mesSel}|${p.nombre}|${p.cuota}`)).length;
                 return vCount > 0
-                  ? <span className="ml-2 text-emerald-600 font-medium">· {vCount}/{pagosFilt.length} verificados</span>
+                  ? <span className="ml-2 text-gray-700 font-medium">· {vCount}/{pagosFilt.length} verificados</span>
                   : null;
               })()}
             </p>
           </div>
-          <p className="text-xl font-bold text-emerald-700">{fmt(totales.total)}</p>
+          <p className="text-xl font-bold text-gray-700">{fmt(totales.total)}</p>
         </div>
 
         {/* Filtro por método */}
@@ -934,31 +934,31 @@ function VistaPagos({ clientes = [] }) {
                   const hasSplit = partes?.length > 0;
                   const cat    = hasSplit ? null : clasiMet(p.metodo);
                   const verf   = verificados.has(pKey);
-                  const rowBg  = verf ? 'bg-emerald-50' : hasSplit ? 'bg-violet-50' : '';
+                  const rowBg  = verf ? 'bg-stone-50' : hasSplit ? 'bg-stone-50' : '';
                   return (
                     <>
                       <tr key={i} className={`border-t border-gray-100 transition-colors ${rowBg} hover:brightness-95`}>
                         <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatFecha(p.fecha)}</td>
-                        <td className={`px-4 py-3 font-medium ${verf ? 'text-emerald-800' : 'text-gray-900'}`}>
+                        <td className={`px-4 py-3 font-medium ${verf ? 'text-gray-700' : 'text-gray-900'}`}>
                           {p.nombre}
                           {matches[pKey] && (
-                            <span className="block text-xs text-blue-500 font-normal mt-0.5">
+                            <span className="block text-xs text-gray-700 font-normal mt-0.5">
                               ⇌ {matches[pKey]['Concepto'] || matches[pKey]['Fecha de ingreso'] || 'Conciliado'}
                             </span>
                           )}
                           {conciliadosSet.has(`${p.nombre}|${p.cuota}`) && (
-                            <span className="block text-xs text-teal-600 font-normal mt-0.5">✓ Conciliado</span>
+                            <span className="block text-xs text-gray-700 font-normal mt-0.5">✓ Conciliado</span>
                           )}
                         </td>
                         <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">{p.programa}</span></td>
                         <td className="px-4 py-3 text-gray-500">C{p.cuota}</td>
                         <td className="px-4 py-3">
                           {hasSplit
-                            ? <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-700 text-xs font-semibold">Desglosado</span>
+                            ? <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold">Desglosado</span>
                             : <span className={`px-2 py-0.5 rounded text-xs font-semibold ${CHIP[cat]}`}>{p.metodo}</span>
                           }
                         </td>
-                        <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.monto)}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-700 whitespace-nowrap">{fmt(p.monto)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             {/* Botón desglosar */}
@@ -967,8 +967,8 @@ function VistaPagos({ clientes = [] }) {
                               title="Desglosar por método de pago"
                               className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
                                 hasSplit
-                                  ? 'bg-violet-500 border-violet-500 text-white'
-                                  : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'
+                                  ? 'bg-gray-900 border-gray-200 text-white'
+                                  : 'border-gray-300 text-gray-400 hover:border-gray-200 hover:text-gray-700'
                               }`}
                             >
                               ÷
@@ -979,8 +979,8 @@ function VistaPagos({ clientes = [] }) {
                               title={verf ? 'Quitar verificación' : 'Marcar como verificado en banco'}
                               className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
                                 verf
-                                  ? 'bg-emerald-500 border-emerald-500 text-white'
-                                  : 'border-gray-300 text-transparent hover:border-emerald-400 hover:text-emerald-300'
+                                  ? 'bg-gray-900 border-gray-200 text-white'
+                                  : 'border-gray-300 text-transparent hover:border-gray-200 hover:text-gray-700'
                               }`}
                             >
                               ✓
@@ -991,8 +991,8 @@ function VistaPagos({ clientes = [] }) {
                               title={matches[pKey] ? 'Quitar conciliación' : 'Conciliar con banco'}
                               className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
                                 matches[pKey]
-                                  ? 'bg-blue-500 border-blue-500 text-white'
-                                  : 'border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-400'
+                                  ? 'bg-gray-900 border-gray-200 text-white'
+                                  : 'border-gray-300 text-gray-400 hover:border-gray-200 hover:text-gray-700'
                               }`}
                             >
                               ⇌
@@ -1022,7 +1022,7 @@ function VistaPagos({ clientes = [] }) {
               <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                 <tr>
                   <td colSpan={6} className="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
-                  <td className="px-4 py-3 font-bold text-emerald-700">{fmt(totalFilt)}</td>
+                  <td className="px-4 py-3 font-bold text-gray-700">{fmt(totalFilt)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -1042,12 +1042,12 @@ function VistaPagos({ clientes = [] }) {
               <span className="block text-xs text-gray-400 mt-0.5">
                 {trackerDelMes.length} movimientos
                 {trackerDelMes.filter(m => !matchedIdx.has(m._rowIndex)).length > 0 && (
-                  <span className="ml-2 text-amber-600 font-medium">
+                  <span className="ml-2 text-gray-700 font-medium">
                     · {trackerDelMes.filter(m => !matchedIdx.has(m._rowIndex)).length} sin conciliar
                   </span>
                 )}
                 {trackerDelMes.filter(m => matchedIdx.has(m._rowIndex)).length > 0 && (
-                  <span className="ml-2 text-emerald-600 font-medium">
+                  <span className="ml-2 text-gray-700 font-medium">
                     · {trackerDelMes.filter(m => matchedIdx.has(m._rowIndex)).length} conciliados
                   </span>
                 )}
@@ -1063,19 +1063,19 @@ function VistaPagos({ clientes = [] }) {
                 const pKey2 = matchEntry?.[0];
                 const clienteRef = pKey2 ? `${pKey2.split('|')[1]} · C${pKey2.split('|')[2]}` : null;
                 return (
-                  <div key={i} className={`px-5 py-3 flex items-center justify-between gap-3 ${conciliado ? 'bg-emerald-50/60' : ''}`}>
+                  <div key={i} className={`px-5 py-3 flex items-center justify-between gap-3 ${conciliado ? 'bg-stone-50/60' : ''}`}>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${conciliado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${conciliado ? 'bg-gray-900' : 'bg-gray-900'}`} />
                         <span className="text-sm font-semibold text-gray-900">{fmt(parseM(mov['Monto']))}</span>
                         <span className="text-xs text-gray-400">{mov['Fecha de ingreso'] || '—'}</span>
                         {mov['Medio de pago'] && <span className="text-xs text-gray-500">{mov['Medio de pago']}</span>}
                       </div>
                       {mov['Concepto'] && <p className="text-xs text-gray-500 mt-0.5 pl-3.5">{mov['Concepto']}</p>}
                       {mov['Nombre'] && <p className="text-xs text-gray-400 mt-0.5 pl-3.5">{mov['Nombre']}</p>}
-                      {clienteRef && <p className="text-xs text-blue-600 mt-0.5 pl-3.5">⇌ {clienteRef}</p>}
+                      {clienteRef && <p className="text-xs text-gray-700 mt-0.5 pl-3.5">⇌ {clienteRef}</p>}
                     </div>
-                    {!conciliado && <span className="text-xs text-amber-600 font-medium whitespace-nowrap flex-shrink-0">Sin conciliar</span>}
+                    {!conciliado && <span className="text-xs text-gray-700 font-medium whitespace-nowrap flex-shrink-0">Sin conciliar</span>}
                   </div>
                 );
               })}
@@ -1109,7 +1109,7 @@ function VistaPagos({ clientes = [] }) {
                       className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
                         yaUsado
                           ? 'border-gray-100 bg-gray-50 opacity-40 cursor-default'
-                          : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-200 hover:bg-stone-50'
                       }`}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-gray-900 text-sm">{fmt(parseM(mov['Monto']))}</span>
@@ -1150,12 +1150,12 @@ function VistaPagos({ clientes = [] }) {
                     value={pt.monto || ''}
                     onChange={e => updateParte(i, 'monto', e.target.value)}
                     placeholder="Monto"
-                    className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                    className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200"
                   />
                   <select
                     value={pt.metodo}
                     onChange={e => updateParte(i, 'metodo', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200 bg-white"
                   >
                     {METODOS_SPLIT.map(m => <option key={m}>{m}</option>)}
                   </select>
@@ -1167,14 +1167,14 @@ function VistaPagos({ clientes = [] }) {
               ))}
 
               <button onClick={() => setSplitDraft(prev => [...prev, { monto: Math.max(0, splitRestante), metodo: 'Transferencia' }])}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                className="text-xs text-gray-700 hover:text-gray-700 font-medium">
                 + Agregar parte
               </button>
 
               {/* Indicador de restante */}
               <div className={`text-xs font-medium px-3 py-2 rounded-lg ${
-                splitOk ? 'bg-emerald-50 text-emerald-700' :
-                splitRestante < 0 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'
+                splitOk ? 'bg-stone-50 text-gray-700' :
+                splitRestante < 0 ? 'bg-red-50 text-red-600' : 'bg-stone-50 text-gray-700'
               }`}>
                 {splitOk
                   ? '✓ El total coincide'
@@ -1198,7 +1198,7 @@ function VistaPagos({ clientes = [] }) {
                 Cancelar
               </button>
               <button onClick={saveSplit} disabled={!splitOk}
-                className="px-4 py-2 text-xs rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors">
+                className="px-4 py-2 text-xs rounded-lg bg-gray-900 text-white font-semibold hover:bg-gray-900 disabled:opacity-40 transition-colors">
                 Guardar
               </button>
             </div>
@@ -1356,10 +1356,10 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
           <p className="text-2xl font-bold text-red-600">{fmt(totalMora)}</p>
           <p className="text-xs text-red-400 mt-1">{visibles.filter(d => d.estado !== 'Saldado').length} deudores</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Sin clasificar</p>
-          <p className="text-2xl font-bold text-amber-600">{sinClasificar}</p>
-          <p className="text-xs text-amber-500 mt-1">necesitan estado</p>
+          <p className="text-2xl font-bold text-gray-700">{sinClasificar}</p>
+          <p className="text-xs text-gray-700 mt-1">necesitan estado</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Incobrables</p>
@@ -1370,7 +1370,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
 
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={() => setReporteModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          className="px-4 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-lg transition-colors">
           📤 Generar reporte Slack
         </button>
         <button onClick={abrirAgregar}
@@ -1416,7 +1416,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                       <td className="px-4 py-3">
                         {d.diasMora === null
                           ? <span className="text-xs text-gray-400 italic">Sin fecha</span>
-                          : <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-amber-600' : 'text-gray-500'}`}>{d.diasMora}d</span>
+                          : <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-gray-700' : 'text-gray-500'}`}>{d.diasMora}d</span>
                         }
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-sm">{d.closer || '—'}</td>
@@ -1429,7 +1429,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                       <td className="px-4 py-3">
                         {!enProceso && d.estado !== 'Saldado' && (
                           <button onClick={() => marcarPagado(d)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                            className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
                             ✓ Pagado
                           </button>
                         )}
@@ -1467,23 +1467,23 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Último contacto</label>
                 <input value={editando.uc} onChange={e => setEditando(prev => ({ ...prev, uc: e.target.value }))}
                   placeholder="Ej: 01/06 · WhatsApp"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
                 <textarea value={editando.sa} onChange={e => setEditando(prev => ({ ...prev, sa: e.target.value }))}
                   placeholder="Ej: Prometió pagar el viernes..." rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
                 <textarea value={editando.dc} onChange={e => setEditando(prev => ({ ...prev, dc: e.target.value }))}
                   placeholder="Ej: Está esperando que se concrete una venta..." rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setEditando(null)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button onClick={guardarEstado} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">Guardar</button>
+                <button onClick={guardarEstado} className="flex-1 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl">Guardar</button>
               </div>
             </div>
           </div>
@@ -1502,19 +1502,19 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <div className="relative">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Buscar cliente</label>
                 {clienteSel ? (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between bg-stone-50 border border-gray-200 rounded-lg px-3 py-2">
                     <div>
-                      <p className="text-sm font-semibold text-blue-900">{clienteSel['Nombre']}</p>
-                      <p className="text-xs text-blue-600">{clienteSel['Programa'] || '—'} · {clienteSel['CLOSER'] || '—'}</p>
+                      <p className="text-sm font-semibold text-gray-700">{clienteSel['Nombre']}</p>
+                      <p className="text-xs text-gray-700">{clienteSel['Programa'] || '—'} · {clienteSel['CLOSER'] || '—'}</p>
                     </div>
                     <button onClick={() => { setClienteSel(null); setCuotaSel(null); setBusqueda(''); }}
-                      className="text-blue-400 hover:text-blue-700 text-lg ml-2">×</button>
+                      className="text-gray-700 hover:text-gray-700 text-lg ml-2">×</button>
                   </div>
                 ) : (
                   <>
                     <input value={busqueda} onChange={e => setBusqueda(e.target.value)} autoFocus
                       placeholder="Escribí el nombre del cliente…"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                     {clientesFiltrados.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {clientesFiltrados.map(cl => (
@@ -1543,7 +1543,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                       {cuotasDisponibles.map(x => (
                         <button key={x.cuota} onClick={() => setCuotaSel(x)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
-                            cuotaSel?.cuota === x.cuota ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                            cuotaSel?.cuota === x.cuota ? 'bg-gray-900 text-white border-gray-200' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-200'
                           }`}>
                           C{x.cuota} — ${Math.round(x.monto).toLocaleString('es-AR')}
                         </button>
@@ -1569,19 +1569,19 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Último contacto</label>
                     <input value={nuevoUc} onChange={e => setNuevoUc(e.target.value)} placeholder="Ej: 01/06 · WhatsApp"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
                     <textarea value={nuevoSa} onChange={e => setNuevoSa(e.target.value)}
                       placeholder="Ej: Prometió pagar el viernes..." rows={2}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
                     <textarea value={nuevoDc} onChange={e => setNuevoDc(e.target.value)}
                       placeholder="Ej: Esperando que venda para pagarnos..." rows={2}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
                   </div>
                 </>
               )}
@@ -1589,7 +1589,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setAgregarModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
                 <button onClick={agregarDeudor} disabled={!clienteSel || !cuotaSel || guardandoNuevo}
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40">
+                  className="flex-1 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40">
                   {guardandoNuevo ? 'Guardando…' : 'Agregar'}
                 </button>
               </div>
@@ -1610,7 +1610,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <textarea readOnly value={generarReporte()} rows={14}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none" />
               <button onClick={() => navigator.clipboard.writeText(generarReporte())}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                className="w-full py-2.5 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors">
                 📋 Copiar al portapapeles
               </button>
             </div>
@@ -1768,7 +1768,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
         {mesesDisp.map(m => (
           <button key={m.mes} onClick={() => { setMesSel(m.mes); setFiltroMet(''); }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              m.mes === mesSel ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              m.mes === mesSel ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>{m.label}</button>
         ))}
       </div>
@@ -1850,7 +1850,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                   const conc   = conciliaciones[mov._rowIndex];
                   const metodo = mov['Medio de Pago'] || mov['Medio de pago'] || '';
                   return (
-                    <tr key={i} className={`border-t border-gray-100 transition-colors ${conc ? 'bg-emerald-50/50' : 'hover:bg-gray-50'}`}>
+                    <tr key={i} className={`border-t border-gray-100 transition-colors ${conc ? 'bg-stone-50/50' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{mov['Fecha'] || '—'}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{fmt(parseM(mov['Monto']))}</td>
                       <td className="px-4 py-3">
@@ -1866,8 +1866,8 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                       <td className="px-4 py-3">
                         {conc ? (
                           <div>
-                            <p className="text-sm font-medium text-emerald-800">{conc.nombre}</p>
-                            <p className="text-xs text-emerald-600">
+                            <p className="text-sm font-medium text-gray-700">{conc.nombre}</p>
+                            <p className="text-xs text-gray-700">
                               {conc.tipo === 'seña' ? 'Seña' : `C${conc.cuota}`}
                               {conc.fecha ? ` · ${formatFecha(conc.fecha)}` : ''}
                             </p>
@@ -1882,7 +1882,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                             className="text-gray-300 hover:text-red-400 transition-colors text-lg px-1">×</button>
                         ) : (
                           <button onClick={() => abrirAsignar(mov)}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap">
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap">
                             Asignar
                           </button>
                         )}
@@ -1913,21 +1913,21 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
             <div className="p-4 flex-shrink-0 border-b border-gray-100">
               {clienteModal ? (
                 <button onClick={() => { setClienteModal(null); setSeleccion(null); }}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-700">
                   ‹ <span className="font-medium">{clienteModal['Nombre']}</span>
                 </button>
               ) : verTodos ? (
                 <div className="flex items-center gap-2">
                   <button onClick={() => { setVerTodos(false); setSeleccion(null); setBusqueda(''); }}
-                    className="text-xs text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0">‹ Volver</button>
+                    className="text-xs text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0">‹ Volver</button>
                   <input value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
                     placeholder="Filtrar por nombre…"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                 </div>
               ) : (
                 <input autoFocus value={busqueda} onChange={e => { setBusqueda(e.target.value); setSeleccion(null); }}
                   placeholder="Filtrar por nombre…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
               )}
             </div>
 
@@ -1943,7 +1943,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                     return (
                       <button key={idx}
                         onClick={() => setSeleccion({ tipo: 'cuota', nombre: (clienteModal['Nombre']||'').trim(), cuota: idx+1, fecha, monto, rowIndex: clienteModal._rowIndex })}
-                        className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${sel ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
+                        className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${sel ? 'border-gray-200 bg-stone-50' : 'border-gray-200 hover:border-gray-200 hover:bg-gray-50'}`}>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold text-gray-800">Cuota {idx+1} — {fmt(monto)}</span>
                           <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
@@ -1993,7 +1993,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                     .map((item, idx) => (
                       <button key={idx}
                         onClick={() => guardarDirecto({ tipo: 'cuota', nombre: item.nombre, cuota: item.cuota, fecha: item.fecha, monto: item.monto, rowIndex: item.rowIndex })}
-                        className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                        className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-stone-50 transition-all">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium text-gray-800">{item.nombre}</span>
                           <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">{fmt(item.monto)}</span>
@@ -2017,7 +2017,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                           return (
                             <button key={idx}
                               onClick={() => guardarDirecto({ tipo: 'seña', nombre, fecha, monto, rowIndex: a._rowIndex })}
-                              className="w-full text-left px-3 py-2.5 rounded-lg mb-0.5 border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                              className="w-full text-left px-3 py-2.5 rounded-lg mb-0.5 border border-gray-100 hover:border-gray-200 hover:bg-stone-50 transition-all">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-800">{nombre} — {fmt(monto)}</span>
                                 <span className="text-xs text-gray-400">{formatFecha(fecha)}</span>
@@ -2029,7 +2029,7 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
                   )}
                   <div className="mt-3 pt-2 border-t border-gray-100">
                     <button onClick={() => { setVerTodos(true); setBusqueda(''); }}
-                      className="w-full text-xs text-gray-400 hover:text-blue-600 py-2 text-center transition-colors">
+                      className="w-full text-xs text-gray-400 hover:text-gray-700 py-2 text-center transition-colors">
                       Ver todos los clientes →
                     </button>
                   </div>
@@ -2039,11 +2039,11 @@ function VistaConciliacion({ clientes = [], abonos = [] }) {
 
             {seleccion && (
               <div className="p-4 border-t border-gray-100 flex-shrink-0">
-                <div className="bg-blue-50 rounded-lg px-3 py-2 mb-3 text-xs text-blue-800">
+                <div className="bg-stone-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-700">
                   <strong>{seleccion.nombre}</strong> · {seleccion.tipo === 'seña' ? 'Seña' : `C${seleccion.cuota}`} · {formatFecha(seleccion.fecha)}
                 </div>
                 <button onClick={guardar}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                  className="w-full py-2.5 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors">
                   Confirmar
                 </button>
               </div>
@@ -2066,7 +2066,7 @@ export default function Cobranzas({ cobranzas, pendientesPorMes, proyeccion = []
         {[['mensual','Resumen mensual'],['pagos','Pagos recibidos'],['semanal','Pagos semanales'],['conciliacion','Conciliación']].map(([v, l]) => (
           <button key={v} onClick={() => setSubTab(v)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              subTab === v ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
+              subTab === v ? 'border-gray-200 text-gray-700' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}>{l}</button>
         ))}
       </div>

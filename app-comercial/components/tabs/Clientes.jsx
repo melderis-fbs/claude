@@ -32,27 +32,27 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
   const stDeuda = estadoDeudaStyle(estadoDeuda);
   return (
     <tr onClick={() => setClienteSel(isSelected ? null : c)}
-      className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : (stDeuda.row || 'hover:bg-gray-50')}`}>
+      className={`cursor-pointer transition-colors ${isSelected ? 'bg-stone-50' : (stDeuda.row || 'hover:bg-gray-50')}`}>
       <td className="px-4 py-3 font-medium text-gray-900">{c['Nombre'] || '—'}</td>
       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{c['Programa'] || '—'}</span></td>
       <td className="px-4 py-3 text-gray-500 text-xs">{c['Fuente'] || '—'}</td>
       <td className="px-4 py-3 text-gray-700">{c['CLOSER'] || '—'}</td>
       <td className="px-4 py-3 text-gray-700">${total.toLocaleString('es-AR')}</td>
       <td className="px-4 py-3 text-center">
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cuotasInfo}</span>
+        <span className={`px-2 py-0.5 rounded text-xs font-medium ${completo ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>{cuotasInfo}</span>
       </td>
       <td className="px-4 py-3 text-gray-700">${pagado.toLocaleString('es-AR')}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5 flex-wrap">
           {c['Estatus'] ? (
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-              String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+              String(c['Estatus']).toLowerCase().includes('activ') ? 'bg-gray-100 text-gray-700' :
               String(c['Estatus']).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600'  :
               'bg-gray-100 text-gray-500'
             }`}>{c['Estatus']}</span>
           ) : <span className="text-gray-300">—</span>}
           {String(c['Reembolso'] || '').toUpperCase() === 'SI' && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">↩ Reembolso</span>
+            <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">↩ Reembolso</span>
           )}
         </div>
       </td>
@@ -62,7 +62,7 @@ function ClienteRow({ c, clienteSel, setClienteSel }) {
           : <span className="text-gray-300 text-xs">Al día</span>}
       </td>
       <td className="px-4 py-3 text-gray-400 text-xs text-right">
-        <span className={`transition-colors ${isSelected ? 'text-blue-500' : 'text-gray-300'}`}>›</span>
+        <span className={`transition-colors ${isSelected ? 'text-gray-700' : 'text-gray-300'}`}>›</span>
       </td>
     </tr>
   );
@@ -156,18 +156,18 @@ export default function Clientes({ clientes, headers }) {
       <div className="flex flex-wrap gap-3 items-center">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre, email…"
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 w-64 shadow-sm" />
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-200 w-64 shadow-sm" />
         {[['Programa', programa, setPrograma, ['Todos', ...PROGRAMAS]],
           ['Closer',   closer,   setCloser,   closerOpts],
           ['Estatus',  estatus,  setEstatus,  estatusOpts]].map(([label, val, setter, opts]) => (
           <select key={label} value={val} onChange={e => setter(e.target.value)}
-            className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500 shadow-sm">
+            className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-gray-200 shadow-sm">
             {opts.map(o => <option key={o}>{o}</option>)}
           </select>
         ))}
         <span className="text-xs text-gray-400 font-medium">{filtrados.length} resultados</span>
         <button onClick={() => setShowAdd(true)}
-          className="ml-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          className="ml-auto px-4 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-lg transition-colors">
           + Nuevo cliente
         </button>
       </div>
@@ -198,7 +198,7 @@ function Field({ label, value, onChange, type='text', placeholder, required }) {
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}{required && ' *'}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 bg-white" />
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 bg-white" />
     </div>
   );
 }
@@ -208,7 +208,7 @@ function Sel({ label, value, onChange, options }) {
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 bg-white">
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 bg-white">
         <option value="">— Elegir —</option>
         {options.map(o => <option key={o}>{o}</option>)}
       </select>
@@ -265,8 +265,8 @@ function AddClienteModal({ headers, fuenteOpts = [], onClose, onSaved }) {
                 <button key={n} type="button" onClick={() => set('Cuotas', n)}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
                     (g('Cuotas') || '1') === n
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                      ? 'bg-gray-900 text-white border-gray-200'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-200'
                   }`}>{lbl}</button>
               ))}
             </div>
@@ -303,7 +303,7 @@ function AddClienteModal({ headers, fuenteOpts = [], onClose, onSaved }) {
               Cancelar
             </button>
             <button onClick={submit} disabled={loading}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl text-sm font-semibold text-white">
+              className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-900 disabled:opacity-50 rounded-xl text-sm font-semibold text-white">
               {loading ? 'Guardando…' : 'Guardar cliente'}
             </button>
           </div>

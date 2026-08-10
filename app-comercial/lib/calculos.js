@@ -718,11 +718,11 @@ export function estadoDeudaCliente(cliente) {
 
 // Estilos (Tailwind) por estado de deuda. row = tinte de fila; badge = etiqueta.
 export const ESTADO_DEUDA_STYLE = {
-  'Deudor':     { row: 'bg-red-50',    badge: 'bg-red-100 text-red-700',       label: 'Deudor'      },
-  'Moroso':     { row: 'bg-amber-50',  badge: 'bg-amber-100 text-amber-700',   label: 'Moroso'      },
-  'En trámite': { row: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700', label: 'En trámite'  },
-  'En gestión': { row: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700', label: 'En gestión'  },
-  'Saldado':    { row: '',             badge: 'bg-emerald-100 text-emerald-700', label: 'Saldado'   },
+  'Deudor':     { row: 'bg-red-50',    badge: 'bg-red-100 text-red-700',      label: 'Deudor'      },
+  'Moroso':     { row: 'bg-red-50/50', badge: 'bg-red-50 text-red-600',       label: 'Moroso'      },
+  'En trámite': { row: 'bg-stone-50',  badge: 'bg-gray-100 text-gray-600',    label: 'En trámite'  },
+  'En gestión': { row: 'bg-stone-50',  badge: 'bg-gray-100 text-gray-600',    label: 'En gestión'  },
+  'Saldado':    { row: '',             badge: 'bg-gray-900 text-white',       label: 'Saldado'     },
 };
 export function estadoDeudaStyle(estado) {
   return ESTADO_DEUDA_STYLE[estado] || { row: '', badge: 'bg-gray-100 text-gray-500', label: estado || 'Al día' };

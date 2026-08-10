@@ -52,7 +52,7 @@ function EgresosDiag() {
               ❌ {result.error}
             </div>
           )}
-          <div className={`rounded-lg px-3 py-2 ${result.urlConfigured ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+          <div className={`rounded-lg px-3 py-2 ${result.urlConfigured ? 'bg-gray-900 text-white' : 'bg-red-50 text-red-600'}`}>
             {result.urlConfigured
               ? '✓ APPS_SCRIPT_EGRESOS_URL configurada'
               : '❌ APPS_SCRIPT_EGRESOS_URL no está configurada en Vercel'}
@@ -76,7 +76,7 @@ function EgresosDiag() {
           )}
           {result.urlConfigured && result.columnas?.length === 0 && !result.rawError && (
             <div className="space-y-2">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-700">
+              <div className="bg-stone-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
                 ⚠️ GAS devuelve {result.rowCount} filas. Respuesta RAW del GAS:
               </div>
               <pre className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 break-all whitespace-pre-wrap overflow-x-auto max-h-48">{result.rawGas}</pre>
@@ -88,26 +88,14 @@ function EgresosDiag() {
   );
 }
 
-function Card({ label, value, sub, color = 'blue' }) {
-  const styles = {
-    blue:   'bg-blue-50 border-blue-200',
-    green:  'bg-emerald-50 border-emerald-200',
-    purple: 'bg-purple-50 border-purple-200',
-    amber:  'bg-amber-50 border-amber-200',
-    red:    'bg-red-50 border-red-200',
-  };
-  const textStyles = {
-    blue:   'text-blue-700',
-    green:  'text-emerald-700',
-    purple: 'text-purple-700',
-    amber:  'text-amber-700',
-    red:    'text-red-700',
-  };
+// Monocromático: neutra por defecto; variant="dark" resalta en gris muy oscuro.
+function Card({ label, value, sub, color = 'blue', variant = 'plain' }) {
+  const dark = variant === 'dark';
   return (
-    <div className={`rounded-xl border p-5 ${styles[color]}`}>
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${textStyles[color]}`}>{value}</p>
-      {sub && <p className="text-xs mt-1 text-gray-500">{sub}</p>}
+    <div className={`rounded-xl border p-5 ${dark ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200'}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{label}</p>
+      <p className={`text-2xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
+      {sub && <p className={`text-xs mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{sub}</p>}
     </div>
   );
 }
@@ -118,76 +106,121 @@ function ROASSection({ mes, anunciosPorMes = {} }) {
   const fmtX    = v => v != null ? `${Number(v).toFixed(2)}x` : '—';
   const fmtCost = v => v != null ? `$${Number(v).toFixed(2)}`  : '—';
 
+  const item = (label, value, hint) => (
+    <div>
+      <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
+      <p className="text-xl font-bold text-white">{value}</p>
+      <p className="text-xs text-gray-500">{hint}</p>
+    </div>
+  );
+
   return (
-    <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-orange-600 mb-4">Meta Ads — ROAS</p>
+    <div className="bg-gray-900 border border-gray-900 rounded-xl p-5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Meta Ads — ROAS</p>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div>
-          <p className="text-xs text-orange-500 font-medium mb-0.5">Inversión Meta</p>
-          <p className="text-xl font-bold text-orange-700">{d.inversion != null ? fmt(d.inversion) : '—'}</p>
-          <p className="text-xs text-orange-400">gasto publicitario</p>
-        </div>
-        <div>
-          <p className="text-xs text-orange-500 font-medium mb-0.5">ROAS</p>
-          <p className="text-xl font-bold text-orange-700">{fmtX(d.roas)}</p>
-          <p className="text-xs text-orange-400">ventas auto / inversión</p>
-        </div>
-        <div>
-          <p className="text-xs text-orange-500 font-medium mb-0.5">ROAS Cash</p>
-          <p className="text-xl font-bold text-orange-700">{fmtX(d.roasCash)}</p>
-          <p className="text-xs text-orange-400">cobros auto / inversión</p>
-        </div>
-        <div>
-          <p className="text-xs text-orange-500 font-medium mb-0.5">Costo por lead</p>
-          <p className="text-xl font-bold text-orange-700">{fmtCost(d.costoLead)}</p>
-          <p className="text-xs text-orange-400">inversión / leads</p>
-        </div>
-        <div>
-          <p className="text-xs text-orange-500 font-medium mb-0.5">Costo por agenda</p>
-          <p className="text-xl font-bold text-orange-700">{fmtCost(d.costoAgenda)}</p>
-          <p className="text-xs text-orange-400">inversión / agendas</p>
-        </div>
+        {item('Inversión Meta', d.inversion != null ? fmt(d.inversion) : '—', 'gasto publicitario')}
+        {item('ROAS', fmtX(d.roas), 'ventas auto / inversión')}
+        {item('ROAS Cash', fmtX(d.roasCash), 'cobros auto / inversión')}
+        {item('Costo por lead', fmtCost(d.costoLead), 'inversión / leads')}
+        {item('Costo por agenda', fmtCost(d.costoAgenda), 'inversión / agendas')}
       </div>
     </div>
   );
 }
 
-export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {}, anunciosPorMes = {} }) {
+export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {}, anunciosPorMes = {}, pendientesPorMes = {} }) {
   const [mesSel, setMesSel] = useState(resumen[resumen.length - 1]?.mes ?? '');
   const m = resumen.find(r => r.mes === mesSel) ?? resumen[resumen.length - 1];
+  const [genPDF, setGenPDF] = useState(false);
+  const [genErr, setGenErr] = useState('');
 
   const cobradoSemana  = cobrosSemanales.filter(c => c.pagado).reduce((a,c) => a+c.monto, 0);
   const esperadoSemana = cobrosSemanales.reduce((a,c) => a+c.monto, 0);
 
   if (!m) return <p className="text-gray-400 text-sm">Sin datos disponibles.</p>;
 
+  // Cobranza de cuotas = cobrado ÷ lo que vencía en cuotas ese mes (cuotas 2ª-4ª).
+  // Viene de calcularCobranzas (aCobrar / cobrado / pctCobrado) por mes de vencimiento.
+  const cuo = cobranzas.find(c => c.mes === mesSel) || null;
+
+  // Genera el informe PDF a partir de los datos YA calculados que están en
+  // pantalla (no vuelve a leer la planilla).
+  async function generarInforme() {
+    setGenPDF(true); setGenErr('');
+    try {
+      const payload = {
+        label: m.label,
+        emitido: new Date().toLocaleDateString('es-AR'),
+        m,
+        cuo,
+        resumen,
+        cobranzas,
+        anuncio: anunciosPorMes[mesSel] || {},
+        // proyección: sólo meses futuros respecto al mes seleccionado
+        pendientesPorMes: Object.fromEntries(
+          Object.entries(pendientesPorMes).filter(([k]) => k >= mesSel)
+        ),
+      };
+      const res = await fetch('/api/informe/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `Error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Informe-FoundersBS-${(m.label || 'mes').replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setGenErr(e.message);
+    } finally {
+      setGenPDF(false);
+    }
+  }
+
   const hayCostos = Object.keys(m.costos).length > 0;
   const totalVentasConMet = (m.ventasAR || 0) + (m.ventasExt || 0) + (m.ventasEfectivo || 0);
 
   return (
     <div className="space-y-6 max-w-7xl">
-      {/* Selector de mes */}
+      {/* Selector de mes + Generar informe */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-gray-500 font-medium">Mes:</span>
         {resumen.map(r => (
           <button key={r.mes} onClick={() => setMesSel(r.mes)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               r.mes === mesSel
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-gray-900 text-white shadow-sm'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
             {r.label}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-2">
+          {genErr && <span className="text-xs text-red-600">{genErr}</span>}
+          <button onClick={generarInforme} disabled={genPDF}
+            className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-60 flex items-center gap-2">
+            {genPDF ? 'Generando…' : '📄 Generar informe'}
+          </button>
+        </div>
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card label="Ventas nuevas"         value={(m.ventasNuevas || 0) + (m.ventasBack || 0)} sub="ventas del mes" color="blue" />
-        <Card label="Monto total ventas"    value={fmt((m.montoFront || 0) + (m.montoBack || 0))} sub={`${(m.ventasNuevas || 0) + (m.ventasBack || 0)} clientes`} color="blue" />
-        <Card label="Recolección"           value={fmt(m.cashTotal)} sub={`${pct(m.pctCC)} de cobro`} color="green" />
-        <Card label="Ganancia"              value={fmt(m.ganancia)} sub={hayCostos ? `Rent. ${pct(m.rentabilidad)}` : 'Sin datos de costos'} color={m.ganancia >= 0 ? 'purple' : 'red'} />
-        <Card label="Cobros esta semana"    value={fmt(cobradoSemana)} sub={`de ${fmt(esperadoSemana)} esperados`} color="amber" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <Card label="Ventas nuevas"         value={(m.ventasNuevas || 0) + (m.ventasBack || 0)} sub={`${m.ventasNuevas || 0} nuevas · ${m.ventasBack || 0} back`} />
+        <Card label="Monto total ventas"    value={fmt((m.montoFront || 0) + (m.montoBack || 0))} sub={`front ${fmt(m.montoFront)} · back ${fmt(m.montoBack)}`} />
+        <Card label="Recolección total"     value={fmt(m.cashTotal)} sub={`venta nueva ${fmt((m.cashNuevoAR||0)+(m.cashNuevoExt||0)+(m.cashNuevoEfectivo||0))} · cuotas ${fmt(m.cashCuotaTotal || 0)}`} variant="dark" />
+        <Card label="Ganancia"              value={fmt(m.ganancia)} sub={hayCostos ? `Rent. ${pct(m.rentabilidad)}` : 'Sin datos de costos'} variant="dark" />
+        <Card label="Recolección venta nueva" value={pct(m.pctCC)} sub="primeros pagos ÷ venta del mes" />
+        <Card label="Cobranza de cuotas"    value={cuo ? pct(cuo.pctCobrado) : '—'} sub={cuo ? `${fmt(cuo.cobrado)} ÷ ${fmt(cuo.aCobrar)} que vencía` : 'cobrado ÷ lo que vencía'} />
+        <Card label="Costos del mes"        value={hayCostos ? fmt(m.totalCostos) : '—'} sub={hayCostos ? pct(m.montoTotal > 0 ? (m.totalCostos / m.montoTotal) * 100 : 0) + ' de ventas' : 'Sin datos de costos'} />
+        <Card label="Cobros esta semana"    value={fmt(cobradoSemana)} sub={`de ${fmt(esperadoSemana)} esperados`} />
       </div>
 
       {/* Meta Ads / ROAS */}
@@ -222,20 +255,20 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
               <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Origen de ventas nuevas</p>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-xs text-blue-600 font-medium">Argentina</p>
-                    <p className="text-sm font-bold text-blue-800">{m.ventasAR || 0} ventas</p>
-                    <p className="text-xs text-blue-600">{fmt(m.montoAR || 0)}</p>
+                  <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Argentina</p>
+                    <p className="text-sm font-bold text-gray-900">{m.ventasAR || 0} ventas</p>
+                    <p className="text-xs text-gray-500">{fmt(m.montoAR || 0)}</p>
                   </div>
-                  <div className="bg-indigo-50 rounded-lg px-3 py-2 border border-indigo-100">
-                    <p className="text-xs text-indigo-600 font-medium">Exterior</p>
-                    <p className="text-sm font-bold text-indigo-800">{m.ventasExt || 0} ventas</p>
-                    <p className="text-xs text-indigo-600">{fmt(m.montoExt || 0)}</p>
+                  <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Exterior</p>
+                    <p className="text-sm font-bold text-gray-900">{m.ventasExt || 0} ventas</p>
+                    <p className="text-xs text-gray-500">{fmt(m.montoExt || 0)}</p>
                   </div>
-                  <div className="bg-green-50 rounded-lg px-3 py-2 border border-green-100">
-                    <p className="text-xs text-green-600 font-medium">Efectivo</p>
-                    <p className="text-sm font-bold text-green-800">{m.ventasEfectivo || 0} ventas</p>
-                    <p className="text-xs text-green-600">{fmt(m.montoEfectivo || 0)}</p>
+                  <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Efectivo</p>
+                    <p className="text-sm font-bold text-gray-900">{m.ventasEfectivo || 0} ventas</p>
+                    <p className="text-xs text-gray-500">{fmt(m.montoEfectivo || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -247,14 +280,28 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Recolección — {m.label}</h3>
 
-          {/* Progreso */}
-          <div className="mb-5">
-            <div className="flex justify-between text-sm mb-1.5">
-              <span className="text-gray-500">Cobrado de ventas front</span>
-              <span className="font-bold text-emerald-600">{pct(m.pctCC)}</span>
+          {/* Progreso desglosado: pagos de venta nueva vs. cuotas */}
+          <div className="mb-5 space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-gray-500">Pagos de venta nueva <span className="text-gray-400">(primeros pagos ÷ venta del mes)</span></span>
+                <span className="font-bold text-gray-900">{pct(m.pctCC)}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-900 rounded-full transition-all" style={{ width: `${Math.min(m.pctCC || 0, 100)}%` }} />
+              </div>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-2 bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(m.pctCC || 0, 100)}%` }} />
+            <div>
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-gray-500">Cobranza de cuotas <span className="text-gray-400">(cobrado ÷ lo que vencía)</span></span>
+                <span className="font-bold text-gray-900">{cuo ? pct(cuo.pctCobrado) : '—'}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-900 rounded-full transition-all" style={{ width: `${Math.min(cuo?.pctCobrado || 0, 100)}%` }} />
+              </div>
+              {cuo && (
+                <p className="text-xs text-gray-400 mt-1">{fmt(cuo.cobrado)} cobrado · {fmt(cuo.aCobrar)} vencía{cuo.pendiente > 0 ? ` · ${fmt(cuo.pendiente)} pendiente` : ''}</p>
+              )}
             </div>
           </div>
 
@@ -263,32 +310,32 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
             <thead>
               <tr>
                 <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-2"></th>
-                <th className="text-right text-xs font-semibold text-blue-500 uppercase tracking-wider pb-2">Argentina</th>
-                <th className="text-right text-xs font-semibold text-indigo-500 uppercase tracking-wider pb-2">Exterior</th>
-                <th className="text-right text-xs font-semibold text-green-600 uppercase tracking-wider pb-2">Efectivo</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Argentina</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Exterior</th>
+                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Efectivo</th>
                 <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-2">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               <tr>
                 <td className="py-2 text-gray-500">Primer pagos</td>
-                <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashNuevoAR || 0)}</td>
-                <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashNuevoExt || 0)}</td>
-                <td className="py-2 text-right font-medium text-green-700">{fmt(m.cashNuevoEfectivo || 0)}</td>
-                <td className="py-2 text-right font-semibold text-gray-800">{fmt((m.cashNuevoAR || 0) + (m.cashNuevoExt || 0) + (m.cashNuevoEfectivo || 0))}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashNuevoAR || 0)}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashNuevoExt || 0)}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashNuevoEfectivo || 0)}</td>
+                <td className="py-2 text-right font-semibold text-gray-900">{fmt((m.cashNuevoAR || 0) + (m.cashNuevoExt || 0) + (m.cashNuevoEfectivo || 0))}</td>
               </tr>
               <tr>
                 <td className="py-2 text-gray-500">Cuotas</td>
-                <td className="py-2 text-right font-medium text-blue-700">{fmt(m.cashCuotaAR || 0)}</td>
-                <td className="py-2 text-right font-medium text-indigo-700">{fmt(m.cashCuotaExt || 0)}</td>
-                <td className="py-2 text-right font-medium text-green-700">{fmt(m.cashCuotaEfectivo || 0)}</td>
-                <td className="py-2 text-right font-semibold text-gray-800">{fmt(m.cashCuotaTotal || 0)}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashCuotaAR || 0)}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashCuotaExt || 0)}</td>
+                <td className="py-2 text-right font-medium text-gray-700">{fmt(m.cashCuotaEfectivo || 0)}</td>
+                <td className="py-2 text-right font-semibold text-gray-900">{fmt(m.cashCuotaTotal || 0)}</td>
               </tr>
               <tr className="border-t-2 border-gray-200">
                 <td className="py-2 font-semibold text-gray-700">Total</td>
-                <td className="py-2 text-right font-bold text-blue-800">{fmt(m.cashTotalAR || 0)}</td>
-                <td className="py-2 text-right font-bold text-indigo-800">{fmt(m.cashTotalExt || 0)}</td>
-                <td className="py-2 text-right font-bold text-green-800">{fmt(m.cashTotalEfectivo || 0)}</td>
+                <td className="py-2 text-right font-bold text-gray-900">{fmt(m.cashTotalAR || 0)}</td>
+                <td className="py-2 text-right font-bold text-gray-900">{fmt(m.cashTotalExt || 0)}</td>
+                <td className="py-2 text-right font-bold text-gray-900">{fmt(m.cashTotalEfectivo || 0)}</td>
                 <td className="py-2 text-right font-bold text-gray-900 text-base">{fmt(m.cashTotal)}</td>
               </tr>
             </tbody>
@@ -333,13 +380,13 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Resultado — {m.label}</h3>
           <div className="space-y-3">
-            <div className={`rounded-lg p-4 ${m.ganancia >= 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-              <p className="text-xs text-gray-500 mb-1">Ganancia (todas las ventas)</p>
-              <p className={`text-3xl font-bold ${m.ganancia >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{fmt(m.ganancia)}</p>
+            <div className={`rounded-lg p-4 ${m.ganancia >= 0 ? 'bg-gray-900 border border-gray-900' : 'bg-red-50 border border-red-200'}`}>
+              <p className={`text-xs mb-1 ${m.ganancia >= 0 ? 'text-gray-400' : 'text-gray-500'}`}>Ganancia (todas las ventas)</p>
+              <p className={`text-3xl font-bold ${m.ganancia >= 0 ? 'text-white' : 'text-red-700'}`}>{fmt(m.ganancia)}</p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-stone-50 border border-gray-200 rounded-lg p-4">
               <p className="text-xs text-gray-500 mb-1">Rentabilidad</p>
-              <p className="text-3xl font-bold text-blue-700">{hayCostos ? pct(m.rentabilidad) : '—'}</p>
+              <p className="text-3xl font-bold text-gray-900">{hayCostos ? pct(m.rentabilidad) : '—'}</p>
             </div>
           </div>
         </div>
@@ -361,23 +408,23 @@ export default function ResumenEconomico({ resumen, cobrosSemanales, ventasPorMe
           <tbody className="divide-y divide-gray-100">
             {[...resumen].reverse().map(r => (
               <tr key={r.mes} onClick={() => setMesSel(r.mes)}
-                className={`cursor-pointer transition-colors ${r.mes === mesSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                className={`cursor-pointer transition-colors ${r.mes === mesSel ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
                 <td className="px-5 py-3 font-semibold text-gray-800">{r.label}</td>
                 <td className="px-5 py-3 text-gray-600">{r.ventasNuevas} nuevas · {r.ventasBack} back</td>
                 <td className="px-5 py-3 text-gray-700">{fmt(r.montoFront)}</td>
                 <td className="px-5 py-3 text-gray-600">
-                  <span className="text-blue-600">{r.ventasAR || 0} AR</span>
+                  <span className="text-gray-700">{r.ventasAR || 0} AR</span>
                   <span className="text-gray-300 mx-1">/</span>
-                  <span className="text-indigo-600">{r.ventasExt || 0} Ext</span>
+                  <span className="text-gray-700">{r.ventasExt || 0} Ext</span>
                 </td>
                 <td className="px-5 py-3 text-gray-700">{fmt(r.cashTotal)}</td>
                 <td className="px-5 py-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.pctCC>=80?'bg-emerald-100 text-emerald-700':r.pctCC>=50?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.pctCC>=80?'bg-gray-900 text-white':r.pctCC>=50?'bg-gray-200 text-gray-700':'bg-red-100 text-red-700'}`}>
                     {pct(r.pctCC)}
                   </span>
                 </td>
                 <td className="px-5 py-3 text-gray-700">{fmt(r.totalCostos)}</td>
-                <td className={`px-5 py-3 font-semibold ${r.ganancia>=0?'text-emerald-600':'text-red-600'}`}>{fmt(r.ganancia)}</td>
+                <td className={`px-5 py-3 font-semibold ${r.ganancia>=0?'text-gray-900':'text-red-600'}`}>{fmt(r.ganancia)}</td>
                 <td className="px-5 py-3 text-gray-600">{Object.keys(r.costos).length>0?pct(r.rentabilidad):'—'}</td>
               </tr>
             ))}

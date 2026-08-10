@@ -31,7 +31,7 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
         {ventasPorMes.map(m => (
           <button key={m.mes} onClick={() => setMesSel(m.mes)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              m.mes === mesSel ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              m.mes === mesSel ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
             {m.label}
           </button>
@@ -57,30 +57,30 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
               onClick={() => setFiltro(f => f === 'back' ? 'todos' : 'back')}
               className={`rounded-xl p-5 cursor-pointer transition-all border ${
                 filtro === 'back'
-                  ? 'bg-blue-700 border-blue-700'
-                  : 'bg-blue-50 border-blue-200 hover:border-blue-300 hover:shadow-md'
+                  ? 'bg-gray-900 border-gray-200'
+                  : 'bg-stone-50 border-gray-200 hover:border-gray-200 hover:shadow-md'
               }`}>
-              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'back' ? 'text-blue-200' : 'text-gray-500'}`}>Ventas back</p>
-              <p className={`text-3xl font-bold ${filtro === 'back' ? 'text-white' : 'text-blue-700'}`}>{mes.totalBack}</p>
-              <p className={`text-sm mt-1 ${filtro === 'back' ? 'text-blue-200' : 'text-blue-600'}`}>{fmt(mes.montoBack)}</p>
+              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'back' ? 'text-gray-700' : 'text-gray-500'}`}>Ventas back</p>
+              <p className={`text-3xl font-bold ${filtro === 'back' ? 'text-white' : 'text-gray-700'}`}>{mes.totalBack}</p>
+              <p className={`text-sm mt-1 ${filtro === 'back' ? 'text-gray-700' : 'text-gray-700'}`}>{fmt(mes.montoBack)}</p>
             </div>
             <div
               onClick={() => setFiltro('todos')}
               className={`rounded-xl p-5 cursor-pointer transition-all border ${
                 filtro === 'todos'
-                  ? 'bg-emerald-700 border-emerald-700'
-                  : 'bg-emerald-50 border-emerald-200 hover:border-emerald-300 hover:shadow-md'
+                  ? 'bg-gray-900 border-gray-200'
+                  : 'bg-stone-50 border-gray-200 hover:border-gray-200 hover:shadow-md'
               }`}>
-              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'todos' ? 'text-emerald-200' : 'text-gray-500'}`}>Total ventas</p>
-              <p className={`text-3xl font-bold ${filtro === 'todos' ? 'text-white' : 'text-emerald-700'}`}>{mes.totalNuevas + mes.totalBack}</p>
-              <p className={`text-sm mt-1 ${filtro === 'todos' ? 'text-emerald-200' : 'text-emerald-600'}`}>{fmt(mes.montoTotal)}</p>
+              <p className={`text-xs uppercase tracking-wider mb-1 ${filtro === 'todos' ? 'text-gray-700' : 'text-gray-500'}`}>Total ventas</p>
+              <p className={`text-3xl font-bold ${filtro === 'todos' ? 'text-white' : 'text-gray-700'}`}>{mes.totalNuevas + mes.totalBack}</p>
+              <p className={`text-sm mt-1 ${filtro === 'todos' ? 'text-gray-700' : 'text-gray-700'}`}>{fmt(mes.montoTotal)}</p>
             </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+            <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ticket promedio</p>
-              <p className="text-2xl font-bold text-purple-700">
+              <p className="text-2xl font-bold text-gray-700">
                 {mes.totalNuevas > 0 ? fmt(mes.montoFront / mes.totalNuevas) : '—'}
               </p>
-              <p className="text-xs text-purple-600 mt-1">Solo front</p>
+              <p className="text-xs text-gray-700 mt-1">Solo front</p>
             </div>
           </div>
 
@@ -134,13 +134,13 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
                         <tr key={closer}>
                           <td className="py-2 font-medium text-gray-800">{closer}</td>
                           <td className="py-2 text-center">
-                            <span className="px-2 py-0.5 bg-blue-100 rounded text-xs font-semibold text-blue-700">{d.count}</span>
+                            <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-semibold text-gray-700">{d.count}</span>
                           </td>
                           <td className="py-2 text-right text-gray-700">{fmt(d.monto)}</td>
                           <td className="py-2 pl-3">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 bg-gray-100 rounded-full h-1.5 max-w-20">
-                                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                                <div className="bg-gray-900 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
                               </div>
                               <span className="text-xs text-gray-500">{pct.toFixed(0)}%</span>
                             </div>
@@ -165,7 +165,7 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
                 {[['todos','Todos'],['nuevas','Front'],['back','Back']].map(([v,l]) => (
                   <button key={v} onClick={() => setFiltro(v)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      filtro === v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      filtro === v ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}>{l}</button>
                 ))}
               </div>
@@ -185,13 +185,13 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
                     return (
                     <tr key={i}
                       onClick={() => clienteFull && setClienteSel(clienteSel?._rowIndex === clienteFull._rowIndex ? null : clienteFull)}
-                      className={`transition-colors ${clienteFull ? 'cursor-pointer' : ''} ${clienteSel?._rowIndex === v.rowIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                      className={`transition-colors ${clienteFull ? 'cursor-pointer' : ''} ${clienteSel?._rowIndex === v.rowIndex ? 'bg-stone-50' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3 font-medium text-gray-900">{v.nombre || '—'}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">{v.programa || '—'}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${v.esBack ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${v.esBack ? 'bg-gray-100 text-gray-600' : 'bg-gray-900 text-white'}`}>
                           {v.esBack ? 'Back' : 'Front'}
                         </span>
                       </td>
@@ -202,7 +202,7 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
                       <td className="px-4 py-3">
                         {v.estatus ? (
                           <span className={`px-2 py-0.5 rounded text-xs ${
-                            String(v.estatus).toLowerCase().includes('activ') ? 'bg-blue-100 text-blue-700' :
+                            String(v.estatus).toLowerCase().includes('activ') ? 'bg-gray-100 text-gray-700' :
                             String(v.estatus).toLowerCase().includes('baja')  ? 'bg-red-100 text-red-600' :
                             'bg-gray-100 text-gray-500'
                           }`}>{v.estatus}</span>
@@ -238,12 +238,12 @@ export default function Ventas({ ventasPorMes, clientes = [] }) {
               <tbody className="divide-y divide-gray-100">
                 {[...ventasPorMes].reverse().map(m => (
                   <tr key={m.mes} onClick={() => setMesSel(m.mes)}
-                    className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                    className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-stone-50' : 'hover:bg-gray-50'}`}>
                     <td className="px-5 py-3 font-semibold text-gray-800">{m.label}</td>
                     <td className="px-5 py-3 text-gray-700">{m.totalNuevas}</td>
                     <td className="px-5 py-3 text-gray-700">{fmt(m.montoFront)}</td>
-                    <td className="px-5 py-3 text-blue-600">{m.totalBack}</td>
-                    <td className="px-5 py-3 text-blue-600">{fmt(m.montoBack)}</td>
+                    <td className="px-5 py-3 text-gray-700">{m.totalBack}</td>
+                    <td className="px-5 py-3 text-gray-700">{fmt(m.montoBack)}</td>
                     <td className="px-5 py-3 font-semibold text-gray-900">{m.totalNuevas + m.totalBack}</td>
                     <td className="px-5 py-3 text-gray-600">{m.totalNuevas > 0 ? fmt(m.montoFront / m.totalNuevas) : '—'}</td>
                   </tr>

@@ -126,7 +126,7 @@ function InvoiceForm({ state, setState }) {
           ))}
         </div>
         <button onClick={() => setState(p => ({ ...p, items: [...p.items, { description: '', unitPrice: '', qty: 1 }] }))}
-          className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700">
+          className="mt-3 text-xs font-semibold text-gray-700 hover:text-gray-700">
           + Agregar ítem
         </button>
       </div>
@@ -192,7 +192,7 @@ function ReciboForm({ state, setState }) {
           ))}
         </div>
         <button onClick={() => setState(p => ({ ...p, items: [...p.items, { description: '', quantity: 1, amount: '' }] }))}
-          className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700">
+          className="mt-3 text-xs font-semibold text-gray-700 hover:text-gray-700">
           + Agregar ítem
         </button>
       </div>
@@ -383,7 +383,7 @@ export default function Documentos({ clientes = [] }) {
           <div className="flex rounded-xl border border-gray-200 p-0.5 bg-white shadow-sm">
             {['USD', 'ARS'].map(m => (
               <button key={m} onClick={() => setMoneda(m)}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${moneda === m ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${moneda === m ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
                 {m}
               </button>
             ))}
@@ -427,7 +427,7 @@ export default function Documentos({ clientes = [] }) {
 
         {/* Feedback */}
         {error && <div className="text-red-700 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>}
-        {success && <div className="text-green-700 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3">{success}</div>}
+        {success && <div className="text-gray-700 text-sm bg-stone-50 border border-gray-200 rounded-xl px-4 py-3">{success}</div>}
 
         {/* Buttons */}
         <div className="flex gap-3">

@@ -16,10 +16,10 @@ const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
 const ESTADOS = [
   { value: '',           label: 'Sin clasificar', color: 'bg-gray-100 text-gray-500'       },
-  { value: 'Moroso',     label: 'Moroso',          color: 'bg-amber-100 text-amber-700'     },
-  { value: 'En gestión', label: 'En gestión',       color: 'bg-blue-100 text-blue-700'      },
+  { value: 'Moroso',     label: 'Moroso',          color: 'bg-gray-100 text-gray-700'     },
+  { value: 'En gestión', label: 'En gestión',       color: 'bg-gray-100 text-gray-700'      },
   { value: 'Incobrable', label: 'Incobrable',       color: 'bg-red-100 text-red-700'        },
-  { value: 'Saldado',    label: 'Saldado',          color: 'bg-emerald-100 text-emerald-700'},
+  { value: 'Saldado',    label: 'Saldado',          color: 'bg-gray-100 text-gray-700'},
 ];
 
 function estadoStyle(val) {
@@ -70,7 +70,7 @@ function VistaSemanal({ proyeccion }) {
         <button onClick={() => setOffset(o => o - 1)} disabled={idx === 0}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-xl leading-none">‹</button>
         <div className="flex-1 text-center">
-          <p className={`text-sm font-semibold ${semana.esActual ? 'text-blue-600' : 'text-gray-700'}`}>
+          <p className={`text-sm font-semibold ${semana.esActual ? 'text-gray-700' : 'text-gray-700'}`}>
             {semana.esActual ? '● Esta semana' : semana.label}
           </p>
           {semana.esActual && <p className="text-xs text-gray-400 mt-0.5">{semana.label}</p>}
@@ -85,10 +85,10 @@ function VistaSemanal({ proyeccion }) {
           <p className="text-2xl font-bold text-gray-900">{fmt(semana.totalEsperado)}</p>
           <p className="text-xs text-gray-400 mt-1">{Object.values(semana.dias).flat().length} cobros</p>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cobrado</p>
-          <p className="text-2xl font-bold text-emerald-700">{fmt(semana.totalCobrado)}</p>
-          <p className="text-xs text-emerald-600 mt-1">{Object.values(semana.dias).flat().filter(c => c.pagado).length} pagos</p>
+          <p className="text-2xl font-bold text-gray-700">{fmt(semana.totalCobrado)}</p>
+          <p className="text-xs text-gray-700 mt-1">{Object.values(semana.dias).flat().filter(c => c.pagado).length} pagos</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pendiente</p>
@@ -115,7 +115,7 @@ function VistaSemanal({ proyeccion }) {
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
                   <span className="text-sm font-semibold text-gray-700">{diaLabel}</span>
                   <div className="flex gap-3 text-xs">
-                    {cobradoHoy > 0 && <span className="text-emerald-600 font-medium">{fmt(cobradoHoy)} cobrado</span>}
+                    {cobradoHoy > 0 && <span className="text-gray-700 font-medium">{fmt(cobradoHoy)} cobrado</span>}
                     {pendienteHoy > 0 && <span className="text-red-500 font-medium">{fmt(pendienteHoy)} pendiente</span>}
                   </div>
                 </div>
@@ -123,7 +123,7 @@ function VistaSemanal({ proyeccion }) {
                   {visibles.map((co, j) => (
                     <div key={j} className="px-5 py-3 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${co.pagado ? 'bg-gray-900' : 'bg-gray-900'}`} />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{co.nombre}</p>
                           <p className="text-xs text-gray-400">
@@ -133,11 +133,11 @@ function VistaSemanal({ proyeccion }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className={`text-sm font-bold ${co.pagado ? 'text-emerald-600' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
+                        <span className={`text-sm font-bold ${co.pagado ? 'text-gray-700' : 'text-gray-800'}`}>{fmt(co.monto)}</span>
                         {co.pagado
-                          ? <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
+                          ? <span className="text-xs font-semibold text-gray-700 bg-stone-50 px-2 py-1 rounded-lg">✓ Cobrado</span>
                           : <button onClick={() => marcarPagado(co)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                              className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors">
                               ✓ Cobrado
                             </button>
                         }
@@ -349,10 +349,10 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
           <p className="text-2xl font-bold text-red-600">{fmt(totalMora)}</p>
           <p className="text-xs text-red-400 mt-1">{visibles.filter(d => d.estado !== 'Saldado').length} deudores</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Sin clasificar</p>
-          <p className="text-2xl font-bold text-amber-600">{sinClasificar}</p>
-          <p className="text-xs text-amber-500 mt-1">necesitan estado</p>
+          <p className="text-2xl font-bold text-gray-700">{sinClasificar}</p>
+          <p className="text-xs text-gray-700 mt-1">necesitan estado</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Incobrables</p>
@@ -363,7 +363,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
 
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={() => setReporteModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+          className="px-4 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-lg transition-colors">
           📤 Generar reporte Slack
         </button>
         <button onClick={abrirAgregar}
@@ -409,7 +409,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                     <td className="px-4 py-3">
                       {d.diasMora === null
                         ? <span className="text-xs text-gray-400 italic">Sin fecha</span>
-                        : <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-amber-600' : 'text-gray-500'}`}>{d.diasMora}d</span>
+                        : <span className={`text-xs font-bold ${d.diasMora > 30 ? 'text-red-600' : d.diasMora > 14 ? 'text-gray-700' : 'text-gray-500'}`}>{d.diasMora}d</span>
                       }
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-sm">{d.closer || '—'}</td>
@@ -422,7 +422,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                     <td className="px-4 py-3">
                       {!enProceso && d.estado !== 'Saldado' && (
                         <button onClick={() => marcarPagado(d)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
+                          className="px-3 py-1.5 bg-gray-900 hover:bg-gray-900 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap">
                           ✓ Pagado
                         </button>
                       )}
@@ -463,7 +463,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                 <input value={editando.uc}
                   onChange={e => setEditando(prev => ({ ...prev, uc: e.target.value }))}
                   placeholder="Ej: 01/06 · WhatsApp"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
@@ -471,7 +471,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                   onChange={e => setEditando(prev => ({ ...prev, sa: e.target.value }))}
                   placeholder="Ej: Prometió pagar el viernes..."
                   rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
@@ -479,11 +479,11 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                   onChange={e => setEditando(prev => ({ ...prev, dc: e.target.value }))}
                   placeholder="Ej: Está esperando que se concrete una venta..."
                   rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setEditando(null)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button onClick={guardarEstado} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">Guardar</button>
+                <button onClick={guardarEstado} className="flex-1 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl">Guardar</button>
               </div>
             </div>
           </div>
@@ -503,19 +503,19 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <div className="relative">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Buscar cliente</label>
                 {clienteSel ? (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between bg-stone-50 border border-gray-200 rounded-lg px-3 py-2">
                     <div>
-                      <p className="text-sm font-semibold text-blue-900">{clienteSel['Nombre']}</p>
-                      <p className="text-xs text-blue-600">{clienteSel['Programa'] || '—'} · {clienteSel['CLOSER'] || '—'}</p>
+                      <p className="text-sm font-semibold text-gray-700">{clienteSel['Nombre']}</p>
+                      <p className="text-xs text-gray-700">{clienteSel['Programa'] || '—'} · {clienteSel['CLOSER'] || '—'}</p>
                     </div>
                     <button onClick={() => { setClienteSel(null); setCuotaSel(null); setBusqueda(''); }}
-                      className="text-blue-400 hover:text-blue-700 text-lg ml-2">×</button>
+                      className="text-gray-700 hover:text-gray-700 text-lg ml-2">×</button>
                   </div>
                 ) : (
                   <>
                     <input value={busqueda} onChange={e => setBusqueda(e.target.value)} autoFocus
                       placeholder="Escribí el nombre del cliente…"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
                     {clientesFiltrados.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {clientesFiltrados.map(cl => (
@@ -546,8 +546,8 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                         <button key={x.cuota} onClick={() => setCuotaSel(x)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
                             cuotaSel?.cuota === x.cuota
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                              ? 'bg-gray-900 text-white border-gray-200'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-200'
                           }`}>
                           C{x.cuota} — ${Math.round(x.monto).toLocaleString('es-AR')}
                         </button>
@@ -577,21 +577,21 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
                     <label className="block text-xs font-medium text-gray-500 mb-1">Último contacto</label>
                     <input value={nuevoUc} onChange={e => setNuevoUc(e.target.value)}
                       placeholder="Ej: 01/06 · WhatsApp"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Situación actual</label>
                     <textarea value={nuevoSa} onChange={e => setNuevoSa(e.target.value)}
                       placeholder="Ej: Prometió pagar el viernes..."
                       rows={2}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Descripción del caso</label>
                     <textarea value={nuevoDc} onChange={e => setNuevoDc(e.target.value)}
                       placeholder="Ej: Esperando que venda para pagarnos..."
                       rows={2}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 resize-none" />
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-200 resize-none" />
                   </div>
                 </>
               )}
@@ -599,7 +599,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setAgregarModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
                 <button onClick={agregarDeudor} disabled={!clienteSel || !cuotaSel || guardandoNuevo}
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40">
+                  className="flex-1 py-2 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40">
                   {guardandoNuevo ? 'Guardando…' : 'Agregar'}
                 </button>
               </div>
@@ -620,7 +620,7 @@ function VistaDeudores({ deudores: initialDeudores, clientes = [] }) {
               <textarea readOnly value={generarReporte()} rows={14}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 bg-gray-50 focus:outline-none resize-none" />
               <button onClick={() => navigator.clipboard.writeText(generarReporte())}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                className="w-full py-2.5 bg-gray-900 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors">
                 📋 Copiar al portapapeles
               </button>
             </div>
@@ -643,7 +643,7 @@ export default function Proyeccion({ proyeccion, deudores = [], clientes = [] })
         {[['semana','Proyección semanal'],['deudores','Deudores']].map(([v,l]) => (
           <button key={v} onClick={() => setVista(v)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              vista === v ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              vista === v ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>{l}</button>
         ))}
         {deudoresActivos.length > 0 && (

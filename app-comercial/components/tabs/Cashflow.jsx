@@ -98,7 +98,7 @@ function fmtNum(n) {
 }
 
 function fmtColor(n) {
-  if (n > 0)  return 'text-emerald-700';
+  if (n > 0)  return 'text-gray-700';
   if (n < 0)  return 'text-red-600';
   return 'text-gray-400';
 }
@@ -123,7 +123,7 @@ function EditCell({ value, onChange }) {
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
-        className="w-full text-right text-sm px-2 py-1 border border-blue-400 rounded outline-none bg-blue-50"
+        className="w-full text-right text-sm px-2 py-1 border border-gray-200 rounded outline-none bg-stone-50"
         placeholder="0"
       />
     );
@@ -223,7 +223,7 @@ export default function Cashflow() {
           {MONEDAS.map(m => (
             <button key={m} onClick={() => setMoneda(m)}
               className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
-                moneda === m ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'
+                moneda === m ? 'bg-white shadow text-gray-700' : 'text-gray-500 hover:text-gray-700'
               }`}>
               {m}
             </button>
@@ -243,7 +243,7 @@ export default function Cashflow() {
             <div className="text-xs text-gray-500 mb-1">{label}</div>
             <div className={`text-lg font-bold ${
               neutral ? 'text-gray-700' :
-              green   ? 'text-emerald-700' :
+              green   ? 'text-gray-700' :
               red     ? 'text-red-600' :
               fmtColor(value)
             }`}>
@@ -264,8 +264,8 @@ export default function Cashflow() {
 
         {/* INGRESOS */}
         <div className="border-b border-gray-200">
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-100">
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Ingresos</span>
+          <div className="px-4 py-2 bg-stone-50 border-b border-gray-200">
+            <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Ingresos</span>
           </div>
           {INGRESOS_ROWS.map(row => (
             <div key={row} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0">
@@ -273,9 +273,9 @@ export default function Cashflow() {
               <EditCell value={d.ingresos?.[row]} onChange={v => setIngreso(row, v)} />
             </div>
           ))}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-emerald-50">
-            <span className="text-sm font-semibold text-emerald-700">Total ingresos</span>
-            <span className="text-sm font-bold text-emerald-700 pr-2">{fmtNum(totalIngresos)}</span>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50">
+            <span className="text-sm font-semibold text-gray-700">Total ingresos</span>
+            <span className="text-sm font-bold text-gray-700 pr-2">{fmtNum(totalIngresos)}</span>
           </div>
         </div>
 
@@ -306,7 +306,7 @@ export default function Cashflow() {
         </div>
 
         {/* Saldo final */}
-        <div className={`flex items-center justify-between px-4 py-4 border-t-2 border-gray-300 ${saldoFinal >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+        <div className={`flex items-center justify-between px-4 py-4 border-t-2 border-gray-300 ${saldoFinal >= 0 ? 'bg-stone-50' : 'bg-red-50'}`}>
           <span className="text-sm font-bold text-gray-800">Saldo final</span>
           <span className={`text-base font-bold pr-2 ${fmtColor(saldoFinal)}`}>
             {saldoFinal === 0 ? '—' : saldoFinal.toLocaleString('es-AR', { maximumFractionDigits: 0 })}

@@ -83,14 +83,14 @@ function BudgetInput({ value, onChange }) {
     <input type="number" min="0" value={draft} autoFocus
       onChange={e => setDraft(e.target.value)}
       onBlur={commit} onKeyDown={e => { if (e.key==='Enter') commit(); if (e.key==='Escape') setEditing(false); }}
-      className="w-24 text-right text-xs font-bold text-amber-700 border border-amber-300 rounded px-1 py-0.5 focus:outline-none bg-amber-50" />
+      className="w-24 text-right text-xs font-bold text-gray-700 border border-gray-200 rounded px-1 py-0.5 focus:outline-none bg-stone-50" />
   );
   return (
     <button onClick={startEdit} className="group flex items-center gap-0.5 text-right">
-      <span className={`text-xs font-semibold ${value > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
+      <span className={`text-xs font-semibold ${value > 0 ? 'text-gray-700' : 'text-gray-300'}`}>
         {value > 0 ? fmt(value) : 'Fijar'}
       </span>
-      <span className="text-[9px] text-gray-300 group-hover:text-amber-400">✎</span>
+      <span className="text-[9px] text-gray-300 group-hover:text-gray-700">✎</span>
     </button>
   );
 }
@@ -138,13 +138,13 @@ function AddModal({ mesSel, categoriaPre, onClose, onSaved }) {
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Detalle</label>
               <input value={gasto} onChange={e => setGasto(e.target.value)} autoFocus placeholder="ej. Kevin, Meta Ads…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Categoría *</label>
               <select value={categoria} onChange={e => setCategoria(e.target.value)}
                 disabled={!!categoriaPre}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-500 disabled:bg-gray-50">
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-gray-200 disabled:bg-gray-50">
                 <option value="">Seleccioná</option>
                 {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -154,19 +154,19 @@ function AddModal({ mesSel, categoriaPre, onClose, onSaved }) {
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Sub categoría <span className="text-gray-400">(opc.)</span></label>
               <input value={subcat} onChange={e => setSubcat(e.target.value)} placeholder="ej. Comercial, Loom…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Donde se paga <span className="text-gray-400">(opc.)</span></label>
               <input value={dondePaga} onChange={e => setDondePaga(e.target.value)} placeholder="ej. Banco Galicia…"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Monto *</label>
               <input type="number" min="0" step="0.01" value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">País</label>
@@ -180,7 +180,7 @@ function AddModal({ mesSel, categoriaPre, onClose, onSaved }) {
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">Fecha vto <span className="text-gray-400">(opc.)</span></label>
               <input type="date" value={fechaVto} onChange={e => setFechaVto(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-200" />
             </div>
           </div>
           <div>
@@ -308,7 +308,7 @@ export default function Egresos({ ventasPorMes = [] }) {
               m.mes === mesSel ? 'bg-gray-800 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
             {m.label}
-            {m.mes === mesActual && m.mes !== mesSel && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />}
+            {m.mes === mesActual && m.mes !== mesSel && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-gray-900" />}
           </button>
         ))}
       </div>
@@ -321,7 +321,7 @@ export default function Egresos({ ventasPorMes = [] }) {
             <p className="text-xs text-red-500 mt-0.5">Quedan {diasRestantes} días para fin de mes.</p>
           </div>
           <button onClick={() => enviarSlack(true)} disabled={slackState==='loading'}
-            className={`shrink-0 text-xs px-4 py-2 rounded-lg font-semibold border transition-colors ${slackState==='ok' ? 'bg-green-50 border-green-300 text-green-700' : slackState==='error' ? 'bg-red-100 border-red-400 text-red-800' : 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'}`}>
+            className={`shrink-0 text-xs px-4 py-2 rounded-lg font-semibold border transition-colors ${slackState==='ok' ? 'bg-stone-50 border-gray-200 text-gray-700' : slackState==='error' ? 'bg-red-100 border-red-400 text-red-800' : 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'}`}>
             {slackState==='loading' ? 'Enviando…' : slackState==='ok' ? '✓ Enviado' : slackState==='error' ? 'Error' : '📤 Alerta Slack'}
           </button>
         </div>
@@ -329,9 +329,9 @@ export default function Egresos({ ventasPorMes = [] }) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Ventas nuevas</p>
-          <p className="text-2xl font-bold text-blue-700">{fmt(ventasMes)}</p>
+          <p className="text-2xl font-bold text-gray-700">{fmt(ventasMes)}</p>
           <p className="text-xs text-gray-400 mt-0.5">{mesLabelSel} {anio}</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -339,14 +339,14 @@ export default function Egresos({ ventasPorMes = [] }) {
           <p className="text-2xl font-bold text-red-700">{fmt(totalReal)}</p>
           <p className="text-xs text-gray-400 mt-0.5">{registrosApp.length} registros cargados</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div className="bg-stone-50 border border-gray-200 rounded-xl p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Presupuesto mes</p>
-          <p className="text-2xl font-bold text-amber-700">{totalPresup > 0 ? fmt(totalPresup) : '—'}</p>
+          <p className="text-2xl font-bold text-gray-700">{totalPresup > 0 ? fmt(totalPresup) : '—'}</p>
           <p className="text-xs text-gray-400 mt-0.5">{totalPresup > 0 ? `${Math.round((totalReal/totalPresup)*100)}% ejecutado` : 'fijá por categoría abajo'}</p>
         </div>
-        <div className={`rounded-xl p-4 border ${rentPresup===null ? 'bg-gray-50 border-gray-200' : rentPresup>=40 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-300'}`}>
+        <div className={`rounded-xl p-4 border ${rentPresup===null ? 'bg-gray-50 border-gray-200' : rentPresup>=40 ? 'bg-stone-50 border-gray-200' : 'bg-red-50 border-red-300'}`}>
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Rent. proyectada</p>
-          <p className={`text-2xl font-bold ${rentPresup===null ? 'text-gray-300' : rentPresup>=40 ? 'text-emerald-700' : 'text-red-600'}`}>{rentPresup!==null ? pct(rentPresup) : '—'}</p>
+          <p className={`text-2xl font-bold ${rentPresup===null ? 'text-gray-300' : rentPresup>=40 ? 'text-gray-700' : 'text-red-600'}`}>{rentPresup!==null ? pct(rentPresup) : '—'}</p>
           <p className="text-xs text-gray-400 mt-0.5">{rentReal!==null ? `real: ${pct(rentReal)}` : 'fijá el presupuesto'}</p>
         </div>
       </div>
@@ -357,7 +357,7 @@ export default function Egresos({ ventasPorMes = [] }) {
           <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <span className="group-open:rotate-90 transition-transform text-[10px] text-gray-400">▶</span>
             Presupuesto por categoría
-            {totalPresup > 0 && <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{fmt(totalPresup)} total</span>}
+            {totalPresup > 0 && <span className="text-xs font-normal text-gray-700 bg-stone-50 border border-gray-200 px-2 py-0.5 rounded-full">{fmt(totalPresup)} total</span>}
           </span>
           <span className="text-xs text-gray-400">{mesLabelAnt} como referencia</span>
         </summary>
@@ -378,7 +378,7 @@ export default function Egresos({ ventasPorMes = [] }) {
                 const pres  = presupMes[cat]   || 0;
                 const ant   = antPorCat[cat]   || 0;
                 const exec  = pres > 0 ? Math.min(100,(real/pres)*100) : 0;
-                const color = exec>=100 ? 'bg-red-400' : exec>=80 ? 'bg-amber-400' : 'bg-emerald-400';
+                const color = exec>=100 ? 'bg-red-400' : exec>=80 ? 'bg-gray-900' : 'bg-gray-900';
                 return (
                   <tr key={cat} className="hover:bg-gray-50">
                     <td className="px-5 py-3 text-sm font-medium text-gray-800">{cat}</td>
@@ -419,7 +419,7 @@ export default function Egresos({ ventasPorMes = [] }) {
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <button onClick={() => enviarSlack(false)} disabled={slackState==='loading'}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors ${slackState==='ok' ? 'bg-green-50 border-green-200 text-green-700' : slackState==='error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors ${slackState==='ok' ? 'bg-stone-50 border-gray-200 text-gray-700' : slackState==='error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
               {slackState==='loading' ? 'Enviando…' : slackState==='ok' ? '✓ Enviado' : slackState==='error' ? 'Error' : '📤 Reporte Slack'}
             </button>
             <button onClick={() => setAddCat('')}
@@ -453,7 +453,7 @@ export default function Egresos({ ventasPorMes = [] }) {
         {!loading && registrosFiltrados.length === 0 ? (
           <div className="px-5 py-16 text-center">
             <p className="text-gray-400 text-sm">No hay gastos cargados{catFilter ? ` en ${catFilter}` : ''} para {mesLabelSel}.</p>
-            <button onClick={() => setAddCat(catFilter || '')} className="mt-3 text-sm text-blue-600 hover:underline">+ Agregar el primero</button>
+            <button onClick={() => setAddCat(catFilter || '')} className="mt-3 text-sm text-gray-700 hover:underline">+ Agregar el primero</button>
           </div>
         ) : (
           <div className="overflow-x-auto">

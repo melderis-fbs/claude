@@ -42,7 +42,7 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
         {comisiones.map(m => (
           <button key={m.mes} onClick={() => setMesSel(m.mes)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              m.mes === mesSel ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              m.mes === mesSel ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
             {m.label}
           </button>
@@ -57,13 +57,13 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cash Front Cobrado</p>
               <p className="text-2xl font-bold text-gray-900">{fmt(mes.totalCash)}</p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Comisiones (8%)</p>
-              <p className="text-2xl font-bold text-blue-700">{fmt(mes.totalComisiones)}</p>
+              <p className="text-2xl font-bold text-gray-700">{fmt(mes.totalComisiones)}</p>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+            <div className="bg-stone-50 border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total a pagar</p>
-              <p className="text-2xl font-bold text-emerald-700">{fmt(totalPagarMes)}</p>
+              <p className="text-2xl font-bold text-gray-700">{fmt(totalPagarMes)}</p>
               <p className="text-xs text-gray-400 mt-0.5">comisión + fijos + ajustes</p>
             </div>
           </div>
@@ -96,19 +96,19 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
                           <span className="ml-2 text-xs font-normal text-gray-400">{d.items.length} cobros</span>
                         )}
                         {totalAjuste(getAdj(d.closer)) !== 0 && (
-                          <span className="block text-xs font-normal text-emerald-600 mt-0.5">
+                          <span className="block text-xs font-normal text-gray-700 mt-0.5">
                             A pagar {fmt(totalPagarCloser(d))} <span className="text-gray-400">({fmtSigno(totalAjuste(getAdj(d.closer)))})</span>
                           </span>
                         )}
                       </td>
                       <td className="px-5 py-4 text-gray-600">{fmt(d.cash)}</td>
                       <td className="px-5 py-4">
-                        <span className="text-blue-700 font-bold text-base">{fmt(d.comision)}</span>
+                        <span className="text-gray-700 font-bold text-base">{fmt(d.comision)}</span>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-1.5 max-w-24">
-                            <div className="bg-blue-500 h-1.5 rounded-full"
+                            <div className="bg-gray-900 h-1.5 rounded-full"
                               style={{ width: `${mes.totalCash > 0 ? (d.cash/mes.totalCash)*100 : 0}%` }} />
                           </div>
                           <span className="text-gray-500 text-xs font-medium">
@@ -137,11 +137,11 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
                                   </thead>
                                   <tbody>
                                     {d.items.map((it, idx) => (
-                                      <tr key={idx} className={`border-t border-gray-200 ${it.cuota > 1 ? 'text-amber-700' : 'text-gray-600'}`}>
+                                      <tr key={idx} className={`border-t border-gray-200 ${it.cuota > 1 ? 'text-gray-700' : 'text-gray-600'}`}>
                                         <td className="py-1.5 pr-4">{it.nombre}</td>
                                         <td className="py-1.5 pr-4">
                                           C{it.cuota}
-                                          {it.cuota > 1 && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">no-front</span>}
+                                          {it.cuota > 1 && <span className="ml-1 text-[10px] bg-gray-100 text-gray-700 px-1 rounded">no-front</span>}
                                         </td>
                                         <td className="py-1.5 pr-4">{it.metodo || '—'}</td>
                                         <td className="py-1.5 pr-4">{fmtFecha(it.fecha)}</td>
@@ -157,7 +157,7 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
                                     {d.items.some(it => it.cuota > 1) && (
                                       <tr className="text-gray-500">
                                         <td className="pt-1" colSpan={4}>Solo front (Cuota 1)</td>
-                                        <td className="pt-1 text-right font-semibold text-emerald-700">
+                                        <td className="pt-1 text-right font-semibold text-gray-700">
                                           {fmt(d.items.filter(it => it.cuota === 1).reduce((a, it) => a + it.monto, 0))}
                                         </td>
                                       </tr>
@@ -199,7 +199,7 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
 
                                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                                   <span className="text-sm text-gray-600">Total a pagar</span>
-                                  <span className="text-lg font-bold text-emerald-700">{fmt(totalPagarCloser(d))}</span>
+                                  <span className="text-lg font-bold text-gray-700">{fmt(totalPagarCloser(d))}</span>
                                 </div>
                                 <p className="text-[11px] text-gray-400 mt-2">Los fijos y extras se cargan en la planilla (pestaña <span className="font-medium">Comisiones ajustes</span>).</p>
                               </div>
@@ -235,13 +235,13 @@ export default function Comisiones({ comisiones, ajustesIniciales = {} }) {
           <tbody className="divide-y divide-gray-100">
             {[...comisiones].reverse().map(m => (
               <tr key={m.mes} onClick={() => setMesSel(m.mes)}
-                className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                className={`cursor-pointer transition-colors ${m.mes === mesSel ? 'bg-stone-50' : 'hover:bg-gray-50'}`}>
                 <td className="px-5 py-3 font-semibold text-gray-800">{m.label}</td>
                 {allClosers.map(cl => {
                   const d = m.detalle.find(x => x.closer === cl);
                   return <td key={cl} className="px-5 py-3 text-gray-600">{d ? fmt(d.comision) : '—'}</td>;
                 })}
-                <td className="px-5 py-3 font-bold text-blue-700">{fmt(m.totalComisiones)}</td>
+                <td className="px-5 py-3 font-bold text-gray-700">{fmt(m.totalComisiones)}</td>
               </tr>
             ))}
           </tbody>
