@@ -305,11 +305,11 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
               <span className="font-semibold text-gray-900">{fmt(m.montoBack)}</span>
             </div>
 
-            {/* Argentina / Exterior / Efectivo */}
+            {/* Argentina / Exterior / Efectivo + Total */}
             {totalVentasConMet > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Origen de ventas nuevas</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
                     <p className="text-xs text-gray-500 font-medium">Argentina</p>
                     <p className="text-sm font-bold text-gray-900">{m.ventasAR || 0} ventas</p>
@@ -325,7 +325,17 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
                     <p className="text-sm font-bold text-gray-900">{m.ventasEfectivo || 0} ventas</p>
                     <p className="text-xs text-gray-500">{fmt(m.montoEfectivo || 0)}</p>
                   </div>
+                  <div className="bg-gray-900 rounded-lg px-3 py-2 border border-gray-900">
+                    <p className="text-xs text-gray-400 font-medium">Total nuevas</p>
+                    <p className="text-sm font-bold text-white">{totalVentasConMet} ventas</p>
+                    <p className="text-xs text-gray-400">{fmt((m.montoAR || 0) + (m.montoExt || 0) + (m.montoEfectivo || 0))}</p>
+                  </div>
                 </div>
+                {m.ventasBack > 0 && (
+                  <p className="text-xs text-gray-400">
+                    No incluye {m.ventasBack} venta{m.ventasBack > 1 ? 's' : ''} back ({fmt(m.montoBack)}). Total del mes con back: {m.ventasNuevas + m.ventasBack} · {fmt((m.montoFront || 0) + (m.montoBack || 0))}.
+                  </p>
+                )}
               </div>
             )}
           </div>
