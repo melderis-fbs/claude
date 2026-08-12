@@ -101,22 +101,10 @@ function Card({ label, value, sub, color = 'blue', variant = 'plain' }) {
 }
 
 
-// Formatea un valor del tracker según el tipo detectado en el parser.
-function fmtMetrica(v, tipo) {
-  if (v == null || isNaN(v)) return '—';
-  const n = Number(v);
-  if (tipo === 'money') return `$${Math.round(n).toLocaleString('es-AR')}`;
-  if (tipo === 'x')     return `${n.toFixed(2).replace('.', ',')}x`;
-  if (tipo === 'pct')   return `${n.toFixed(1).replace('.', ',')}%`;
-  // count: entero si es redondo, si no 2 decimales
-  return Number.isInteger(n) ? n.toLocaleString('es-AR') : n.toFixed(2).replace('.', ',');
-}
-
 function ROASSection({ mes, anunciosPorMes = {} }) {
   const d = anunciosPorMes[mes] ?? {};
   const fmtX    = v => v != null ? `${Number(v).toFixed(2)}x` : '—';
   const fmtCost = v => v != null ? `$${Number(v).toFixed(2)}`  : '—';
-  const metricas = Array.isArray(d.metricas) ? d.metricas : [];
 
   const item = (label, value, hint) => (
     <div>
@@ -126,38 +114,16 @@ function ROASSection({ mes, anunciosPorMes = {} }) {
     </div>
   );
 
-  // Tasa de cierre sobre asistencia (si hay embudo cargado).
-  const tasaCierre = d.cierres != null && d.asistencias ? (d.cierres / d.asistencias) * 100 : null;
-
   return (
-    <div className="bg-gray-900 border border-gray-900 rounded-xl p-5 space-y-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Meta Ads — ROAS · {mesCorto(mes)}</p>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {item('Inversión Meta', d.inversion != null ? fmt(d.inversion) : '—', 'gasto publicitario')}
-          {item('ROAS', fmtX(d.roas), 'ventas auto / inversión')}
-          {item('ROAS Cash', fmtX(d.roasCash), 'cobros auto / inversión')}
-          {item('Costo por lead', fmtCost(d.costoLead), 'inversión / leads')}
-          {item('Costo por agenda', fmtCost(d.costoAgenda), 'inversión / agendas')}
-        </div>
+    <div className="bg-gray-900 border border-gray-900 rounded-xl p-5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Meta Ads — ROAS</p>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {item('Inversión Meta', d.inversion != null ? fmt(d.inversion) : '—', 'gasto publicitario')}
+        {item('ROAS', fmtX(d.roas), 'ventas auto / inversión')}
+        {item('ROAS Cash', fmtX(d.roasCash), 'cobros auto / inversión')}
+        {item('Costo por lead', fmtCost(d.costoLead), 'inversión / leads')}
+        {item('Costo por agenda', fmtCost(d.costoAgenda), 'inversión / agendas')}
       </div>
-
-      {/* Embudo completo: TODAS las filas del tracker Anuncios, en orden. */}
-      {metricas.length > 0 && (
-        <div className="border-t border-gray-800 pt-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-            Embudo del mes {tasaCierre != null && <span className="text-gray-500 normal-case font-normal">· cierre {tasaCierre.toFixed(1).replace('.', ',')}% s/ asistencia</span>}
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {metricas.map((mt, i) => (
-              <div key={i} className="bg-gray-800/60 rounded-lg px-3 py-2">
-                <p className="text-[11px] text-gray-400 leading-tight mb-0.5">{mt.label}</p>
-                <p className="text-base font-bold text-white">{fmtMetrica(mt.value, mt.tipo)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -305,11 +271,11 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
               <span className="font-semibold text-gray-900">{fmt(m.montoBack)}</span>
             </div>
 
-            {/* Argentina / Exterior / Efectivo + Total */}
-            {totalVentasConMet > 0 && (
+            {/* Origen de ventas: Argentina / Exterior / Efectivo + Back → Total del mes */}
+            {(totalVentasConMet > 0 || m.ventasBack > 0) && (
               <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Origen de ventas nuevas</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Origen de ventas del mes</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                   <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
                     <p className="text-xs text-gray-500 font-medium">Argentina</p>
                     <p className="text-sm font-bold text-gray-900">{m.ventasAR || 0} ventas</p>
@@ -325,17 +291,17 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
                     <p className="text-sm font-bold text-gray-900">{m.ventasEfectivo || 0} ventas</p>
                     <p className="text-xs text-gray-500">{fmt(m.montoEfectivo || 0)}</p>
                   </div>
+                  <div className="bg-stone-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Back</p>
+                    <p className="text-sm font-bold text-gray-900">{m.ventasBack || 0} ventas</p>
+                    <p className="text-xs text-gray-500">{fmt(m.montoBack || 0)}</p>
+                  </div>
                   <div className="bg-gray-900 rounded-lg px-3 py-2 border border-gray-900">
-                    <p className="text-xs text-gray-400 font-medium">Total nuevas</p>
-                    <p className="text-sm font-bold text-white">{totalVentasConMet} ventas</p>
-                    <p className="text-xs text-gray-400">{fmt((m.montoAR || 0) + (m.montoExt || 0) + (m.montoEfectivo || 0))}</p>
+                    <p className="text-xs text-gray-400 font-medium">Total</p>
+                    <p className="text-sm font-bold text-white">{(m.ventasNuevas || 0) + (m.ventasBack || 0)} ventas</p>
+                    <p className="text-xs text-gray-400">{fmt((m.montoFront || 0) + (m.montoBack || 0))}</p>
                   </div>
                 </div>
-                {m.ventasBack > 0 && (
-                  <p className="text-xs text-gray-400">
-                    No incluye {m.ventasBack} venta{m.ventasBack > 1 ? 's' : ''} back ({fmt(m.montoBack)}). Total del mes con back: {m.ventasNuevas + m.ventasBack} · {fmt((m.montoFront || 0) + (m.montoBack || 0))}.
-                  </p>
-                )}
               </div>
             )}
           </div>
