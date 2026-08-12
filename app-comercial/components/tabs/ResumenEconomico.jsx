@@ -101,10 +101,22 @@ function Card({ label, value, sub, color = 'blue', variant = 'plain' }) {
 }
 
 
+// Formatea un valor del tracker según el tipo detectado en el parser.
+function fmtMetrica(v, tipo) {
+  if (v == null || isNaN(v)) return '—';
+  const n = Number(v);
+  if (tipo === 'money') return `$${Math.round(n).toLocaleString('es-AR')}`;
+  if (tipo === 'x')     return `${n.toFixed(2).replace('.', ',')}x`;
+  if (tipo === 'pct')   return `${n.toFixed(1).replace('.', ',')}%`;
+  // count: entero si es redondo, si no 2 decimales
+  return Number.isInteger(n) ? n.toLocaleString('es-AR') : n.toFixed(2).replace('.', ',');
+}
+
 function ROASSection({ mes, anunciosPorMes = {} }) {
   const d = anunciosPorMes[mes] ?? {};
   const fmtX    = v => v != null ? `${Number(v).toFixed(2)}x` : '—';
   const fmtCost = v => v != null ? `$${Number(v).toFixed(2)}`  : '—';
+  const metricas = Array.isArray(d.metricas) ? d.metricas : [];
 
   const item = (label, value, hint) => (
     <div>
@@ -114,21 +126,50 @@ function ROASSection({ mes, anunciosPorMes = {} }) {
     </div>
   );
 
+  // Tasa de cierre sobre asistencia (si hay embudo cargado).
+  const tasaCierre = d.cierres != null && d.asistencias ? (d.cierres / d.asistencias) * 100 : null;
+
   return (
-    <div className="bg-gray-900 border border-gray-900 rounded-xl p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Meta Ads — ROAS</p>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {item('Inversión Meta', d.inversion != null ? fmt(d.inversion) : '—', 'gasto publicitario')}
-        {item('ROAS', fmtX(d.roas), 'ventas auto / inversión')}
-        {item('ROAS Cash', fmtX(d.roasCash), 'cobros auto / inversión')}
-        {item('Costo por lead', fmtCost(d.costoLead), 'inversión / leads')}
-        {item('Costo por agenda', fmtCost(d.costoAgenda), 'inversión / agendas')}
+    <div className="bg-gray-900 border border-gray-900 rounded-xl p-5 space-y-5">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">Meta Ads — ROAS · {mesCorto(mes)}</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {item('Inversión Meta', d.inversion != null ? fmt(d.inversion) : '—', 'gasto publicitario')}
+          {item('ROAS', fmtX(d.roas), 'ventas auto / inversión')}
+          {item('ROAS Cash', fmtX(d.roasCash), 'cobros auto / inversión')}
+          {item('Costo por lead', fmtCost(d.costoLead), 'inversión / leads')}
+          {item('Costo por agenda', fmtCost(d.costoAgenda), 'inversión / agendas')}
+        </div>
       </div>
+
+      {/* Embudo completo: TODAS las filas del tracker Anuncios, en orden. */}
+      {metricas.length > 0 && (
+        <div className="border-t border-gray-800 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            Embudo del mes {tasaCierre != null && <span className="text-gray-500 normal-case font-normal">· cierre {tasaCierre.toFixed(1).replace('.', ',')}% s/ asistencia</span>}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {metricas.map((mt, i) => (
+              <div key={i} className="bg-gray-800/60 rounded-lg px-3 py-2">
+                <p className="text-[11px] text-gray-400 leading-tight mb-0.5">{mt.label}</p>
+                <p className="text-base font-bold text-white">{fmtMetrica(mt.value, mt.tipo)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {}, anunciosPorMes = {}, pendientesPorMes = {} }) {
+// Etiqueta corta de mes a partir de "YYYY-MM".
+const mesCorto = mk => {
+  const M = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const p = String(mk).split('-');
+  return p.length === 2 ? `${M[(+p[1]) - 1]} ${p[0]}` : mk;
+};
+
+export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemanales, ventasPorMes = [], cobrosAutomatica = {}, anunciosPorMes = {}, pendientesPorMes = {}, flujoCuotas = {} }) {
   const [mesSel, setMesSel] = useState(resumen[resumen.length - 1]?.mes ?? '');
   const m = resumen.find(r => r.mes === mesSel) ?? resumen[resumen.length - 1];
   const [genPDF, setGenPDF] = useState(false);
@@ -142,6 +183,15 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
   // Cobranza de cuotas = cobrado ÷ lo que vencía en cuotas ese mes (cuotas 2ª-4ª).
   // Viene de calcularCobranzas (aCobrar / cobrado / pctCobrado) por mes de vencimiento.
   const cuo = cobranzas.find(c => c.mes === mesSel) || null;
+
+  // Flujo de cuotas del mes estudiado (de calcularFlujoCuotas):
+  //  · saldoDelMes: de las VENTAS de este mes, cuánto queda por cobrar y en qué mes vence.
+  //  · recolDelMes: de la CAJA cobrada este mes, cuánto es venta nueva (primeros pagos)
+  //    y cuánto son cuotas que vienen de ventas de meses anteriores (por mes de origen).
+  const saldoDelMes = flujoCuotas.saldoVentas?.[mesSel] || { porVenc: {}, total: 0, ingresado: 0 };
+  const recolDelMes = flujoCuotas.recolOrigen?.[mesSel] || { primerosPagos: 0, porOrigen: {}, totalCuotas: 0 };
+  const saldoPorVenc = Object.entries(saldoDelMes.porVenc).filter(([, v]) => v > 0).sort(([a], [b]) => a.localeCompare(b));
+  const recolPorOrigen = Object.entries(recolDelMes.porOrigen).filter(([, v]) => v > 0).sort(([a], [b]) => a.localeCompare(b));
 
   // Genera el informe PDF a partir de los datos YA calculados que están en
   // pantalla (no vuelve a leer la planilla).
@@ -161,6 +211,10 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
         pendientesPorMes: Object.fromEntries(
           Object.entries(pendientesPorMes).filter(([k]) => k >= mesSel)
         ),
+        // Flujo de cuotas del mes estudiado: saldo por cobrar de sus ventas (por
+        // mes de vencimiento) y de dónde vino la caja cobrada (por mes de origen).
+        saldoDelMes,
+        recolOrigen: recolDelMes,
       };
       const res = await fetch('/api/informe/generate', {
         method: 'POST',
@@ -390,6 +444,64 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
               <p className="text-3xl font-bold text-gray-900">{hayCostos ? pct(m.rentabilidad) : '—'}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Flujo de cuotas del mes estudiado */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Saldo por cobrar de las ventas de este mes → hacia meses siguientes */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Saldo por cobrar — ventas de {m.label}</h3>
+          <p className="text-xs text-gray-400 mb-4">Cuotas de las ventas de este mes, por mes de vencimiento.</p>
+          {saldoPorVenc.length > 0 ? (
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-gray-100">
+                {saldoPorVenc.map(([mk, v]) => (
+                  <tr key={mk}>
+                    <td className="py-2 text-gray-600">Vence en {mesCorto(mk)}</td>
+                    <td className="py-2 text-right font-semibold text-gray-900">{fmt(v)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-gray-300 font-semibold">
+                  <td className="py-2 text-gray-900">Total por cobrar</td>
+                  <td className="py-2 text-right text-gray-900">{fmt(saldoDelMes.total)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-400 text-xs">Ya ingresado de estas ventas</td>
+                  <td className="py-2 text-right text-gray-500 text-xs">{fmt(saldoDelMes.ingresado)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-gray-400 text-sm py-6 text-center">Sin cuotas futuras pendientes de las ventas de este mes.</p>
+          )}
+        </div>
+
+        {/* Recolección del mes por origen → cuánto es propio vs de meses anteriores */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Caja de {m.label} — por origen</h3>
+          <p className="text-xs text-gray-400 mb-4">De lo cobrado este mes, cuánto es venta nueva y cuánto viene de otros meses.</p>
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-100">
+              <tr>
+                <td className="py-2 text-gray-600">Venta nueva del mes <span className="text-gray-400">(primeros pagos)</span></td>
+                <td className="py-2 text-right font-semibold text-gray-900">{fmt(recolDelMes.primerosPagos)}</td>
+              </tr>
+              {recolPorOrigen.map(([mk, v]) => (
+                <tr key={mk}>
+                  <td className="py-2 text-gray-600">Cuotas de ventas de {mesCorto(mk)}</td>
+                  <td className="py-2 text-right font-medium text-gray-700">{fmt(v)}</td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-gray-300 font-semibold">
+                <td className="py-2 text-gray-900">Total recolectado</td>
+                <td className="py-2 text-right text-gray-900">{fmt(recolDelMes.primerosPagos + recolDelMes.totalCuotas)}</td>
+              </tr>
+            </tbody>
+          </table>
+          {recolPorOrigen.length === 0 && (
+            <p className="text-xs text-gray-400 mt-3">Todo lo cobrado este mes corresponde a ventas nuevas del propio mes.</p>
+          )}
         </div>
       </div>
 

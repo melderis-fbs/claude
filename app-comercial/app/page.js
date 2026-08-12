@@ -6,7 +6,7 @@ import {
   calcularPendientesPorMes, calcularVentasPorMes,
   calcularProyeccion, calcularDeudores,
   calcularCobrosAutomaticaPorMes, calcularVentasAutomaticaPorMes,
-  calcularProyeccionAnual,
+  calcularProyeccionAnual, calcularFlujoCuotas,
   parseAnunciosTab,
 } from '../lib/calculos.js';
 import Dashboard from '../components/Dashboard.jsx';
@@ -83,6 +83,7 @@ export default async function Home() {
     const pendientesPorMes = calcularPendientesPorMes(clientes);
     const proyeccion       = calcularProyeccion(clientes);
     const deudores         = calcularDeudores(clientes, deudoresRecords);
+    const flujoCuotas      = calcularFlujoCuotas(clientes);
 
     const anoActual = new Date().getFullYear().toString();
     const cobranzasFiltradas        = cobranzas.filter(m => m.mes.startsWith(anoActual));
@@ -126,6 +127,7 @@ export default async function Home() {
         cobrosAutomatica={cobrosAutomatica}
         anunciosPorMes={anunciosPorMes}
         comisionesAjustes={comisionesAjustes}
+        flujoCuotas={flujoCuotas}
       />
     );
   } catch (err) {

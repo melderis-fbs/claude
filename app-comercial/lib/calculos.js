@@ -403,6 +403,55 @@ export function calcularPendientesPorMes(clientes) {
   return porMes;
 }
 
+// ── Flujo de cuotas por mes de venta / mes de cobro ───────────────────────────
+// Responde dos preguntas del informe, para cualquier mes estudiado M:
+//  1) saldoVentas[M]: de las VENTAS hechas en M, cuánto queda por cobrar y en qué
+//     mes vence cada cuota (jul/ago/sep…). = "Desglose del saldo por cobrar".
+//  2) recolOrigen[M]: de la CAJA cobrada en M, cuánto son primeros pagos (venta
+//     nueva del propio mes) y cuánto son cuotas que vienen de ventas de meses
+//     anteriores, desglosado por ese mes de origen. = "cuánto viene de otros meses".
+export function calcularFlujoCuotas(clientes) {
+  const saldoVentas = {}; // mesVenta -> { porVenc:{mesVenc:monto}, total, ingresado }
+  const recolOrigen = {}; // mesCobro -> { primerosPagos, porOrigen:{mesOrigen:monto}, totalCuotas }
+  const valido = m => m && !m.startsWith('__');
+
+  for (const c of clientes) {
+    if (esPagado(c['Reembolso'])) continue;
+    const mesVenta = normalizarIngreso(c['Ingreso'], c);
+
+    CUOTAS_DEF.forEach((q, i) => {
+      const monto = parseMonto(c[q.monto]);
+      if (!monto) return;
+      const pagado = esPagado(c[q.estado]);
+      const mesVenc = normalizarMes(c[q.fecha]);
+
+      // 1) Saldo por cobrar de las ventas de mesVenta (cuotas 2ª–4ª impagas).
+      if (valido(mesVenta)) {
+        if (!saldoVentas[mesVenta]) saldoVentas[mesVenta] = { porVenc: {}, total: 0, ingresado: 0 };
+        if (i > 0 && !pagado && valido(mesVenc)) {
+          saldoVentas[mesVenta].porVenc[mesVenc] = (saldoVentas[mesVenta].porVenc[mesVenc] || 0) + monto;
+          saldoVentas[mesVenta].total += monto;
+        }
+        if (pagado) saldoVentas[mesVenta].ingresado += monto;
+      }
+
+      // 2) Caja cobrada, por mes de cobro y origen de la venta.
+      if (pagado && valido(mesVenc)) {
+        if (!recolOrigen[mesVenc]) recolOrigen[mesVenc] = { primerosPagos: 0, porOrigen: {}, totalCuotas: 0 };
+        if (i === 0) {
+          recolOrigen[mesVenc].primerosPagos += monto; // venta nueva → origen = mismo mes
+        } else {
+          recolOrigen[mesVenc].totalCuotas += monto;
+          const org = valido(mesVenta) ? mesVenta : 'otros';
+          recolOrigen[mesVenc].porOrigen[org] = (recolOrigen[mesVenc].porOrigen[org] || 0) + monto;
+        }
+      }
+    });
+  }
+
+  return { saldoVentas, recolOrigen };
+}
+
 // ── Proyección semanal ────────────────────────────────────────────────────────
 
 // "Ahora" en horario de Argentina (UTC-3). El servidor corre en UTC, así que
@@ -787,8 +836,55 @@ export function calcularProyeccionAnual(clientes, resumen, ventasPorMes) {
   return Object.values(dataMap).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
-// Parsea la pestaña "Anuncios" (pivote: filas=métricas, columnas=meses) →
-// { 'YYYY-MM': { inversion, roas, roasCash, costoLead, costoAgenda } }
+// Parsea números en formato es-AR ("1.234,56"), en-US ("1,234.56"), con $ o %.
+// Los GAS suelen devolver números nativos; esto cubre además los strings.
+function parseNumES(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  let s = String(v).trim().replace(/[$%\s]/g, '');
+  if (s === '' || s === '-' || s === '—') return null;
+  if (s.includes(',') && s.includes('.')) {
+    // El separador decimal es el último que aparece.
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else                                          s = s.replace(/,/g, '');
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Clasifica una fila del tracker por su etiqueta → { key, tipo }.
+// key = alias tipado para KPIs; tipo = formato sugerido para mostrar.
+// Se distinguen los CONTEOS del embudo (leads, agendas, asistencias, cierres)
+// de sus COSTOS/RATIOS (CPL, CPA, ROAS), que antes se pisaban entre sí.
+function clasificarMetricaAnuncio(labelLower) {
+  const l = labelLower;
+  const has = (...ks) => ks.some(k => l.includes(k));
+  if (has('invers'))                                  return { key: 'inversion',      tipo: 'money' };
+  if (has('roas') && has('cash'))                     return { key: 'roasCash',       tipo: 'x' };
+  if (has('roas'))                                    return { key: 'roas',           tipo: 'x' };
+  if (has('cpl') || (has('costo') && has('lead')))    return { key: 'costoLead',      tipo: 'money' };
+  if (has('cpa') || (has('costo') && has('agenda')))  return { key: 'costoAgenda',    tipo: 'money' };
+  if (has('costo') && has('asist'))                   return { key: 'costoAsistencia',tipo: 'money' };
+  if (has('costo') && has('cierre'))                  return { key: 'costoCierre',    tipo: 'money' };
+  if (has('lead'))                                    return { key: 'leads',          tipo: 'count' };
+  if (has('agenda') && has('calif', 'cualif'))        return { key: 'agendasCalif',   tipo: 'count' };
+  if (has('agenda'))                                  return { key: 'agendas',        tipo: 'count' };
+  if (has('asist'))                                   return { key: 'asistencias',    tipo: 'count' };
+  if (has('cierre') || has('cerrada'))                return { key: 'cierres',        tipo: 'count' };
+  if (has('recolec') || has('cobr'))                  return { key: 'recoleccion',    tipo: 'money' };
+  if (has('venta') || has('facturac'))                return { key: 'ventaAuto',      tipo: 'money' };
+  if (has('tasa') || has('conversi') || l.includes('%')) return { key: null,         tipo: 'pct' };
+  return { key: null, tipo: 'count' };
+}
+
+// Parsea la pestaña "Anuncios" (pivote: filas=métricas, columnas=meses).
+// Devuelve, por mes: los alias tipados (inversion, leads, agendas, asistencias,
+// cierres, costoLead, costoAgenda, ventaAuto, recoleccion, …) Y `metricas`: la
+// lista COMPLETA de filas del tracker en orden, para dibujar el embudo tal cual
+// está cargado, sin descartar nada. `roas`/`roasCash` se recalculan luego en
+// page.js (ventas/cobros automática ÷ inversión), así que acá son referenciales.
 export function parseAnunciosTab(rows) {
   if (!rows || rows.length < 2) return {};
 
@@ -801,34 +897,29 @@ export function parseAnunciosTab(rows) {
     if (num) colMes[i] = `${anio}-${num}`;
   });
 
-  const parseVal = v => {
-    if (v === null || v === undefined || v === '') return null;
-    const n = parseFloat(String(v).replace(/[$\s]/g, '').replace(',', '.'));
-    return isNaN(n) ? null : n;
-  };
-
   const result = {};
 
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
-    const metricRaw = String(row[0] || '').trim().toLowerCase();
-    if (!metricRaw) continue;
-
-    let field = null;
-    if (metricRaw.includes('invers'))                            field = 'inversion';
-    else if (metricRaw.includes('roas') && metricRaw.includes('cash')) field = 'roasCash';
-    else if (metricRaw === 'roas')                               field = 'roas';
-    else if (metricRaw.includes('lead'))                         field = 'costoLead';
-    else if (metricRaw.includes('agenda'))                       field = 'costoAgenda';
-
-    if (!field) continue;
+    const label = String(row[0] || '').trim();
+    if (!label) continue;
+    const { key, tipo } = clasificarMetricaAnuncio(label.toLowerCase());
 
     Object.entries(colMes).forEach(([colIdx, mes]) => {
-      const val = parseVal(row[parseInt(colIdx)]);
+      const val = parseNumES(row[parseInt(colIdx)]);
       if (val === null) return;
-      if (!result[mes]) result[mes] = {};
-      result[mes][field] = val;
+      if (!result[mes]) result[mes] = { metricas: [] };
+      result[mes].metricas.push({ label, key, tipo, value: val });
+      if (key && result[mes][key] == null) result[mes][key] = val;
     });
+  }
+
+  // Derivados de respaldo: si el tracker no trae CPL/CPA/tasa, se calculan.
+  for (const d of Object.values(result)) {
+    if (d.costoLead == null && d.inversion && d.leads)     d.costoLead   = d.inversion / d.leads;
+    if (d.costoAgenda == null && d.inversion && d.agendas) d.costoAgenda = d.inversion / d.agendas;
+    if (d.tasaAsistencia == null && d.cierres != null && d.asistencias)
+      d.tasaCierreAsist = (d.cierres / d.asistencias) * 100;
   }
 
   return result;

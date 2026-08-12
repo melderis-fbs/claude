@@ -125,7 +125,7 @@ export default function Dashboard({
   clientes, headers, resumen, ventasPorMes, comisiones,
   cobranzas, cobrosSemanales, pendientesPorMes,
   proyeccion, proyeccionAnual = [], abonos, deudores, facturas, cobrosAutomatica,
-  anunciosPorMes = {}, comisionesAjustes = {},
+  anunciosPorMes = {}, comisionesAjustes = {}, flujoCuotas = {},
 }) {
   const [tab, setTab] = useState('resumen');
   const tabActual = TABS.find(t => t.id === tab);
@@ -171,7 +171,7 @@ export default function Dashboard({
         </header>
 
         <main className="flex-1 overflow-auto p-6">
-          {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobranzas={cobranzas} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} pendientesPorMes={pendientesPorMes} />}
+          {tab === 'resumen'    && <ResumenEconomico resumen={resumen} cobranzas={cobranzas} cobrosSemanales={cobrosSemanales} ventasPorMes={ventasPorMes} cobrosAutomatica={cobrosAutomatica} anunciosPorMes={anunciosPorMes} pendientesPorMes={pendientesPorMes} flujoCuotas={flujoCuotas} />}
           {tab === 'ventas'     && <Ventas ventasPorMes={ventasPorMes} clientes={clientes} />}
           {tab === 'cobranzas'  && <Cobranzas cobranzas={cobranzas} pendientesPorMes={pendientesPorMes} proyeccion={proyeccion} proyeccionAnual={proyeccionAnual} deudores={deudores} clientes={clientes} abonos={abonos} />}
           {tab === 'deudores'   && <Deudores deudores={deudores} clientes={clientes} />}

@@ -95,7 +95,8 @@ const R3 = ({ a, b, c, bold, tot }) => (
 );
 
 export default function InformeDocument({ data, logoSrc }) {
-  const { label, m, cuo, resumen = [], cobranzas = [], anuncio = {}, ventaMes = null, pendientesPorMes = {}, emitido } = data;
+  const { label, m, cuo, resumen = [], cobranzas = [], anuncio = {}, ventaMes = null, pendientesPorMes = {}, emitido,
+          saldoDelMes = { porVenc: {}, total: 0, ingresado: 0 }, recolOrigen = { primerosPagos: 0, porOrigen: {}, totalCuotas: 0 } } = data;
 
   const ventaTotal = (m.montoFront || 0) + (m.montoBack || 0);
   const cashNuevoTotal = (m.cashNuevoAR || 0) + (m.cashNuevoExt || 0) + (m.cashNuevoEfectivo || 0);
@@ -121,6 +122,25 @@ export default function InformeDocument({ data, logoSrc }) {
     .map(([mes, arr]) => [mes, (arr || []).reduce((a, p) => a + (p.monto || 0), 0)])
     .filter(([, v]) => v > 0).sort(([a], [b]) => a.localeCompare(b));
   const proyTotal = proy.reduce((a, [, v]) => a + v, 0);
+
+  // Saldo por cobrar de las VENTAS del mes, por mes de vencimiento.
+  const saldoVenc = Object.entries(saldoDelMes.porVenc || {})
+    .filter(([, v]) => v > 0).sort(([a], [b]) => a.localeCompare(b));
+  // Caja del mes por ORIGEN: primeros pagos (propio) + cuotas de meses anteriores.
+  const recolOrig = Object.entries(recolOrigen.porOrigen || {})
+    .filter(([, v]) => v > 0).sort(([a], [b]) => a.localeCompare(b));
+  const recolTotal = (recolOrigen.primerosPagos || 0) + (recolOrigen.totalCuotas || 0);
+
+  // Embudo completo de Meta (todas las filas del tracker, en orden).
+  const funnel = Array.isArray(anuncio.metricas) ? anuncio.metricas : [];
+  const fmtMetrica = (v, tipo) => {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    if (tipo === 'money') return money(n);
+    if (tipo === 'x')     return `${n.toFixed(2).replace('.', ',')}x`;
+    if (tipo === 'pct')   return `${n.toFixed(1).replace('.', ',')}%`;
+    return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
+  };
 
   // Movimientos del período (reembolsos detectados automáticamente).
   const reembolsos = ventaMes?.totalReembolsos || 0;
@@ -240,9 +260,33 @@ export default function InformeDocument({ data, logoSrc }) {
 
       {/* ── Página 2 ── */}
       <Page size="A4" style={s.page}>
+        {/* Flujo de cuotas del mes estudiado */}
+        <Text style={s.capLabel}>Cuotas de {label} · saldo por cobrar y origen de la caja</Text>
+        <View style={s.twoCol}>
+          <View style={s.col}>
+            <Text style={[s.kL, { marginBottom: 4 }]}>Saldo por cobrar de las ventas de {label}</Text>
+            <View style={s.th}><Text style={[s.thc, s.cL]}>Vence en</Text><Text style={[s.thc, s.cR]}>Monto</Text></View>
+            {saldoVenc.length ? saldoVenc.map(([mk, v]) => (
+              <View style={s.tr} key={mk}><Text style={[s.td, s.cL]}>{mesLbl(mk)}</Text><Text style={[s.td, s.cR]}>{money(v)}</Text></View>
+            )) : <Text style={s.note}>Sin cuotas futuras pendientes de las ventas de este mes.</Text>}
+            {saldoVenc.length > 0 && (
+              <View style={s.trTot}><Text style={[s.tdB, s.cL]}>Total por cobrar</Text><Text style={[s.tdB, s.cR]}>{money(saldoDelMes.total)}</Text></View>
+            )}
+          </View>
+          <View style={s.col}>
+            <Text style={[s.kL, { marginBottom: 4 }]}>Caja de {label} · por mes de origen</Text>
+            <View style={s.th}><Text style={[s.thc, s.cL]}>Origen</Text><Text style={[s.thc, s.cR]}>Monto</Text></View>
+            <View style={s.tr}><Text style={[s.td, s.cL]}>Venta nueva del mes (primeros pagos)</Text><Text style={[s.td, s.cR]}>{money(recolOrigen.primerosPagos || 0)}</Text></View>
+            {recolOrig.map(([mk, v]) => (
+              <View style={s.tr} key={mk}><Text style={[s.td, s.cL]}>Cuotas de ventas de {mesLbl(mk)}</Text><Text style={[s.td, s.cR]}>{money(v)}</Text></View>
+            ))}
+            <View style={s.trTot}><Text style={[s.tdB, s.cL]}>Total recolectado</Text><Text style={[s.tdB, s.cR]}>{money(recolTotal)}</Text></View>
+          </View>
+        </View>
+
         {proy.length > 0 && (
           <>
-            <Text style={s.capLabel}>Proyección de cobranza · cuotas pendientes por mes de vencimiento</Text>
+            <Text style={[s.capLabel, { marginTop: 12 }]}>Proyección de cobranza · cuotas pendientes por mes de vencimiento (todas)</Text>
             <View style={s.th}><Text style={[s.thc, s.cL]}>Mes de vencimiento</Text><Text style={[s.thc, s.cR]}>Cuotas a cobrar</Text></View>
             {proy.map(([mk, v]) => (
               <View style={s.tr} key={mk}><Text style={[s.td, s.cL]}>{mesLbl(mk)}</Text><Text style={[s.td, s.cR]}>{money(v)}</Text></View>
@@ -349,6 +393,20 @@ export default function InformeDocument({ data, logoSrc }) {
           <Kpi w20 label="Costo / lead" value={anuncio.costoLead != null ? money(anuncio.costoLead) : '—'} hint="inv. ÷ leads" />
           <Kpi w20 label="Costo / agenda" value={anuncio.costoAgenda != null ? money(anuncio.costoAgenda) : '—'} hint="inv. ÷ agendas" />
         </View>
+
+        {/* Embudo completo del tracker de Anuncios (todas las métricas cargadas). */}
+        {funnel.length > 0 && (
+          <>
+            <Text style={[s.capLabel, { marginTop: 10 }]}>Embudo del mes · métricas del tracker</Text>
+            <View style={s.th}><Text style={[s.thc, s.cL]}>Métrica</Text><Text style={[s.thc, s.cR]}>Valor</Text></View>
+            {funnel.map((mt, i) => (
+              <View style={s.tr} key={i}>
+                <Text style={[s.td, s.cL]}>{mt.label}</Text>
+                <Text style={[s.tdB, s.cR]}>{fmtMetrica(mt.value, mt.tipo)}</Text>
+              </View>
+            ))}
+          </>
+        )}
         <Foot />
       </Page>
     </Document>
