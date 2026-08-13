@@ -45,15 +45,31 @@ async function fetchScript(url, params = {}, { retries = 0 } = {}) {
 
 // POST (escrituras) — NO reintentamos para no duplicar filas; sólo subimos el timeout.
 async function postScript(url, body) {
+  if (!url) throw new Error('No está configurada APPS_SCRIPT_CLIENTES_URL en el servidor.');
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
+    redirect: 'follow',
     signal: AbortSignal.timeout(WRITE_TIMEOUT),
   });
-  if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
-  const data = await res.json();
+  const text = await res.text();
+  // Google devuelve una página HTML (404 de Drive o login) cuando el Web App no
+  // resuelve para POST: normalmente el doPost no está en la implementación ACTIVA,
+  // el acceso no es "Cualquier usuario", o la URL /exec quedó desactualizada.
+  if (/^\s*</.test(text)) {
+    throw new Error(
+      'El Apps Script no aceptó la escritura (devolvió una página de Google, no datos). ' +
+      'Revisá en Apps Script → Implementar → Gestionar implementaciones: que la implementación ACTIVA ' +
+      'tenga doPost publicado, "Ejecutar como: Yo" y "Quién tiene acceso: Cualquier usuario", y que la URL ' +
+      '/exec en Vercel sea la de esa implementación. Al redeployar, usá "Editar → Nueva versión" para no cambiar la URL.'
+    );
+  }
+  if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${text.slice(0, 300)}`);
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`Respuesta inesperada del Apps Script: ${text.slice(0, 200)}`); }
   if (data && data.error) throw new Error(data.error);
   return data;
 }
