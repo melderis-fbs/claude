@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { LayoutDashboard, TrendingUp, Wallet, AlertTriangle, Coins, PieChart, Receipt, Users, FileText, CreditCard, LineChart, Megaphone } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Wallet, AlertTriangle, Coins, PieChart, Receipt, Users, CreditCard, Megaphone } from 'lucide-react';
 
 function SlackReporteBtn() {
   const [cargando, setCargando]   = useState(false);
@@ -103,9 +103,7 @@ import Comisiones      from './tabs/Comisiones.jsx';
 import Facturas        from './tabs/Facturas.jsx';
 import Clientes        from './tabs/Clientes.jsx';
 import { Deudores }     from './tabs/Cobranzas.jsx';
-import Documentos      from './tabs/Documentos.jsx';
 import Egresos         from './tabs/Egresos.jsx';
-import Cashflow        from './tabs/Cashflow.jsx';
 import Anuncios        from './tabs/Anuncios.jsx';
 
 const TABS = [
@@ -118,9 +116,7 @@ const TABS = [
   { id: 'anuncios',   label: 'Anuncios',   icon: Megaphone },
   { id: 'facturas',   label: 'Facturas',   icon: Receipt },
   { id: 'clientes',   label: 'Clientes',   icon: Users },
-  { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'egresos',    label: 'Egresos',    icon: CreditCard },
-  { id: 'cashflow',   label: 'Cashflow',   icon: LineChart },
 ];
 
 export default function Dashboard({
@@ -182,9 +178,7 @@ export default function Dashboard({
           {tab === 'anuncios'   && <Anuncios anunciosPorMes={anunciosPorMes} />}
           {tab === 'facturas'   && <Facturas facturas={facturas} />}
           {tab === 'clientes'   && <Clientes clientes={clientes} headers={headers} />}
-          {tab === 'documentos' && <Documentos clientes={clientes} />}
           {tab === 'egresos'    && <Egresos ventasPorMes={ventasPorMes} />}
-          {tab === 'cashflow'   && <Cashflow />}
         </main>
       </div>
     </div>
