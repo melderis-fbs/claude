@@ -247,7 +247,7 @@ export default function InformeDocument({ data, logoSrc }) {
           <View style={s.col}><View style={s.panel}>
             <Text style={s.kL}>Tasa de recolección · venta nueva</Text>
             <Text style={s.kV}>{pctv(m.pctCC)}</Text>
-            <Text style={s.kH}>{money(cashNuevoTotal)} primeros pagos ÷ {money(ventaTotal)} venta del mes</Text>
+            <Text style={s.kH}>{money(cashNuevoTotal)} primeros pagos ÷ {money(m.montoFront)} venta nueva del mes</Text>
           </View></View>
           <View style={s.col}><View style={s.panel}>
             <Text style={s.kL}>Cobranza de cuotas</Text>

@@ -233,7 +233,11 @@ export function calcularResumenMensual(clientes, egresosRows = []) {
     // Rentabilidad = ganancia sobre el total de ventas
     const ventaTotal = v.front + v.montoBack;
     const ganancia = ventaTotal - totalCostos;
-    const pctCC = v.front > 0 ? (c.front / v.front) * 100 : 0;
+    // Recolección de venta nueva = PRIMEROS PAGOS cobrados ÷ venta nueva del mes.
+    // Ojo: c.front incluye también las cuotas de clientes no-back, así que NO
+    // sirve como numerador (inflaba la tasa). Usamos sólo los primeros pagos.
+    const cashNuevoTotal = (c.nuevoAR || 0) + (c.nuevoExt || 0) + (c.nuevoEfectivo || 0);
+    const pctCC = v.front > 0 ? (cashNuevoTotal / v.front) * 100 : 0;
     return {
       mes, label: mesLabel(mes),
       ventasNuevas: v.nuevas, ventasBack: v.back, ventasTotal: v.nuevas + v.back,
