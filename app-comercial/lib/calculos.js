@@ -858,37 +858,45 @@ function parseNumES(v) {
   return isNaN(n) ? null : n;
 }
 
-// Clasifica una fila del tracker por su etiqueta → { key, tipo }.
-// key = alias tipado para KPIs; tipo = formato sugerido para mostrar.
-// Se distinguen los CONTEOS del embudo (leads, agendas, asistencias, cierres)
-// de sus COSTOS/RATIOS (CPL, CPA, ROAS), que antes se pisaban entre sí.
-function clasificarMetricaAnuncio(labelLower) {
-  const l = labelLower;
-  const has = (...ks) => ks.some(k => l.includes(k));
-  if (has('invers'))                                  return { key: 'inversion',      tipo: 'money' };
-  if (has('roas') && has('cash'))                     return { key: 'roasCash',       tipo: 'x' };
-  if (has('roas'))                                    return { key: 'roas',           tipo: 'x' };
-  if (has('cpl') || (has('costo') && has('lead')))    return { key: 'costoLead',      tipo: 'money' };
-  if (has('cpa') || (has('costo') && has('agenda')))  return { key: 'costoAgenda',    tipo: 'money' };
-  if (has('costo') && has('asist'))                   return { key: 'costoAsistencia',tipo: 'money' };
-  if (has('costo') && has('cierre'))                  return { key: 'costoCierre',    tipo: 'money' };
-  if (has('lead'))                                    return { key: 'leads',          tipo: 'count' };
-  if (has('agenda') && has('calif', 'cualif'))        return { key: 'agendasCalif',   tipo: 'count' };
-  if (has('agenda'))                                  return { key: 'agendas',        tipo: 'count' };
-  if (has('asist'))                                   return { key: 'asistencias',    tipo: 'count' };
-  if (has('cierre') || has('cerrada'))                return { key: 'cierres',        tipo: 'count' };
-  if (has('recolec') || has('cobr'))                  return { key: 'recoleccion',    tipo: 'money' };
-  if (has('venta') || has('facturac'))                return { key: 'ventaAuto',      tipo: 'money' };
-  if (has('tasa') || has('conversi') || l.includes('%')) return { key: null,         tipo: 'pct' };
-  return { key: null, tipo: 'count' };
+// Tipo de formato de una fila del tracker, según su etiqueta.
+// Reglas (en orden): ROAS/ROI = ratio · CPC/CPM/CPA = dinero (aunque digan %) ·
+// prefijo "$" = dinero · prefijo "%" = porcentaje · palabras de dinero = dinero ·
+// resto = conteo.
+function tipoMetricaAnuncio(label) {
+  const l = label.trim();
+  const low = l.toLowerCase();
+  const has = (...ks) => ks.some(k => low.includes(k));
+  if (has('roas', 'roi'))                 return 'x';
+  if (has('cpm', 'cpc', 'cpa'))           return 'money';
+  if (l.startsWith('$'))                  return 'money';
+  if (l.startsWith('%'))                  return 'pct';
+  if (has('invers', 'venta', 'facturado', 'beneficio', 'costo')) return 'money';
+  if (has('%', 'tasa', 'conversi'))       return 'pct';
+  return 'count';
+}
+
+// Alias tipado (para KPIs y ROAS calculado). null si no aplica.
+function keyMetricaAnuncio(label) {
+  const low = label.trim().toLowerCase();
+  const has = (...ks) => ks.some(k => low.includes(k));
+  if (has('invers'))                    return 'inversion';
+  if (has('roas') && has('cash'))       return 'roasCash';
+  if (has('roas'))                      return 'roas';
+  if (low.startsWith('$lead'))          return 'costoLead';
+  if (has('costo') && has('agenda'))    return 'costoAgenda';
+  if (low === 'cierres')                return 'cierres';
+  if (low.startsWith('asistencias'))    return 'asistencias';
+  if (low === 'venta')                  return 'ventaAuto';
+  if (has('facturado'))                 return 'facturado';
+  return null;
 }
 
 // Parsea la pestaña "Anuncios" (pivote: filas=métricas, columnas=meses).
-// Devuelve, por mes: los alias tipados (inversion, leads, agendas, asistencias,
-// cierres, costoLead, costoAgenda, ventaAuto, recoleccion, …) Y `metricas`: la
-// lista COMPLETA de filas del tracker en orden, para dibujar el embudo tal cual
-// está cargado, sin descartar nada. `roas`/`roasCash` se recalculan luego en
-// page.js (ventas/cobros automática ÷ inversión), así que acá son referenciales.
+// Devuelve, por mes: alias tipados (inversion, roas, cierres, ventaAuto, …) Y
+// `metricas`: la lista de filas del tracker EN ORDEN, cada una con su sección
+// (`grupo`), tipo de formato y posición (`orden`). Las filas de encabezado de
+// sección (sin ningún valor numérico, ej. "Información de Meta") NO se emiten
+// como métricas: sólo definen el grupo de las filas que siguen.
 export function parseAnunciosTab(rows) {
   if (!rows || rows.length < 2) return {};
 
@@ -900,30 +908,30 @@ export function parseAnunciosTab(rows) {
     const num = MESES_ES[h];
     if (num) colMes[i] = `${anio}-${num}`;
   });
+  const colIdxs = Object.keys(colMes).map(Number);
 
   const result = {};
+  let grupo = '';
 
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
     const label = String(row[0] || '').trim();
     if (!label) continue;
-    const { key, tipo } = clasificarMetricaAnuncio(label.toLowerCase());
+
+    // ¿Fila de encabezado de sección? (etiqueta sin ningún valor numérico).
+    const tieneValor = colIdxs.some(ci => parseNumES(row[ci]) !== null);
+    if (!tieneValor) { grupo = label; continue; }
+
+    const tipo = tipoMetricaAnuncio(label);
+    const key  = keyMetricaAnuncio(label);
 
     Object.entries(colMes).forEach(([colIdx, mes]) => {
       const val = parseNumES(row[parseInt(colIdx)]);
       if (val === null) return;
       if (!result[mes]) result[mes] = { metricas: [] };
-      result[mes].metricas.push({ label, key, tipo, value: val });
+      result[mes].metricas.push({ label, key, tipo, grupo, orden: r, value: val });
       if (key && result[mes][key] == null) result[mes][key] = val;
     });
-  }
-
-  // Derivados de respaldo: si el tracker no trae CPL/CPA/tasa, se calculan.
-  for (const d of Object.values(result)) {
-    if (d.costoLead == null && d.inversion && d.leads)     d.costoLead   = d.inversion / d.leads;
-    if (d.costoAgenda == null && d.inversion && d.agendas) d.costoAgenda = d.inversion / d.agendas;
-    if (d.tasaAsistencia == null && d.cierres != null && d.asistencias)
-      d.tasaCierreAsist = (d.cierres / d.asistencias) * 100;
   }
 
   return result;

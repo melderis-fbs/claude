@@ -136,9 +136,12 @@ export default function InformeDocument({ data, logoSrc }) {
   const fmtMetrica = (v, tipo) => {
     if (v == null || isNaN(v)) return '—';
     const n = Number(v);
-    if (tipo === 'money') return money(n);
-    if (tipo === 'x')     return `${n.toFixed(2).replace('.', ',')}x`;
-    if (tipo === 'pct')   return `${n.toFixed(1).replace('.', ',')}%`;
+    if (tipo === 'money') {
+      const a = Math.abs(n);
+      return a > 0 && a < 100 ? `$${n.toFixed(2).replace('.', ',')}` : money(n);
+    }
+    if (tipo === 'x')   return `${n.toFixed(2).replace('.', ',')}x`;
+    if (tipo === 'pct') return `${(n * 100).toFixed(2).replace('.', ',')}%`;
     return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
   };
 
