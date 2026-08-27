@@ -32,6 +32,7 @@ export default function Abonos({ abonos }) {
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [reciboLoad, setReciboLoad] = useState(null);
 
   const filtrados = abonosLocal.filter(a => {
     if (!busqueda) return true;
@@ -69,6 +70,52 @@ export default function Abonos({ abonos }) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Genera y descarga un recibo PDF de la seña (usa /api/documentos/generate,
+  // que asigna el número correlativo de recibo y lo registra en Documentos).
+  const generarRecibo = async (a) => {
+    const rid = a._rowIndex;
+    setReciboLoad(rid); setError('');
+    try {
+      const nombre = String(get(a, 'Nombre', 'nombre') || '').trim();
+      const monto  = Number(get(a, 'Monto', 'monto') || 0);
+      const forma  = String(get(a, 'Forma de pago') || '');
+      const fecha  = get(a, 'Fecha', 'fecha') || new Date().toLocaleDateString('es-AR');
+      const moneda = /ars/i.test(forma) ? 'ARS' : 'USD';
+      const payload = {
+        tipo: 'Recibo',
+        moneda,
+        formData: {
+          nombre,
+          fecha,
+          items: [{ description: 'Seña / abono', quantity: 1, amount: monto }],
+          subtotal: monto, vat: 0, vatAmount: 0, total: monto,
+          titulo: 'RECIBO', subtitulo: 'Seña',
+          origen: 'Abono',
+        },
+      };
+      const res = await fetch('/api/documentos/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `Error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Recibo-${(nombre || 'sena').replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setReciboLoad(null);
     }
   };
 
@@ -305,10 +352,16 @@ export default function Abonos({ abonos }) {
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${est.color}`}>{est.label}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => abrirEditar(a)}
-                          className="text-gray-300 hover:text-gray-700 transition-colors text-base" title="Editar">
-                          ✏
-                        </button>
+                        <div className="flex items-center gap-2 justify-end">
+                          <button onClick={() => generarRecibo(a)} disabled={reciboLoad === a._rowIndex}
+                            className="text-xs px-2 py-1 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap" title="Generar recibo de la seña">
+                            {reciboLoad === a._rowIndex ? '…' : '🧾 Recibo'}
+                          </button>
+                          <button onClick={() => abrirEditar(a)}
+                            className="text-gray-300 hover:text-gray-700 transition-colors text-base" title="Editar">
+                            ✏
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
