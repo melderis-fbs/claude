@@ -32,7 +32,9 @@ export default function Abonos({ abonos }) {
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
-  const [reciboLoad, setReciboLoad] = useState(null);
+  const [reciboModal, setReciboModal] = useState(null); // abono en curso, o null
+  const [reciboForm, setReciboForm]   = useState({ nombre:'', telefono:'', email:'', concepto:'Seña / abono', monto:'', fecha:'', moneda:'USD' });
+  const [reciboGen, setReciboGen]     = useState(false);
 
   const filtrados = abonosLocal.filter(a => {
     if (!busqueda) return true;
@@ -73,24 +75,38 @@ export default function Abonos({ abonos }) {
     }
   };
 
-  // Genera y descarga un recibo PDF de la seña (usa /api/documentos/generate,
-  // que asigna el número correlativo de recibo y lo registra en Documentos).
-  const generarRecibo = async (a) => {
-    const rid = a._rowIndex;
-    setReciboLoad(rid); setError('');
+  // Abre el formulario de recibo prefileado con los datos de la seña.
+  const abrirRecibo = (a) => {
+    const forma = String(get(a, 'Forma de pago') || '');
+    setError('');
+    setReciboForm({
+      nombre:    String(get(a, 'Nombre', 'nombre') || '').trim(),
+      telefono:  String(get(a, 'Telefono', 'Teléfono', 'telefono') || '').trim(),
+      email:     String(get(a, 'Email', 'Mail', 'email') || '').trim(),
+      concepto:  'Seña / abono',
+      monto:     String(get(a, 'Monto', 'monto') || ''),
+      fecha:     get(a, 'Fecha', 'fecha') || new Date().toLocaleDateString('es-AR'),
+      moneda:    /ars/i.test(forma) ? 'ARS' : 'USD',
+    });
+    setReciboModal(a);
+  };
+  const setR = (k, v) => setReciboForm(f => ({ ...f, [k]: v }));
+
+  // Genera y descarga el recibo PDF con los datos del formulario. Usa
+  // /api/documentos/generate (numeración correlativa + logo + registro).
+  const confirmarRecibo = async () => {
+    setReciboGen(true); setError('');
     try {
-      const nombre = String(get(a, 'Nombre', 'nombre') || '').trim();
-      const monto  = Number(get(a, 'Monto', 'monto') || 0);
-      const forma  = String(get(a, 'Forma de pago') || '');
-      const fecha  = get(a, 'Fecha', 'fecha') || new Date().toLocaleDateString('es-AR');
-      const moneda = /ars/i.test(forma) ? 'ARS' : 'USD';
+      const monto = Number(reciboForm.monto || 0);
       const payload = {
         tipo: 'Recibo',
-        moneda,
+        moneda: reciboForm.moneda,
         formData: {
-          nombre,
-          fecha,
-          items: [{ description: 'Seña / abono', quantity: 1, amount: monto }],
+          nombre:   reciboForm.nombre,
+          telefono: reciboForm.telefono,
+          email:    reciboForm.email,
+          fecha:    reciboForm.fecha,
+          items: [{ description: reciboForm.concepto || 'Seña / abono', quantity: 1, amount: monto }],
           subtotal: monto, vat: 0, vatAmount: 0, total: monto,
           titulo: 'RECIBO', subtitulo: 'Seña',
           origen: 'Abono',
@@ -109,13 +125,14 @@ export default function Abonos({ abonos }) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Recibo-${(nombre || 'sena').replace(/\s+/g, '-')}.pdf`;
+      link.download = `Recibo-${(reciboForm.nombre || 'sena').replace(/\s+/g, '-')}.pdf`;
       document.body.appendChild(link); link.click(); link.remove();
       URL.revokeObjectURL(url);
+      setReciboModal(null);
     } catch (err) {
       setError(err.message);
     } finally {
-      setReciboLoad(null);
+      setReciboGen(false);
     }
   };
 
@@ -170,6 +187,76 @@ export default function Abonos({ abonos }) {
 
   return (
     <div className="space-y-5 max-w-5xl">
+      {/* Modal recibo */}
+      {reciboModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => !reciboGen && setReciboModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Recibo de seña</h3>
+              <button onClick={() => setReciboModal(null)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              {error && <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                <input value={reciboForm.nombre} onChange={e => setR('nombre', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
+                  <input value={reciboForm.telefono} onChange={e => setR('telefono', e.target.value)}
+                    placeholder="Opcional"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <input value={reciboForm.email} onChange={e => setR('email', e.target.value)}
+                    placeholder="Opcional"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Concepto</label>
+                <input value={reciboForm.concepto} onChange={e => setR('concepto', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+                  <input type="number" value={reciboForm.monto} onChange={e => setR('monto', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Moneda</label>
+                  <select value={reciboForm.moneda} onChange={e => setR('moneda', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300 bg-white">
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Fecha</label>
+                  <input value={reciboForm.fecha} onChange={e => setR('fecha', e.target.value)} placeholder="DD/MM/YYYY"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-300" />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-2 justify-end">
+              <button onClick={() => setReciboModal(null)} disabled={reciboGen}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={confirmarRecibo} disabled={reciboGen || !reciboForm.nombre.trim()}
+                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                {reciboGen ? 'Generando…' : '🧾 Generar recibo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
@@ -353,9 +440,9 @@ export default function Abonos({ abonos }) {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 justify-end">
-                          <button onClick={() => generarRecibo(a)} disabled={reciboLoad === a._rowIndex}
-                            className="text-xs px-2 py-1 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap" title="Generar recibo de la seña">
-                            {reciboLoad === a._rowIndex ? '…' : '🧾 Recibo'}
+                          <button onClick={() => abrirRecibo(a)}
+                            className="text-xs px-2 py-1 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 whitespace-nowrap" title="Generar recibo de la seña">
+                            🧾 Recibo
                           </button>
                           <button onClick={() => abrirEditar(a)}
                             className="text-gray-300 hover:text-gray-700 transition-colors text-base" title="Editar">
