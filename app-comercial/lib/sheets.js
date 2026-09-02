@@ -11,31 +11,35 @@ const WRITE_TIMEOUT = 20000;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// GET (lecturas) — idempotente, así que reintentamos ante timeout / error de red.
-// Apps Script suele tardar más de lo normal en arranque en frío.
-async function fetchScript(url, params = {}, { retries = 0 } = {}) {
+// GET (lecturas) — idempotente. Reintentamos ante timeout/red Y ante respuestas
+// transitorias de Google: el /exec redirige a googleusercontent y en frío o bajo
+// carga a veces devuelve un 404 "unable to open the file" o una página HTML aunque
+// el Web App esté sano. Reintentar suele resolverlo (el ping del diagnóstico
+// mostró las URLs vivas). Por eso el default trae reintentos.
+async function fetchScript(url, params = {}, { retries = 3 } = {}) {
+  if (!url) throw new Error('No está configurada la URL del Apps Script en el servidor.');
   const qs = new URLSearchParams(params).toString();
   const fullUrl = qs ? `${url}?${qs}` : url;
   let lastErr;
   for (let intento = 0; intento <= retries; intento++) {
     try {
-      const res = await fetch(fullUrl, { cache: 'no-store', signal: AbortSignal.timeout(READ_TIMEOUT) });
-      if (!res.ok) throw new Error(`Apps Script error ${res.status}: ${await res.text()}`);
+      const res = await fetch(fullUrl, { cache: 'no-store', redirect: 'follow', signal: AbortSignal.timeout(READ_TIMEOUT) });
       const text = await res.text();
-      // Si devuelve HTML (página de login/consent de Google) en vez de JSON, el
-      // Web App está pidiendo login → el acceso no es "Cualquier usuario" (anónimo).
-      if (/^\s*</.test(text)) {
-        throw new Error('Apps Script devolvió una página de login (HTML) en vez de datos. En la implementación del Web App poné "Quién tiene acceso: Cualquier usuario" (anónimo, NO "con cuenta de Google").');
-      }
-      return JSON.parse(text);
+      // 404/5xx o cuerpo HTML (404 de Drive / página de login) → transitorio, se reintenta.
+      if (!res.ok)          throw Object.assign(new Error(`Apps Script HTTP ${res.status}`), { reintentable: true });
+      if (/^\s*</.test(text)) throw Object.assign(new Error('Apps Script devolvió HTML (404/login) en vez de datos'), { reintentable: true });
+      return JSON.parse(text); // un HTML/parcial cae al catch como error de parseo → reintenta
     } catch (err) {
       lastErr = err;
-      // Sólo reintentamos ante timeout o problemas de red transitorios.
-      const transitorio = err?.name === 'TimeoutError' || err?.name === 'AbortError' ||
-        /timeout|aborted|network|fetch failed|ECONN/i.test(err?.message || '');
+      const transitorio = err?.reintentable || err?.name === 'TimeoutError' || err?.name === 'AbortError' ||
+        /timeout|aborted|network|fetch failed|ECONN|unexpected token|json|<|not found|404/i.test(err?.message || '');
       if (intento < retries && transitorio) {
-        await sleep(800 * (intento + 1));
+        await sleep(700 * (intento + 1)); // 0.7s, 1.4s, 2.1s
         continue;
+      }
+      // Agotados los reintentos: mensaje claro según el síntoma.
+      if (/HTML|404|login|<|not found/i.test(err?.message || '')) {
+        throw new Error('El Apps Script no devolvió datos tras varios intentos (404/HTML). Si persiste, revisá que la implementación activa tenga "Cualquier usuario" y que la URL /exec en Vercel sea la vigente.');
       }
       throw err;
     }
