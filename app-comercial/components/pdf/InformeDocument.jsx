@@ -273,6 +273,46 @@ export default function InformeDocument({ data, logoSrc }) {
           </View>
         </View>
 
+        {/* Proyección de ventas · venta del mes por lugar + back como subítem */}
+        <Text style={[s.capLabel, { marginTop: 10 }]}>Proyección de ventas</Text>
+        <View style={s.th}>
+          <Text style={[s.thc, s.cL]}>Concepto</Text>
+          <Text style={[s.thc, s.cRn]}>Argentina</Text>
+          <Text style={[s.thc, s.cRn]}>Exterior</Text>
+          <Text style={[s.thc, s.cRn]}>Efectivo</Text>
+          <Text style={[s.thc, s.cRn]}>Total</Text>
+        </View>
+        <View style={s.tr}>
+          <Text style={[s.td, s.cL]}>Venta nueva</Text>
+          <Text style={[s.td, s.cRn]}>{money(m.montoAR || 0)}</Text>
+          <Text style={[s.td, s.cRn]}>{money(m.montoExt || 0)}</Text>
+          <Text style={[s.td, s.cRn]}>{money(m.montoEfectivo || 0)}</Text>
+          <Text style={[s.tdB, s.cRn]}>{money(m.montoFront || 0)}</Text>
+        </View>
+        <View style={[s.tr, { borderBottomWidth: 0, paddingTop: 0, paddingVertical: 1 }]}>
+          <Text style={[s.tdM, s.cL, { fontSize: 6.3 }]} />
+          <Text style={[s.tdM, s.cRn, { fontSize: 6.3 }]}>{share(m.montoAR || 0, ventaTotal)}</Text>
+          <Text style={[s.tdM, s.cRn, { fontSize: 6.3 }]}>{share(m.montoExt || 0, ventaTotal)}</Text>
+          <Text style={[s.tdM, s.cRn, { fontSize: 6.3 }]}>{share(m.montoEfectivo || 0, ventaTotal)}</Text>
+          <Text style={[s.tdM, s.cRn, { fontSize: 6.3 }]} />
+        </View>
+        {(m.montoBack || 0) > 0 && (
+          <View style={s.tr}>
+            <Text style={[s.td, s.cL, { paddingLeft: 10 }]}>+ Venta back ({m.ventasBack || 0})</Text>
+            <Text style={[s.tdM, s.cRn]}>—</Text>
+            <Text style={[s.tdM, s.cRn]}>—</Text>
+            <Text style={[s.tdM, s.cRn]}>—</Text>
+            <Text style={[s.tdB, s.cRn]}>{money(m.montoBack || 0)}</Text>
+          </View>
+        )}
+        <View style={s.trTot}>
+          <Text style={[s.tdB, s.cL]}>Total del mes</Text>
+          <Text style={[s.tdB, s.cRn]} />
+          <Text style={[s.tdB, s.cRn]} />
+          <Text style={[s.tdB, s.cRn]} />
+          <Text style={[s.tdB, s.cRn]}>{money(ventaTotal)}</Text>
+        </View>
+
         {/* 3 Cobros y recolección */}
         <SecTitle n="3">Cobros y recolección</SecTitle>
         <Text style={s.capLabel}>Composición de la recolección · por origen y lugar de ingreso</Text>
