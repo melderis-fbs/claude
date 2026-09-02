@@ -13,6 +13,12 @@ const money = n => {
   const abs = String(Math.abs(num)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return (num < 0 ? '-$' : '$') + abs;
 };
+// Dinero con 2 decimales (para costos chicos: CPL, CPM…).
+const money2 = n => {
+  if (n == null || isNaN(n)) return '—';
+  const [i, d] = Math.abs(Number(n)).toFixed(2).split('.');
+  return (Number(n) < 0 ? '-$' : '$') + i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d;
+};
 const pctv = n => (n == null || isNaN(n) ? '—' : `${Number(n).toFixed(1).replace('.', ',')}%`);
 const xv   = n => (n == null || isNaN(n) ? '—' : `${Number(n).toFixed(2).replace('.', ',')}x`);
 const share = (part, whole) => (whole > 0 ? pctv((part / whole) * 100) : '—');
@@ -36,6 +42,7 @@ const s = StyleSheet.create({
 
   kpiWrap: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3 },
   kpi: { width: '33.333%', paddingHorizontal: 3, marginBottom: 6 },
+  kpi25: { width: '25%', paddingHorizontal: 3, marginBottom: 6 },
   kpi20: { width: '20%', paddingHorizontal: 3, marginBottom: 6 },
   cardLight: { backgroundColor: CREAM, borderWidth: 0.5, borderColor: LINE, borderRadius: 4, padding: 8 },
   cardDark: { backgroundColor: DARK, borderRadius: 4, padding: 8 },
@@ -71,8 +78,8 @@ const s = StyleSheet.create({
 const SecTitle = ({ n, children }) => (
   <View style={s.secTitleRow}><Text style={s.secNum}>{n}</Text><Text style={s.secTitle}>{children}</Text></View>
 );
-const Kpi = ({ label, value, hint, dark, small, w20 }) => (
-  <View style={w20 ? s.kpi20 : s.kpi}>
+const Kpi = ({ label, value, hint, dark, small, w20, w25 }) => (
+  <View style={w20 ? s.kpi20 : w25 ? s.kpi25 : s.kpi}>
     <View style={dark ? s.cardDark : s.cardLight}>
       <Text style={dark ? s.kLd : s.kL}>{label}</Text>
       <Text style={dark ? s.kVd : (small ? s.kVsm : s.kV)}>{value}</Text>
@@ -145,6 +152,60 @@ export default function InformeDocument({ data, logoSrc }) {
     return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
   };
 
+  // ── Totales y promedios de las tablas de evolución ──────────────────────────
+  const sum = (arr, f) => arr.reduce((acc, x) => acc + (f(x) || 0), 0);
+  const avg = vals => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
+  const evoTot = {
+    fact:     sum(resumen, r => (r.montoFront || 0) + (r.montoBack || 0)),
+    recol:    sum(resumen, r => r.cashTotal),
+    costos:   sum(resumen, r => r.totalCostos),
+    ganancia: sum(resumen, r => r.ganancia),
+    rentProm: avg(resumen.filter(r => Object.keys(r.costos || {}).length).map(r => r.rentabilidad)),
+  };
+  const recNuevaTot = {
+    cobrado: sum(resumen, r => (r.cashNuevoAR || 0) + (r.cashNuevoExt || 0) + (r.cashNuevoEfectivo || 0)),
+    pctProm: avg(resumen.map(r => r.pctCC).filter(v => v != null)),
+  };
+  const cobrCuotasTot = {
+    cobrado: sum(cobranzas, c => c.cobrado),
+    pctProm: avg(cobranzas.map(c => c.pctCobrado).filter(v => v != null)),
+  };
+
+  // ── Meta Ads: serie mensual + embudo del mes seleccionado ───────────────────
+  const anunciosPorMes = data.anunciosPorMes || {};
+  const metaMeses = Object.keys(anunciosPorMes).sort();
+  const getMetV = (d, re) => { const mt = (d?.metricas || []).find(x => re.test(x.label)); return mt ? mt.value : null; };
+  const metaSerie = metaMeses.map(mk => {
+    const d = anunciosPorMes[mk] || {};
+    return {
+      mes: mk, label: mesLbl(mk),
+      inversion: d.inversion ?? null,
+      cierres:   d.cierres ?? null,
+      cpa: (d.inversion != null && d.cierres) ? d.inversion / d.cierres : null,
+      roas: d.roas ?? null,
+    };
+  });
+  const metaTot = {
+    inversion: sum(metaSerie, x => x.inversion),
+    cierres:   sum(metaSerie, x => x.cierres),
+  };
+  metaTot.cpa  = metaTot.cierres ? metaTot.inversion / metaTot.cierres : null;
+  metaTot.roas = avg(metaSerie.map(x => x.roas).filter(v => v != null));
+  const roasFmt = n => (n == null || isNaN(n) ? '—' : Number(n).toFixed(2).replace('.', ','));
+
+  const aAgendas   = getMetV(anuncio, /agendas?\s*(calif|cualif)/i);
+  const aLeadsAfsa = getMetV(anuncio, /leads?\s*afsa/i);
+  const aLeadsAbo  = getMetV(anuncio, /leads?\s*abo/i);
+  const aLeads     = (aLeadsAfsa || aLeadsAbo) ? (aLeadsAfsa || 0) + (aLeadsAbo || 0) : aAgendas;
+  const aAsist     = anuncio.asistencias ?? getMetV(anuncio, /^asistencias/i);
+  // %Asistencia: fila de PORCENTAJE (no la de conteo "Asistencias").
+  const aPctAsist  = (anuncio.metricas || []).find(x => /asistencia/i.test(x.label) && x.tipo === 'pct')?.value ?? null;
+  const aVenta     = anuncio.ventaAuto ?? getMetV(anuncio, /^venta$/i);
+  const aFacturado = anuncio.facturado ?? getMetV(anuncio, /facturado/i);
+  const aCostoLead = anuncio.costoLead ?? getMetV(anuncio, /\$?\s*lead/i);
+  const aCierres   = anuncio.cierres ?? getMetV(anuncio, /^cierres/i);
+  const aTasaCierre = (aCierres != null && aAsist) ? (aCierres / aAsist) * 100 : null;
+
   // Movimientos del período (reembolsos detectados automáticamente).
   const reembolsos = ventaMes?.totalReembolsos || 0;
   const montoReemb = ventaMes?.montoReembolso || 0;
@@ -205,12 +266,6 @@ export default function InformeDocument({ data, logoSrc }) {
             <R3 a="Exterior" b={money(m.montoExt || 0)} c={String(m.ventasExt || 0)} />
             <R3 a="Efectivo" b={money(m.montoEfectivo || 0)} c={String(m.ventasEfectivo || 0)} />
             <R3 a="Total" b={money((m.montoAR || 0) + (m.montoExt || 0) + (m.montoEfectivo || 0))} c={String((m.ventasAR || 0) + (m.ventasExt || 0) + (m.ventasEfectivo || 0))} tot />
-
-            <View style={{ height: 10 }} />
-            <Text style={s.capLabel}>Declarado vs. no declarado (venta)</Text>
-            <View style={s.th}><Text style={[s.thc, s.cL]}>Concepto</Text><Text style={[s.thc, s.cRn]}>Monto</Text><Text style={[s.thc, s.cRs]}>% s/tot</Text></View>
-            <R3 a="Declarado (Argentina)" b={money(ventaDecl)} c={share(ventaDecl, ventaTotal)} />
-            <R3 a="No declarado (Ext. + efvo.)" b={money(ventaNoDecl)} c={share(ventaNoDecl, ventaTotal)} />
             <Text style={s.note}>Pago full: {money(m.cashNuevoFull || 0)} · Financiado: {money(m.cashNuevoFinanciado || 0)} (según primeros pagos).</Text>
           </View>
         </View>
@@ -244,7 +299,6 @@ export default function InformeDocument({ data, logoSrc }) {
           <Text style={[s.tdB, s.cRn]}>{money(m.cashTotalEfectivo || 0)}</Text>
           <Text style={[s.tdB, s.cRn]}>{money(m.cashTotal)}</Text>
         </View>
-        <Text style={s.note}>Declarado (Argentina) {money(recDecl)} · No declarado (ext. + efvo.) {money(recNoDecl)}.</Text>
 
         <View style={[s.twoCol, { marginTop: 9 }]}>
           <View style={s.col}><View style={s.panel}>
@@ -369,6 +423,14 @@ export default function InformeDocument({ data, logoSrc }) {
             <Text style={[s.tdB, s.cRs]}>{Object.keys(r.costos || {}).length ? pctv(r.rentabilidad) : '—'}</Text>
           </View>
         ))}
+        <View style={s.trTot}>
+          <Text style={[s.tdB, s.cL]}>Total anual</Text>
+          <Text style={[s.tdB, s.cRn]}>{money(evoTot.fact)}</Text>
+          <Text style={[s.tdB, s.cRn]}>{money(evoTot.recol)}</Text>
+          <Text style={[s.tdB, s.cRn]}>{money(evoTot.costos)}</Text>
+          <Text style={[s.tdB, s.cRn]}>{money(evoTot.ganancia)}</Text>
+          <Text style={[s.tdB, s.cRs]}>{pctv(evoTot.rentProm)}</Text>
+        </View>
 
         <View style={[s.twoCol, { marginTop: 12 }]}>
           <View style={s.col}>
@@ -377,6 +439,7 @@ export default function InformeDocument({ data, logoSrc }) {
             {resumen.map(r => (
               <R3 key={r.mes} a={r.label} b={money((r.cashNuevoAR || 0) + (r.cashNuevoExt || 0) + (r.cashNuevoEfectivo || 0))} c={pctv(r.pctCC)} />
             ))}
+            <R3 a="Total / prom." b={money(recNuevaTot.cobrado)} c={pctv(recNuevaTot.pctProm)} tot />
           </View>
           <View style={s.col}>
             <Text style={s.capLabel}>Cobranza de cuotas</Text>
@@ -384,32 +447,63 @@ export default function InformeDocument({ data, logoSrc }) {
             {cobranzas.map(c => (
               <R3 key={c.mes} a={c.label} b={money(c.cobrado)} c={pctv(c.pctCobrado)} />
             ))}
+            <R3 a="Total / prom." b={money(cobrCuotasTot.cobrado)} c={pctv(cobrCuotasTot.pctProm)} tot />
           </View>
         </View>
 
         {/* Apartado Meta Ads */}
         <SecTitle n="A">Meta Ads — {label}</SecTitle>
         <View style={s.kpiWrap}>
-          <Kpi w20 label="Inversión" value={money(anuncio.inversion)} hint="gasto pauta" />
-          <Kpi w20 dark label="ROAS" value={xv(anuncio.roas)} hint={anuncio.roasCash != null ? `cash ${xv(anuncio.roasCash)}` : 'ventas ÷ inv.'} />
-          <Kpi w20 label="ROAS Cash" value={xv(anuncio.roasCash)} hint="cobros ÷ inv." />
-          <Kpi w20 label="Costo / lead" value={anuncio.costoLead != null ? money(anuncio.costoLead) : '—'} hint="inv. ÷ leads" />
-          <Kpi w20 label="Costo / agenda" value={anuncio.costoAgenda != null ? money(anuncio.costoAgenda) : '—'} hint="inv. ÷ agendas" />
+          <Kpi w25 label="Inversión" value={money(anuncio.inversion)} hint="gasto de pauta" />
+          <Kpi w25 label="Leads" value={aLeads != null ? String(aLeads) : '—'} hint={aCostoLead != null ? `CPL ${money2(aCostoLead)}` : ''} />
+          <Kpi w25 label="Cierres" value={aCierres != null ? String(aCierres) : '—'} hint={aTasaCierre != null ? `${pctv(aTasaCierre)} s/ asistencia` : ''} />
+          <Kpi w25 dark label="ROAS" value={roasFmt(anuncio.roas)} hint={anuncio.roasCash != null ? `cash ${roasFmt(anuncio.roasCash)}` : ''} />
         </View>
 
-        {/* Embudo completo del tracker de Anuncios (todas las métricas cargadas). */}
-        {funnel.length > 0 && (
-          <>
-            <Text style={[s.capLabel, { marginTop: 10 }]}>Embudo del mes · métricas del tracker</Text>
-            <View style={s.th}><Text style={[s.thc, s.cL]}>Métrica</Text><Text style={[s.thc, s.cR]}>Valor</Text></View>
-            {funnel.map((mt, i) => (
-              <View style={s.tr} key={i}>
-                <Text style={[s.td, s.cL]}>{mt.label}</Text>
-                <Text style={[s.tdB, s.cR]}>{fmtMetrica(mt.value, mt.tipo)}</Text>
+        <View style={[s.twoCol, { marginTop: 4 }]}>
+          {/* Embudo del mes */}
+          <View style={s.col}>
+            <Text style={s.capLabel}>Embudo</Text>
+            <View style={s.th}>
+              <Text style={[s.thc, s.cL]}>Etapa</Text>
+              <Text style={[s.thc, s.cRn]}>Valor</Text>
+              <Text style={[s.thc, s.cRs]}>Costo / tasa</Text>
+            </View>
+            <R3 a="Agendas cualificadas" b={aAgendas != null ? String(aAgendas) : '—'} c={aCostoLead != null ? money2(aCostoLead) : '—'} />
+            <R3 a="Asistencias" b={aAsist != null ? String(aAsist) : '—'} c={aPctAsist != null ? pctv(aPctAsist * 100) : '—'} />
+            <R3 a="Cierres" b={aCierres != null ? String(aCierres) : '—'} c={aTasaCierre != null ? pctv(aTasaCierre) : '—'} />
+            <R3 a="Venta" b={aVenta != null ? money(aVenta) : '—'} c="" bold />
+            <R3 a="Facturado" b={aFacturado != null ? money(aFacturado) : '—'} c="" bold />
+          </View>
+
+          {/* Evolución mensual */}
+          <View style={s.col}>
+            <Text style={s.capLabel}>Evolución mensual</Text>
+            <View style={s.th}>
+              <Text style={[s.thc, { flex: 1 }]}>Mes</Text>
+              <Text style={[s.thc, { width: 46, textAlign: 'right' }]}>Inv.</Text>
+              <Text style={[s.thc, { width: 40, textAlign: 'right' }]}>CPA</Text>
+              <Text style={[s.thc, { width: 30, textAlign: 'right' }]}>Cierr.</Text>
+              <Text style={[s.thc, { width: 30, textAlign: 'right' }]}>ROAS</Text>
+            </View>
+            {metaSerie.map(x => (
+              <View style={s.tr} key={x.mes}>
+                <Text style={[s.td, { flex: 1, fontSize: 7.5 }]}>{x.label}</Text>
+                <Text style={[s.td, { width: 46, textAlign: 'right', fontSize: 7.5 }]}>{money(x.inversion)}</Text>
+                <Text style={[s.tdM, { width: 40, textAlign: 'right', fontSize: 7.5 }]}>{x.cpa != null ? money(x.cpa) : '—'}</Text>
+                <Text style={[s.tdM, { width: 30, textAlign: 'right', fontSize: 7.5 }]}>{x.cierres != null ? String(x.cierres) : '—'}</Text>
+                <Text style={[s.tdB, { width: 30, textAlign: 'right', fontSize: 7.5 }]}>{roasFmt(x.roas)}</Text>
               </View>
             ))}
-          </>
-        )}
+            <View style={s.trTot}>
+              <Text style={[s.tdB, { flex: 1 }]}>Total</Text>
+              <Text style={[s.tdB, { width: 46, textAlign: 'right', fontSize: 7.5 }]}>{money(metaTot.inversion)}</Text>
+              <Text style={[s.tdB, { width: 40, textAlign: 'right', fontSize: 7.5 }]}>{metaTot.cpa != null ? money(metaTot.cpa) : '—'}</Text>
+              <Text style={[s.tdB, { width: 30, textAlign: 'right', fontSize: 7.5 }]}>{String(metaTot.cierres)}</Text>
+              <Text style={[s.tdB, { width: 30, textAlign: 'right', fontSize: 7.5 }]}>{roasFmt(metaTot.roas)}</Text>
+            </View>
+          </View>
+        </View>
         <Foot />
       </Page>
     </Document>

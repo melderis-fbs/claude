@@ -172,6 +172,7 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
         resumen,
         cobranzas,
         anuncio: anunciosPorMes[mesSel] || {},
+        anunciosPorMes, // serie completa para la evolución mensual de Meta
         ventaMes: ventasPorMes.find(v => v.mes === mesSel) || null,
         // proyección: sólo meses futuros respecto al mes seleccionado
         pendientesPorMes: Object.fromEntries(
