@@ -256,7 +256,10 @@ export default function InformeDocument({ data, logoSrc }) {
             {fuentes.length ? fuentes.map(([f, d]) => (
               <R3 key={f} a={f} b={money(d.monto)} c={String(d.count)} />
             )) : <Text style={s.note}>Sin desglose de fuente para este mes.</Text>}
-            {fuentes.length > 0 && <R3 a="Total" b={money(fuentes.reduce((a, [, d]) => a + d.monto, 0))} c={String(fuentes.reduce((a, [, d]) => a + d.count, 0))} tot />}
+            {(m.ventasBack || 0) > 0 && <R3 a="Back" b={money(m.montoBack || 0)} c={String(m.ventasBack || 0)} />}
+            {(fuentes.length > 0 || (m.ventasBack || 0) > 0) && (
+              <R3 a="Total" b={money(ventaTotal)} c={String((m.ventasNuevas || 0) + (m.ventasBack || 0))} tot />
+            )}
           </View>
 
           <View style={s.col}>
