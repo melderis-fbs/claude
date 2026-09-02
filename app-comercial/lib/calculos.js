@@ -442,8 +442,10 @@ export function calcularFlujoCuotas(clientes) {
       // 2) Caja cobrada, por mes de cobro y origen de la venta.
       if (pagado && valido(mesVenc)) {
         if (!recolOrigen[mesVenc]) recolOrigen[mesVenc] = { primerosPagos: 0, porOrigen: {}, totalCuotas: 0 };
-        if (i === 0) {
-          recolOrigen[mesVenc].primerosPagos += monto; // venta nueva → origen = mismo mes
+        // Primer pago, o cuota de una venta del PROPIO mes → va con "venta nueva
+        // del mes" (no como línea "Cuotas de ventas de <ese mismo mes>").
+        if (i === 0 || (valido(mesVenta) && mesVenta === mesVenc)) {
+          recolOrigen[mesVenc].primerosPagos += monto;
         } else {
           recolOrigen[mesVenc].totalCuotas += monto;
           const org = valido(mesVenta) ? mesVenta : 'otros';

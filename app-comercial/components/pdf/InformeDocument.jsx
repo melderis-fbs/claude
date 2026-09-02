@@ -333,7 +333,7 @@ export default function InformeDocument({ data, logoSrc }) {
           <View style={s.col}>
             <Text style={[s.kL, { marginBottom: 4 }]}>Caja de {label} · por mes de origen</Text>
             <View style={s.th}><Text style={[s.thc, s.cL]}>Origen</Text><Text style={[s.thc, s.cR]}>Monto</Text></View>
-            <View style={s.tr}><Text style={[s.td, s.cL]}>Venta nueva del mes (primeros pagos)</Text><Text style={[s.td, s.cR]}>{money(recolOrigen.primerosPagos || 0)}</Text></View>
+            <View style={s.tr}><Text style={[s.td, s.cL]}>Venta nueva del mes</Text><Text style={[s.td, s.cR]}>{money(recolOrigen.primerosPagos || 0)}</Text></View>
             {recolOrig.map(([mk, v]) => (
               <View style={s.tr} key={mk}><Text style={[s.td, s.cL]}>Cuotas de ventas de {mesLbl(mk)}</Text><Text style={[s.td, s.cR]}>{money(v)}</Text></View>
             ))}
@@ -386,17 +386,10 @@ export default function InformeDocument({ data, logoSrc }) {
 
         {/* 5 Rentabilidad */}
         <SecTitle n="5">Rentabilidad</SecTitle>
-        <View style={s.twoCol}>
-          <View style={s.col}><View style={s.panelDark}>
-            <Text style={s.kLd}>Devengada · sobre lo vendido</Text>
-            <Text style={s.kVd}>{pctv(m.rentabilidad)}</Text>
-            <Text style={s.kHd}>ganancia {money(m.ganancia)} · fact. {money(ventaTotal)} − costos {money(m.totalCostos)}</Text>
-          </View></View>
-          <View style={s.col}><View style={s.panel}>
-            <Text style={s.kL}>Cobrada · sobre lo ingresado</Text>
-            <Text style={s.kV}>{pctv(rentCobrada)}</Text>
-            <Text style={s.kH}>ganancia {money(gananciaCobrada)} · recol. {money(m.cashTotal)} − costos {money(m.totalCostos)}</Text>
-          </View></View>
+        <View style={s.panelDark}>
+          <Text style={s.kLd}>Devengada · sobre lo vendido</Text>
+          <Text style={s.kVd}>{pctv(m.rentabilidad)}</Text>
+          <Text style={s.kHd}>ganancia {money(m.ganancia)} · fact. {money(ventaTotal)} − costos {money(m.totalCostos)}</Text>
         </View>
         <Foot />
       </Page>
@@ -450,6 +443,22 @@ export default function InformeDocument({ data, logoSrc }) {
             <R3 a="Total / prom." b={money(cobrCuotasTot.cobrado)} c={pctv(cobrCuotasTot.pctProm)} tot />
           </View>
         </View>
+
+        <Foot />
+      </Page>
+
+      {/* ── Página 4 · Meta Ads ── */}
+      <Page size="A4" style={s.page}>
+        <View style={s.headRow}>
+          <View>
+            <Text style={s.title}>Meta Ads</Text>
+            <Text style={s.subtitle}>{label}</Text>
+          </View>
+          {logoSrc
+            ? <Image src={logoSrc} style={s.logoImage} />
+            : <View style={{ alignItems: 'flex-end' }}><Text style={s.brand}>FOUNDERS</Text><Text style={s.brandSub}>BUSINESS STRATEGIES</Text></View>}
+        </View>
+        <View style={s.rule} />
 
         {/* Apartado Meta Ads */}
         <SecTitle n="A">Meta Ads — {label}</SecTitle>

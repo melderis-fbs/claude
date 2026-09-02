@@ -461,7 +461,7 @@ export default function ResumenEconomico({ resumen, cobranzas = [], cobrosSemana
           <table className="w-full text-sm">
             <tbody className="divide-y divide-gray-100">
               <tr>
-                <td className="py-2 text-gray-600">Venta nueva del mes <span className="text-gray-400">(primeros pagos)</span></td>
+                <td className="py-2 text-gray-600">Venta nueva del mes</td>
                 <td className="py-2 text-right font-semibold text-gray-900">{fmt(recolDelMes.primerosPagos)}</td>
               </tr>
               {recolPorOrigen.map(([mk, v]) => (
